@@ -40,7 +40,9 @@ export function pickOpponentDraft(pack, existingTeam = []) {
   return pack
     .map((species) => {
       const freshTypes = species.types.filter((type) => !teamTypes.has(type)).length;
-      const score = totalStats(species.baseStats) + freshTypes * 18 + (species.nfe ? -12 : 12);
+      const speedBias = species.baseStats.spe >= 95 ? 18 : 0;
+      const bulkBias = species.baseStats.hp + species.baseStats.def + species.baseStats.spd >= 240 ? 14 : 0;
+      const score = totalStats(species.baseStats) + freshTypes * 18 + (species.nfe ? -12 : 12) + speedBias + bulkBias;
       return {species, score};
     })
     .sort((a, b) => b.score - a.score)[0].species;
@@ -151,4 +153,60 @@ export function generateSet(species, dex) {
 
 export function previewMoves(species, dex) {
   return chooseMoves(species, dex).map((move) => move.name);
+}
+
+export function chooseTeamOrder(team) {
+  return team
+    .slice()
+    .sort((a, b) => {
+      const aScore = a.baseStats.spe + a.baseStats.hp / 2 + (a.types.length === 2 ? 8 : 0);
+      const bScore = b.baseStats.spe + b.baseStats.hp / 2 + (b.types.length === 2 ? 8 : 0);
+      return bScore - aScore;
+    });
+}
+
+export function evaluateMoveChoice(moveSlot, dex, attackerTypes, defenderTypes = []) {
+  const move = dex.moves.get(moveSlot.id || moveSlot.move || '');
+  if (!move?.exists || move.disabled) return -999;
+  if (move.category === 'Status') {
+    let score = STRONG_STATUS.has(move.id) ? 72 : 28;
+    score += move.status ? 14 : 0;
+    score += move.boosts ? 12 : 0;
+    score += move.heal ? 18 : 0;
+    return score;
+  }
+
+  const stab = attackerTypes.includes(move.type) ? 1.3 : 1;
+  const typeMod = defenderTypes.length ? dex.types.getEffectiveness(move.type, defenderTypes) : 0;
+  const effectiveness = typeMod >= 2 ? 2 : typeMod === 1 ? 1.5 : typeMod === 0 ? 1 : 0.65;
+  const accuracy = move.accuracy === true ? 1 : Number(move.accuracy || 100) / 100;
+  return (move.basePower || 0) * stab * effectiveness * accuracy + (move.priority > 0 ? 20 : 0) + (move.secondary ? 8 : 0);
+}
+
+export function chooseBattleAction(request, dex, ownTeam, opposingActive) {
+  if (request.forceSwitch) {
+    const candidates = request.side.pokemon
+      .map((mon, index) => ({mon, index}))
+      .filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt'));
+    const ranked = candidates.sort((a, b) => {
+      const aSpecies = ownTeam.find((species) => species.name === a.mon.details.split(',')[0]);
+      const bSpecies = ownTeam.find((species) => species.name === b.mon.details.split(',')[0]);
+      return totalStats(bSpecies?.baseStats || {hp:0,atk:0,def:0,spa:0,spd:0,spe:0})
+        - totalStats(aSpecies?.baseStats || {hp:0,atk:0,def:0,spa:0,spd:0,spe:0});
+    });
+    return `switch ${ranked[0].index + 1}`;
+  }
+
+  const active = request.active?.[0];
+  if (!active) return 'move 1';
+  const self = ownTeam.find((species) => species.name === request.side.pokemon.find((mon) => mon.active)?.details.split(',')[0]);
+  const attackerTypes = self?.types || [];
+  const defenderTypes = opposingActive?.types || [];
+  const rankedMoves = active.moves
+    .map((move, index) => ({
+      index,
+      score: evaluateMoveChoice(move, dex, attackerTypes, defenderTypes),
+    }))
+    .sort((a, b) => b.score - a.score);
+  return `move ${rankedMoves[0].index + 1}`;
 }
