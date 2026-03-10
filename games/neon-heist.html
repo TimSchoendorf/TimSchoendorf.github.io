@@ -3,222 +3,421 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Orbital Forge | Tim Schoendorf</title>
+    <title>Neon Heist | Tim Schoendorf</title>
     <style>
-        :root { --bg:#050816; --panel:#0d1328; --panel2:#121a35; --text:#eef2ff; --muted:#95a2d5; --line:rgba(255,255,255,.08); --cyan:#74f7ff; --pink:#ff6fd7; --gold:#ffd66f; }
+        :root { --bg:#060816; --panel:rgba(9,14,33,.84); --panel2:rgba(16,24,51,.95); --line:rgba(255,255,255,.08); --text:#edf3ff; --muted:#8ea3cf; --cyan:#69f4ff; --pink:#ff70cc; --gold:#ffd66f; --green:#7cffb2; --red:#ff7c7c; }
         * { box-sizing:border-box; }
-        body { margin:0; min-height:100vh; font-family:"Segoe UI",sans-serif; color:var(--text); background:radial-gradient(circle at top left,rgba(116,247,255,.18),transparent 28%),radial-gradient(circle at bottom right,rgba(255,111,215,.18),transparent 24%),linear-gradient(180deg,#050816,#0a1124 46%,#0d1530); padding:24px; }
+        body { margin:0; min-height:100vh; padding:24px; font-family:"Segoe UI",sans-serif; color:var(--text); background:radial-gradient(circle at top left,rgba(105,244,255,.18),transparent 26%),radial-gradient(circle at bottom right,rgba(255,112,204,.16),transparent 24%),linear-gradient(180deg,#050713,#091024 45%,#0c1430); }
         a { color:inherit; }
-        .page { width:min(1160px,100%); margin:0 auto; display:grid; grid-template-columns:1fr 320px; gap:22px; }
-        .main, .side { background:rgba(13,19,40,.82); border:1px solid var(--line); border-radius:30px; box-shadow:0 28px 60px rgba(0,0,0,.32); backdrop-filter:blur(18px); }
-        .main { padding:24px; display:grid; gap:20px; }
-        .header { display:flex; justify-content:space-between; gap:12px; align-items:start; flex-wrap:wrap; }
+        .page { width:min(1240px,100%); margin:0 auto; display:grid; grid-template-columns:320px 1fr 300px; gap:20px; }
+        .panel { background:var(--panel); border:1px solid var(--line); border-radius:28px; box-shadow:0 28px 60px rgba(0,0,0,.3); backdrop-filter:blur(18px); }
+        .left,.center,.right { padding:20px; display:grid; align-content:start; gap:16px; }
         .back { text-decoration:none; padding:10px 14px; border-radius:999px; background:rgba(255,255,255,.06); }
-        h1 { margin:8px 0 10px; font-size:clamp(2.3rem,5vw,4rem); line-height:.92; }
-        .lead { color:var(--muted); max-width:58ch; }
-        .status { display:flex; gap:12px; flex-wrap:wrap; }
-        .card, .cell, .entry, .rule { border:1px solid var(--line); border-radius:20px; background:rgba(255,255,255,.04); }
-        .card { padding:14px 16px; min-width:130px; }
-        .board-shell { display:grid; grid-template-columns:1fr 220px; gap:18px; align-items:start; }
-        .board { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; padding:14px; border-radius:28px; background:rgba(255,255,255,.04); }
-        .cell { aspect-ratio:1; display:grid; place-items:center; font-size:1.5rem; color:#081322; font-weight:800; background:rgba(255,255,255,.05); }
-        .cell.empty { color:transparent; }
-        .v2{background:#d6fbff}.v4{background:#b7f2ff}.v8{background:#95e7ff}.v16{background:#ffdca2}.v32{background:#ffc17b}.v64{background:#ff9b8f}.v128{background:#ff88d5}.v256{background:#d39dff}.v512{background:#a9a1ff}.v1024{background:#9df1c8}.v2048{background:#ffe36f}
-        .next-panel { display:grid; gap:12px; }
-        .drop-slot { min-height:220px; padding:18px; border-radius:24px; background:linear-gradient(180deg,rgba(116,247,255,.08),rgba(255,255,255,.03)); display:grid; place-items:center; text-align:center; }
-        .drop-tile { width:112px; aspect-ratio:1; border-radius:22px; display:grid; place-items:center; font-size:2rem; font-weight:800; color:#081322; }
+        h1 { margin:8px 0 10px; font-size:clamp(2.2rem,4.4vw,3.8rem); line-height:.92; }
+        .eyebrow { color:var(--cyan); text-transform:uppercase; letter-spacing:.16em; font-size:.8rem; }
+        .lead { color:var(--muted); }
+        .card,.cell,.tool,.entry,.summary { border:1px solid var(--line); border-radius:20px; background:rgba(255,255,255,.04); }
+        .stats { display:grid; gap:10px; }
+        .card { padding:14px 16px; }
+        .label { display:block; color:var(--muted); font-size:.78rem; text-transform:uppercase; letter-spacing:.14em; margin-bottom:4px; }
+        .value { font-size:1.35rem; font-weight:700; }
+        .board-wrap { display:grid; gap:16px; }
+        .mission-head { display:flex; justify-content:space-between; gap:12px; align-items:end; flex-wrap:wrap; }
+        .board { display:grid; grid-template-columns:repeat(8,1fr); gap:10px; padding:14px; border-radius:26px; background:rgba(255,255,255,.04); }
+        .cell { aspect-ratio:1; display:grid; place-items:center; font-weight:800; color:#081321; background:var(--panel2); position:relative; overflow:hidden; }
+        .cell.floor { color:#2b3b70; }
+        .cell.wall { background:#0a0f22; color:transparent; }
+        .cell.player { background:linear-gradient(135deg,var(--cyan),#d4ffff); }
+        .cell.guard { background:linear-gradient(135deg,#ff9b7d,#ffd1b3); }
+        .cell.camera { background:linear-gradient(135deg,#ff8fdf,#ffd6f3); }
+        .cell.vault { background:linear-gradient(135deg,#ffd66f,#fff0b9); }
+        .cell.exit { background:linear-gradient(135deg,#87ffb6,#e0ffec); }
+        .cell.key { background:linear-gradient(135deg,#9fd3ff,#edf7ff); }
+        .cell.intel { background:linear-gradient(135deg,#d4b2ff,#f0e4ff); }
+        .cell.emp::after,.cell.smoke::after { content:""; position:absolute; inset:6px; border-radius:14px; opacity:.35; }
+        .cell.emp::after { background:var(--cyan); }
+        .cell.smoke::after { background:#d9dcf4; }
         .controls { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
         button { border:none; font:inherit; cursor:pointer; }
-        .action { padding:14px; border-radius:18px; font-weight:700; color:#07111c; background:linear-gradient(180deg,var(--cyan),#d6feff); }
-        .action.alt { background:linear-gradient(180deg,var(--pink),#ffd2f4); }
-        .action.gold { background:linear-gradient(180deg,var(--gold),#fff0bc); }
-        .side { padding:20px; display:grid; gap:16px; align-content:start; }
-        .rule { padding:14px; }
-        .log { display:grid; gap:10px; max-height:280px; overflow:auto; }
-        .entry { padding:12px 14px; color:#dce4ff; }
-        .summary { min-height:70px; padding:14px 16px; border-radius:20px; background:rgba(255,255,255,.05); }
-        @media (max-width:980px) { .page,.board-shell { grid-template-columns:1fr; } }
+        .action,.tool { padding:14px; font-weight:700; color:#081321; background:linear-gradient(180deg,var(--cyan),#d5feff); }
+        .action.alt { background:linear-gradient(180deg,var(--pink),#ffd0f0); }
+        .action.gold { background:linear-gradient(180deg,var(--gold),#fff0ba); }
+        .ghost { opacity:0; pointer-events:none; }
+        .tool-grid { display:grid; gap:10px; }
+        .tool { border-radius:18px; text-align:left; }
+        .tool span { display:block; font-size:.82rem; color:#183046; font-weight:600; }
+        .summary { padding:14px 16px; min-height:72px; }
+        .log { display:grid; gap:10px; max-height:320px; overflow:auto; }
+        .entry { padding:12px 14px; color:#dce6ff; }
+        .legend { display:grid; gap:8px; color:var(--muted); font-size:.92rem; }
+        .status-ok { color:var(--green); }
+        .status-bad { color:var(--red); }
+        @media (max-width:1120px) { .page { grid-template-columns:1fr; } }
     </style>
 </head>
 <body>
     <div class="page">
-        <section class="main">
-            <div class="header">
+        <aside class="panel left">
+            <a class="back" href="../index.html#games">Zurueck zur Startseite</a>
+            <div>
+                <div class="eyebrow">Turn-based stealth roguelite</div>
+                <h1>Neon Heist</h1>
+                <p class="lead">Infiltriere ein zufaellig erzeugtes Sicherheitslevel, stehle Keycard und Vault-Daten und entkomme, bevor Alarm 100 erreicht oder dich ein Guard stellt.</p>
+            </div>
+            <div class="stats">
+                <div class="card"><span class="label">Mission</span><span class="value" id="missionStat"></span></div>
+                <div class="card"><span class="label">Alarm</span><span class="value" id="alarmStat"></span></div>
+                <div class="card"><span class="label">Zuege</span><span class="value" id="turnStat"></span></div>
+                <div class="card"><span class="label">Bestscore</span><span class="value" id="bestStat"></span></div>
+            </div>
+            <div class="tool-grid">
+                <button class="tool" id="empBtn">EMP<span>Deaktiviert Kameras fuer 3 Zuege</span></button>
+                <button class="tool" id="smokeBtn">Smoke<span>Versteckt dich fuer 2 Zuege</span></button>
+                <button class="tool" id="dashBtn">Dash<span>2 Felder in dieselbe Richtung</span></button>
+            </div>
+            <div class="legend">
+                <div>`P` Spieler, `G` Guard, `C` Kamera</div>
+                <div>`K` Keycard, `V` Vault, `I` Intel, `E` Exit</div>
+                <div>Jeder Zug bewegt Gegner oder hebt den Alarm.</div>
+            </div>
+        </aside>
+
+        <main class="panel center">
+            <div class="mission-head">
                 <div>
-                    <a class="back" href="../index.html#games">Zurueck zur Startseite</a>
-                    <div style="text-transform:uppercase;letter-spacing:.16em;color:var(--cyan);font-size:.8rem;margin-top:14px;">Original endless puzzle</div>
-                    <h1>Orbital Forge</h1>
-                    <p class="lead">Ein eigenes Merge-Spiel mit echter Loop: jede Runde faellt ein neuer Kern in eine Spalte. Kombiniere gleiche Werte vertikal und horizontal, plane Ketten und halte das Gitter offen.</p>
+                    <div class="eyebrow">Secure Site 7B</div>
+                    <h2 style="margin:8px 0 0;">Grid</h2>
                 </div>
-                <div class="status">
-                    <div class="card"><div style="color:var(--muted);font-size:.8rem;text-transform:uppercase;">Score</div><strong id="scoreStat"></strong></div>
-                    <div class="card"><div style="color:var(--muted);font-size:.8rem;text-transform:uppercase;">Best</div><strong id="bestStat"></strong></div>
-                    <div class="card"><div style="color:var(--muted);font-size:.8rem;text-transform:uppercase;">Combo</div><strong id="comboStat"></strong></div>
+                <div class="summary" id="summary"></div>
+            </div>
+            <div class="board" id="board"></div>
+            <div class="controls">
+                <button class="action ghost"></button>
+                <button class="action" data-dir="up">Oben</button>
+                <button class="action gold" id="waitBtn">Warten</button>
+                <button class="action" data-dir="left">Links</button>
+                <button class="action alt" id="newRunBtn">Neuer Run</button>
+                <button class="action" data-dir="right">Rechts</button>
+                <button class="action ghost"></button>
+                <button class="action" data-dir="down">Unten</button>
+                <button class="action ghost"></button>
+            </div>
+        </main>
+
+        <aside class="panel right">
+            <div class="card">
+                <span class="label">Loadout</span>
+                <div style="display:grid;gap:8px;">
+                    <div>EMP: <strong id="empStat"></strong></div>
+                    <div>Smoke: <strong id="smokeStat"></strong></div>
+                    <div>Dash: <strong id="dashStat"></strong></div>
+                    <div>Keycard: <strong id="keyStat"></strong></div>
+                    <div>Intel: <strong id="intelStat"></strong></div>
                 </div>
             </div>
-            <div class="board-shell">
-                <div class="board" id="board"></div>
-                <div class="next-panel">
-                    <div class="drop-slot">
-                        <div>
-                            <div style="color:var(--muted);text-transform:uppercase;letter-spacing:.16em;font-size:.8rem;margin-bottom:12px;">Naechster Kern</div>
-                            <div class="drop-tile" id="nextTile"></div>
-                        </div>
-                    </div>
-                    <div class="controls">
-                        <button class="action gold" data-col="0">Spalte 1</button>
-                        <button class="action gold" data-col="1">Spalte 2</button>
-                        <button class="action gold" data-col="2">Spalte 3</button>
-                        <button class="action gold" data-col="3">Spalte 4</button>
-                        <button class="action" id="undoBtn">Undo</button>
-                        <button class="action alt" id="resetBtn">Neustart</button>
-                    </div>
-                    <div class="summary" id="summary"></div>
-                </div>
+            <div class="card">
+                <span class="label">Run Log</span>
+                <div class="log" id="log"></div>
             </div>
-        </section>
-        <aside class="side">
-            <div class="rule"><strong>Spielidee</strong><p>Wirf den Kern in eine Spalte. Gleiche Werte, die sich beruehren, verschmelzen zu einem hoehren Wert. Ketten geben Bonuspunkte.</p></div>
-            <div class="rule"><strong>Tiefe</strong><p>Replayability entsteht durch den naechsten Kern, Undo fuer riskante Zuege und die Suche nach grossen Kaskaden bis 2048 und darueber.</p></div>
-            <div class="rule"><strong>Log</strong><div class="log" id="log"></div></div>
         </aside>
     </div>
 
     <script>
         const ui = {
             board: document.getElementById("board"),
-            score: document.getElementById("scoreStat"),
-            best: document.getElementById("bestStat"),
-            combo: document.getElementById("comboStat"),
-            next: document.getElementById("nextTile"),
             summary: document.getElementById("summary"),
+            mission: document.getElementById("missionStat"),
+            alarm: document.getElementById("alarmStat"),
+            turn: document.getElementById("turnStat"),
+            best: document.getElementById("bestStat"),
+            emp: document.getElementById("empStat"),
+            smoke: document.getElementById("smokeStat"),
+            dash: document.getElementById("dashStat"),
+            key: document.getElementById("keyStat"),
+            intel: document.getElementById("intelStat"),
             log: document.getElementById("log")
         };
 
         let state = {};
+        let queuedAction = null;
 
-        function bestScore() { return Number(localStorage.getItem("forge_best") || 0); }
-        function newTileValue() { return Math.random() < 0.75 ? 2 : 4; }
-        function deepCopyBoard(board) { return board.map((row) => row.slice()); }
+        function bestScore() { return Number(localStorage.getItem("neon_heist_best") || 0); }
+        function rand(max) { return Math.floor(Math.random() * max); }
+        function posKey(x, y) { return `${x},${y}`; }
+        function dist(a, b) { return Math.abs(a.x - b.x) + Math.abs(a.y - b.y); }
         function log(text) { const item = document.createElement("div"); item.className = "entry"; item.textContent = text; ui.log.prepend(item); }
+
+        function randomFloor(used) {
+            let x, y;
+            do { x = rand(8); y = rand(8); } while (used.has(posKey(x, y)) || state.grid[y][x] === "wall");
+            used.add(posKey(x, y));
+            return { x, y };
+        }
+
+        function buildGrid() {
+            const grid = Array.from({ length: 8 }, (_, y) => Array.from({ length: 8 }, (_, x) => {
+                if (x === 0 || y === 0 || x === 7 || y === 7) return "floor";
+                return Math.random() < 0.12 ? "wall" : "floor";
+            }));
+            for (let i = 0; i < 3; i += 1) {
+                grid[rand(8)][rand(8)] = "floor";
+            }
+            return grid;
+        }
+
+        function createRun() {
+            state = {
+                grid: buildGrid(),
+                player: { x: 0, y: 0 },
+                exit: { x: 7, y: 7 },
+                keycard: null,
+                vault: null,
+                intel: null,
+                guards: [],
+                cameras: [],
+                alarm: 0,
+                turns: 0,
+                emp: 2,
+                smoke: 2,
+                dash: 2,
+                keyOwned: false,
+                intelOwned: false,
+                won: false,
+                lost: false,
+                smokeTurns: 0,
+                empTurns: 0,
+                message: "Mission gestartet. Hole zuerst die Keycard.",
+                score: 0
+            };
+            const used = new Set([posKey(0, 0), posKey(7, 7)]);
+            state.keycard = randomFloor(used);
+            state.vault = randomFloor(used);
+            state.intel = randomFloor(used);
+            for (let i = 0; i < 3; i += 1) state.guards.push({ ...randomFloor(used), stun: 0 });
+            for (let i = 0; i < 3; i += 1) state.cameras.push({ ...randomFloor(used) });
+            ui.log.innerHTML = "";
+            log(state.message);
+            render();
+        }
+
+        function cellGlyph(x, y) {
+            if (state.player.x === x && state.player.y === y) return ["player", "P"];
+            if (state.guards.some((g) => g.x === x && g.y === y)) return ["guard", "G"];
+            if (state.cameras.some((c) => c.x === x && c.y === y)) return [state.empTurns > 0 ? "camera emp" : "camera", "C"];
+            if (!state.keyOwned && state.keycard.x === x && state.keycard.y === y) return ["key", "K"];
+            if (state.vault.x === x && state.vault.y === y) return ["vault", "V"];
+            if (!state.intelOwned && state.intel.x === x && state.intel.y === y) return ["intel", "I"];
+            if (state.exit.x === x && state.exit.y === y) return ["exit", "E"];
+            return [state.grid[y][x] === "wall" ? "wall" : "floor", state.grid[y][x] === "wall" ? "" : "."];
+        }
 
         function render() {
             ui.board.innerHTML = "";
-            state.board.forEach((row) => row.forEach((value) => {
-                const cell = document.createElement("div");
-                cell.className = `cell ${value ? `v${value}` : "empty"}`;
-                cell.textContent = value || ".";
-                ui.board.appendChild(cell);
-            }));
-            ui.score.textContent = state.score;
-            ui.best.textContent = bestScore();
-            ui.combo.textContent = state.combo;
-            ui.next.className = `drop-tile v${state.next}`;
-            ui.next.textContent = state.next;
-            ui.summary.textContent = state.summary;
-        }
-
-        function gravity() {
-            for (let col = 0; col < 4; col += 1) {
-                const values = [];
-                for (let row = 3; row >= 0; row -= 1) if (state.board[row][col]) values.push(state.board[row][col]);
-                for (let row = 3, index = 0; row >= 0; row -= 1, index += 1) state.board[row][col] = values[index] || 0;
-            }
-        }
-
-        function mergePass() {
-            let merged = false;
-            const seen = new Set();
-            for (let row = 3; row >= 0; row -= 1) {
-                for (let col = 0; col < 4; col += 1) {
-                    const value = state.board[row][col];
-                    if (!value) continue;
-                    [[0,1],[-1,0],[1,0]].forEach(([dy, dx]) => {
-                        const nr = row + dy;
-                        const nc = col + dx;
-                        if (nr < 0 || nr > 3 || nc < 0 || nc > 3) return;
-                        if (state.board[nr][nc] !== value) return;
-                        const key = [row, col, nr, nc].sort().join("-");
-                        if (seen.has(key)) return;
-                        seen.add(key);
-                        state.board[row][col] = value * 2;
-                        state.board[nr][nc] = 0;
-                        state.score += value * 2;
-                        state.combo += 1;
-                        merged = true;
-                    });
+            for (let y = 0; y < 8; y += 1) {
+                for (let x = 0; x < 8; x += 1) {
+                    const [cls, glyph] = cellGlyph(x, y);
+                    const cell = document.createElement("div");
+                    cell.className = `cell ${cls} ${state.smokeTurns > 0 && state.player.x === x && state.player.y === y ? "smoke" : ""}`;
+                    cell.textContent = glyph;
+                    ui.board.appendChild(cell);
                 }
             }
-            if (merged) gravity();
-            return merged;
+            ui.summary.textContent = state.message;
+            ui.mission.textContent = state.won ? "Erfolgreich" : state.lost ? "Fehlgeschlagen" : state.keyOwned ? state.intelOwned ? "Exit erreichen" : "Vault-Daten holen" : "Keycard finden";
+            ui.alarm.innerHTML = state.alarm >= 70 ? `<span class="status-bad">${state.alarm}</span>` : state.alarm <= 35 ? `<span class="status-ok">${state.alarm}</span>` : state.alarm;
+            ui.turn.textContent = state.turns;
+            ui.best.textContent = bestScore();
+            ui.emp.textContent = `${state.emp} ${state.empTurns > 0 ? `(aktiv ${state.empTurns})` : ""}`;
+            ui.smoke.textContent = `${state.smoke} ${state.smokeTurns > 0 ? `(aktiv ${state.smokeTurns})` : ""}`;
+            ui.dash.textContent = state.dash;
+            ui.key.textContent = state.keyOwned ? "ja" : "nein";
+            ui.intel.textContent = state.intelOwned ? "ja" : "nein";
         }
 
-        function cascade() {
-            let safety = 0;
-            while (mergePass() && safety < 12) safety += 1;
+        function passable(x, y) {
+            return x >= 0 && y >= 0 && x < 8 && y < 8 && state.grid[y][x] !== "wall";
         }
 
-        function drop(col) {
-            if (state.over) return;
-            let row = 3;
-            while (row >= 0 && state.board[row][col]) row -= 1;
-            if (row < 0) {
-                state.summary = `Spalte ${col + 1} ist voll.`;
+        function triggerTile() {
+            if (!state.keyOwned && state.player.x === state.keycard.x && state.player.y === state.keycard.y) {
+                state.keyOwned = true;
+                state.message = "Keycard gesichert. Jetzt zum Vault.";
+                log(state.message);
+            } else if (state.keyOwned && !state.intelOwned && state.player.x === state.vault.x && state.player.y === state.vault.y) {
+                state.intelOwned = true;
+                state.alarm += 18;
+                state.message = "Vault offen. Intel gestohlen. Exit!";
+                log(state.message);
+            } else if (!state.intelOwned && state.player.x === state.intel.x && state.player.y === state.intel.y) {
+                state.alarm = Math.max(0, state.alarm - 10);
+                state.message = "Bonus-Intel gesammelt. Alarm sinkt.";
+                state.intelOwned = "bonus";
+                log(state.message);
+            } else if (state.keyOwned && state.intelOwned && state.player.x === state.exit.x && state.player.y === state.exit.y) {
+                finish(true);
+            }
+        }
+
+        function lineSeenByCamera(camera) {
+            if (state.empTurns > 0 || state.smokeTurns > 0) return false;
+            return camera.x === state.player.x || camera.y === state.player.y;
+        }
+
+        function guardsAct() {
+            state.guards.forEach((guard) => {
+                if (guard.stun > 0) {
+                    guard.stun -= 1;
+                    return;
+                }
+                const options = [[1,0],[-1,0],[0,1],[0,-1]]
+                    .map(([dx, dy]) => ({ x: guard.x + dx, y: guard.y + dy }))
+                    .filter((p) => passable(p.x, p.y));
+                if (!options.length) return;
+                let next;
+                if (state.smokeTurns === 0 && dist(guard, state.player) <= 4) {
+                    next = options.sort((a, b) => dist(a, state.player) - dist(b, state.player))[0];
+                } else {
+                    next = options[rand(options.length)];
+                }
+                guard.x = next.x;
+                guard.y = next.y;
+            });
+        }
+
+        function detect() {
+            let seen = false;
+            if (state.guards.some((guard) => guard.x === state.player.x && guard.y === state.player.y)) {
+                state.message = "Ein Guard hat dich gestellt.";
+                log(state.message);
+                finish(false);
+                return true;
+            }
+            if (state.cameras.some((camera) => lineSeenByCamera(camera))) {
+                state.alarm += 12;
+                state.message = "Kamera-Linie. Alarm steigt.";
+                log(state.message);
+                seen = true;
+            }
+            if (state.guards.some((guard) => dist(guard, state.player) <= 1) && state.smokeTurns === 0) {
+                state.alarm += 8;
+                state.message = "Guard in Naehe. Das Team wird nervoes.";
+                log(state.message);
+                seen = true;
+            }
+            if (state.alarm >= 100) {
+                state.message = "Alarm 100. Das Gebaeude geht in Lockdown.";
+                log(state.message);
+                finish(false);
+                return true;
+            }
+            return seen;
+        }
+
+        function endTurn() {
+            state.turns += 1;
+            state.alarm += state.intelOwned === true ? 4 : 2;
+            guardsAct();
+            triggerTile();
+            if (!state.won && !state.lost) detect();
+            state.smokeTurns = Math.max(0, state.smokeTurns - 1);
+            state.empTurns = Math.max(0, state.empTurns - 1);
+            render();
+        }
+
+        function move(dir, steps = 1) {
+            if (state.won || state.lost) return;
+            const delta = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] }[dir];
+            let moved = false;
+            for (let i = 0; i < steps; i += 1) {
+                const nx = state.player.x + delta[0];
+                const ny = state.player.y + delta[1];
+                if (!passable(nx, ny)) break;
+                state.player = { x: nx, y: ny };
+                moved = true;
+                triggerTile();
+                if (state.won || state.lost) break;
+            }
+            if (!moved) {
+                state.message = "Wand oder Blockade.";
                 render();
                 return;
             }
-            state.history = { board: deepCopyBoard(state.board), score: state.score, next: state.next, combo: state.combo };
-            state.board[row][col] = state.next;
-            state.combo = 0;
-            cascade();
-            state.next = newTileValue();
-            state.summary = `Kern in Spalte ${col + 1} gesetzt.`;
-            log(state.summary);
-            if (state.board[0].every((value) => value)) {
-                state.over = true;
-                localStorage.setItem("forge_best", String(Math.max(bestScore(), state.score)));
-                state.summary = `Grid voll. Endscore ${state.score}. Starte einen neuen Run.`;
-                log(state.summary);
+            state.message = steps === 2 ? "Dash ausgefuehrt." : "Position veraendert.";
+            endTurn();
+        }
+
+        function useEMP() {
+            if (state.won || state.lost || state.emp <= 0) return;
+            state.emp -= 1;
+            state.empTurns = 3;
+            state.message = "EMP aktiv. Kameras sind kurz blind.";
+            log(state.message);
+            endTurn();
+        }
+
+        function useSmoke() {
+            if (state.won || state.lost || state.smoke <= 0) return;
+            state.smoke -= 1;
+            state.smokeTurns = 2;
+            state.message = "Smoke deployed. Du verschwindest im Nebel.";
+            log(state.message);
+            endTurn();
+        }
+
+        function armDash() {
+            if (state.won || state.lost || state.dash <= 0) return;
+            queuedAction = "dash";
+            state.message = "Dash bereit. Waehle eine Richtung.";
+            render();
+        }
+
+        function finish(win) {
+            state.won = win;
+            state.lost = !win;
+            if (win) {
+                state.score = Math.max(0, 300 - state.alarm - state.turns * 3 + state.emp * 12 + state.smoke * 12 + state.dash * 16);
+                localStorage.setItem("neon_heist_best", String(Math.max(bestScore(), state.score)));
+                state.message = `Extraktion gelungen. Score ${state.score}.`;
             } else {
-                localStorage.setItem("forge_best", String(Math.max(bestScore(), state.score)));
+                state.score = 0;
             }
             render();
         }
 
-        function undo() {
-            if (!state.history || state.over) return;
-            state.board = deepCopyBoard(state.history.board);
-            state.score = state.history.score;
-            state.next = state.history.next;
-            state.combo = state.history.combo;
-            state.summary = "Letzten Zug rueckgaengig gemacht.";
-            state.history = null;
-            render();
+        function waitTurn() {
+            if (state.won || state.lost) return;
+            state.message = "Du wartest und beobachtest die Lage.";
+            endTurn();
         }
 
-        function reset() {
-            state = {
-                board: Array.from({ length: 4 }, () => Array(4).fill(0)),
-                score: 0,
-                combo: 0,
-                next: newTileValue(),
-                over: false,
-                history: null,
-                summary: "Baue deine erste Kette."
-            };
-            ui.log.innerHTML = "";
-            log(state.summary);
-            render();
+        function handleDirection(dir) {
+            if (queuedAction === "dash") {
+                queuedAction = null;
+                state.dash -= 1;
+                move(dir, 2);
+                return;
+            }
+            move(dir, 1);
         }
 
-        document.querySelectorAll("[data-col]").forEach((button) => button.addEventListener("click", () => drop(Number(button.dataset.col))));
-        document.getElementById("undoBtn").addEventListener("click", undo);
-        document.getElementById("resetBtn").addEventListener("click", reset);
+        document.querySelectorAll("[data-dir]").forEach((button) => button.addEventListener("click", () => handleDirection(button.dataset.dir)));
+        document.getElementById("empBtn").addEventListener("click", useEMP);
+        document.getElementById("smokeBtn").addEventListener("click", useSmoke);
+        document.getElementById("dashBtn").addEventListener("click", armDash);
+        document.getElementById("waitBtn").addEventListener("click", waitTurn);
+        document.getElementById("newRunBtn").addEventListener("click", createRun);
         window.addEventListener("keydown", (event) => {
-            if (["1","2","3","4"].includes(event.key)) drop(Number(event.key) - 1);
-            if (event.key.toLowerCase() === "z") undo();
+            const keyMap = { ArrowUp:"up", ArrowDown:"down", ArrowLeft:"left", ArrowRight:"right" };
+            if (keyMap[event.key]) {
+                event.preventDefault();
+                handleDirection(keyMap[event.key]);
+            }
+            if (event.key.toLowerCase() === "e") useEMP();
+            if (event.key.toLowerCase() === "s") useSmoke();
+            if (event.key.toLowerCase() === "d") armDash();
         });
-        reset();
+
+        createRun();
     </script>
 </body>
 </html>
