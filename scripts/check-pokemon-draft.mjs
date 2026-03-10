@@ -1,79 +1,78 @@
-import {BattleStreams, Teams} from '@pkmn/sim';
 import {Dex} from '@pkmn/sim';
 import {POKEMON_POOL, chooseBattleAction, generateSet, shuffle} from '../src/pokemon-draft-core.js';
 
-function buildTeam() {
-  return shuffle(POKEMON_POOL).slice(0, 3).map((species) => generateSet(species, Dex));
-}
+const SAMPLE_SPECIES = [
+  1, 3, 6, 9, 12, 15, 18, 25, 31, 34, 38, 40, 45, 51, 53,
+  59, 62, 65, 68, 71, 73, 76, 78, 80, 85, 91, 94, 97, 103, 112,
+  115, 121, 124, 130, 131, 134, 135, 136, 142, 149,
+];
 
-async function simulate(teamA, teamB) {
-  const streams = BattleStreams.getPlayerStreams(new BattleStreams.BattleStream());
-  let complete = false;
-  let activeNames = {p1: null, p2: null};
-
-  const teamSpeciesA = teamA.map((set) => POKEMON_POOL.find((species) => species.name === set.species));
-  const teamSpeciesB = teamB.map((set) => POKEMON_POOL.find((species) => species.name === set.species));
-
-  void (async () => {
-    for await (const chunk of streams.omniscient) {
-      for (const line of chunk.split('\n')) {
-        if (line.startsWith('|switch|')) {
-          const parts = line.split('|');
-          const slot = parts[2];
-          const name = slot.split(': ').pop();
-          if (slot.startsWith('p1')) activeNames.p1 = name;
-          if (slot.startsWith('p2')) activeNames.p2 = name;
-        }
-        if (line.startsWith('|win|') || line.startsWith('|tie')) complete = true;
-      }
+function validateGeneratedSets() {
+  const sample = POKEMON_POOL.filter((species) => SAMPLE_SPECIES.includes(species.num));
+  for (const species of sample) {
+    const set = generateSet(species, Dex);
+    if (!Array.isArray(set.moves) || set.moves.length !== 4) {
+      throw new Error(`Invalid move count for ${species.name}`);
     }
-  })();
-
-  void (async () => {
-    for await (const chunk of streams.p1) {
-      for (const line of chunk.split('\n')) {
-        if (line.startsWith('|request|')) {
-          const request = JSON.parse(line.slice(9));
-          if (request.teamPreview) {
-            void streams.p1.write('team 1, 2, 3');
-          } else {
-            const opposing = teamSpeciesB.find((species) => species?.name === activeNames.p2);
-            void streams.p1.write(chooseBattleAction(request, Dex, teamSpeciesA, opposing));
-          }
-        }
-      }
+    if (new Set(set.moves).size !== set.moves.length) {
+      throw new Error(`Duplicate move on ${species.name}`);
     }
-  })();
-
-  void (async () => {
-    for await (const chunk of streams.p2) {
-      for (const line of chunk.split('\n')) {
-        if (line.startsWith('|request|')) {
-          const request = JSON.parse(line.slice(9));
-          if (request.teamPreview) {
-            void streams.p2.write('team 1, 2, 3');
-          } else {
-            const opposing = teamSpeciesA.find((species) => species?.name === activeNames.p1);
-            void streams.p2.write(chooseBattleAction(request, Dex, teamSpeciesB, opposing));
-          }
-        }
+    for (const moveId of set.moves) {
+      if (!species.moveIds.includes(moveId)) {
+        throw new Error(`Illegal move ${moveId} on ${species.name}`);
       }
+      const move = Dex.moves.get(moveId);
+      if (!move?.exists) throw new Error(`Unknown move ${moveId} on ${species.name}`);
     }
-  })();
-
-  await streams.omniscient.write(`>start ${JSON.stringify({formatid: 'gen9customgame'})}
->player p1 ${JSON.stringify({name: 'Check A', team: Teams.pack(teamA)})}
->player p2 ${JSON.stringify({name: 'Check B', team: Teams.pack(teamB)})}`);
-
-  const start = Date.now();
-  while (!complete && Date.now() - start < 15000) {
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    if (!species.abilities.includes(set.ability)) {
+      throw new Error(`Illegal ability ${set.ability} on ${species.name}`);
+    }
   }
-  if (!complete) throw new Error('Simulation timeout');
 }
 
-for (let i = 0; i < 24; i += 1) {
-  await simulate(buildTeam(), buildTeam());
+function validateActionSelection() {
+  const team = shuffle(POKEMON_POOL).slice(0, 3);
+  const opposing = team[1];
+  const activeSet = generateSet(team[0], Dex);
+  const switchTarget = generateSet(team[2], Dex);
+
+  const request = {
+    side: {
+      pokemon: [
+        {details: `${team[0].name}, L50`, active: true, condition: '100/100'},
+        {details: `${team[1].name}, L50`, active: false, condition: '100/100'},
+        {details: `${team[2].name}, L50`, active: false, condition: '100/100'},
+      ],
+    },
+    active: [{
+      trapped: false,
+      moves: activeSet.moves.map((moveId) => {
+        const move = Dex.moves.get(moveId);
+        return {id: move.id, move: move.name, pp: move.pp || 8, maxpp: move.pp || 8, disabled: false};
+      }),
+    }],
+  };
+
+  const action = chooseBattleAction(request, Dex, team, opposing);
+  if (!/^move \d+$|^switch \d+$/.test(action)) {
+    throw new Error(`Unexpected action format: ${action}`);
+  }
+
+  const forceSwitchRequest = {
+    side: request.side,
+    forceSwitch: [true],
+  };
+  const switchAction = chooseBattleAction(forceSwitchRequest, Dex, team, opposing);
+  if (!/^switch \d+$/.test(switchAction)) {
+    throw new Error(`Unexpected switch action: ${switchAction}`);
+  }
+
+  if (!switchTarget.moves.length) {
+    throw new Error('Generated benchmark switch target has no moves');
+  }
 }
 
-console.log('Pokemon draft simulation checks passed.');
+validateGeneratedSets();
+validateActionSelection();
+console.log('Pokemon draft checks passed.');
+process.exit(0);

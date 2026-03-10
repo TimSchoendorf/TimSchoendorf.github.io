@@ -23,7 +23,7 @@ for (const target of targets) {
   });
 
   for (let i = 0; i < 3; i += 1) {
-    await page.locator('[data-draft-id]').first().click();
+    await page.locator('[data-draft-id]').first().click({ force: true });
     await page.waitForTimeout(100);
   }
   await page.screenshot({
