@@ -14,33 +14,32 @@ async function fillWizard(page) {
   await page.goto(baseUrl, {waitUntil: 'networkidle', timeout: 120000});
   await page.locator('[data-field="profile.name"]').fill('Aela Frost');
   await page.locator('[data-field="profile.player"]').fill('Tim');
-  await page.locator('[data-field="profile.concept"]').fill('Field medic mage');
-  await page.locator('[data-field="profile.origin"]').fill('Northwatch');
+  await page.locator('[data-field="profile.level"]').fill('4');
   await page.getByRole('button', {name: 'Weiter', exact: true}).click();
 
   await page.getByRole('button', {name: /^Elf/}).click();
+  await page.getByRole('button', {name: /^Dark Elf/}).click();
   await page.getByRole('button', {name: 'Weiter', exact: true}).click();
 
   await page.getByRole('button', {name: /^Mage/}).click();
-  await page.getByRole('button', {name: /^School of the Scholar/}).click();
+  await page.getByRole('button', {name: /^School of the Path/}).click();
   await page.getByRole('button', {name: 'Weiter', exact: true}).click();
 
-  await page.locator('[data-field="abilities.int"]').fill('16');
-  await page.locator('[data-field="abilities.dex"]').fill('14');
-  await page.locator('[data-field="combat.hp"]').fill('18');
+  await page.locator('[data-field="abilities.str"]').fill('15');
+  await page.locator('[data-field="abilities.dex"]').fill('15');
+  await page.locator('[data-field="abilities.con"]').fill('12');
+  await page.locator('[data-field="abilities.int"]').fill('8');
+  await page.locator('[data-field="abilities.wis"]').fill('13');
+  await page.locator('[data-field="abilities.cha"]').fill('8');
   await page.getByRole('button', {name: 'Weiter', exact: true}).click();
 
   await page.locator('[data-toggle-field="proficiencies.skills"][data-toggle-value="Arcana"]').click();
-  await page.locator('[data-toggle-field="build.feats"][data-toggle-value="Medic"]').click();
+  await page.locator('[data-toggle-field="proficiencies.skills"][data-toggle-value="Science"]').click();
   await page.getByRole('button', {name: 'Weiter', exact: true}).click();
 
-  await page.locator('[data-field="loadout.equipment"]').fill('Satchel, bedroll, field journal');
-  await page.locator('[data-field="loadout.weapons"]').fill('Sidearm, ritual knife');
-  await page.locator('[data-field="loadout.armor"]').fill('Padded coat');
   await page.getByRole('button', {name: 'Weiter', exact: true}).click();
 
   await page.locator('[data-toggle-field="magic.elemental"][data-toggle-value="Blast"]').click();
-  await page.locator('[data-toggle-field="magic.elemental"][data-toggle-value="Mage Armor"]').click();
 }
 
 async function main() {

@@ -7,11 +7,38 @@ const AUTOSAVE_KEY = 'soanw-character-studio-v1';
 const LEVEL_TO_PROF = {1: 2, 2: 2, 3: 2, 4: 2, 5: 3, 6: 3, 7: 3, 8: 3, 9: 4, 10: 4};
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 const ABILITY_LABELS = {str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma'};
+const POINT_BUY_COST = {8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9};
+const POINT_BUY_BUDGET = 27;
 const SKILLS = [
-  'Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation',
-  'Investigation', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand',
-  'Stealth', 'Survival',
+  'Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Crafting', 'Deception', 'History', 'Insight', 'Intimidation',
+  'Investigation', 'Mechanics', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Science',
+  'Sleight of Hand', 'Stealth', 'Survival', 'Driving', 'Explosives',
 ];
+const SKILL_DESCRIPTIONS = {
+  Acrobatics: 'Balance, tumbling, agile movement and keeping your footing.',
+  'Animal Handling': 'Calming, guiding and understanding beasts.',
+  Arcana: 'Arcane knowledge, lores and magical theory.',
+  Athletics: 'Climbing, swimming, grappling and feats of strength.',
+  Crafting: 'Repairing, building and practical handwork.',
+  Deception: 'Lies, disguises and misleading people.',
+  History: 'Knowledge of cultures, events and older lore.',
+  Insight: 'Reading motives, moods and social intent.',
+  Intimidation: 'Threats, pressure and forceful presence.',
+  Investigation: 'Clues, deduction and careful searching.',
+  Mechanics: 'Locks, traps, machines and technical handling.',
+  Medicine: 'Diagnosis, treatment and field care.',
+  Nature: 'Wildlife, plants, terrain and natural phenomena.',
+  Perception: 'Spotting danger, details and hidden movement.',
+  Performance: 'Music, acting, speech and staged presence.',
+  Persuasion: 'Convincing, negotiating and diplomacy.',
+  Religion: 'Gods, cults, rites and divine traditions.',
+  Science: 'Systematic knowledge, experiments and technical reasoning.',
+  'Sleight of Hand': 'Pickpocketing, concealment and manual trickery.',
+  Stealth: 'Moving unseen and unheard.',
+  Survival: 'Tracking, foraging, navigation and wilderness endurance.',
+  Driving: 'Operating ground vehicles under pressure.',
+  Explosives: 'Handling, placing and understanding explosives.',
+};
 const SPECIES = ['Dwarf', 'Elf', 'Giant', 'Human', 'Half-Humans', 'Harpy', 'Fairy', 'Kobold', 'Merfolk', 'Wildling', 'Changeling', 'Lizardfolk'];
 const ACQUIRED_SPECIES = ['None', 'Wildling', 'Changeling', 'Lizardfolk', 'Template', 'Acquired Species'];
 const CLASSES = ['Barbarian', 'Bard', 'Druid', 'Fighter', 'Mage', 'Monk', 'Paladin', 'Prophet', 'Ranger', 'Rogue', 'Sorcerer', 'Witch'];
@@ -90,6 +117,136 @@ const SPELL_SECTION_LABELS = {
   maneuvers: 'Maneuvers',
 };
 const EQUIPMENT_REFERENCES = ['Weapons', 'Firearms', 'Armor and Shields', 'Basic Gear', 'Tools', 'Consumables', 'Vehicles'];
+const SPECIES_OPTIONS = {
+  Dwarf: [
+    {name: 'Halfling', abilities: {dex: 2, cha: 1}, baseAc: 12, speed: 8, hpBase: 4, hpPer: 4, vitalityBase: 12, vitalityPer: 5, carryMultiplier: 2, autoSkills: [], feats: ['Brave', 'Alchemy Ancestry'], summary: 'Agile dwarf-kin with alchemical roots and strong morale.'},
+    {name: 'Mountain Dwarf', abilities: {con: 2, str: 1}, baseAc: 12, speed: 8, hpBase: 6, hpPer: 4, vitalityBase: 12, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Dwarven Armor Training', 'Stout'], summary: 'Heavy, resilient subterranean dwarf with armor training.'},
+  ],
+  Elf: [
+    {name: 'High Elf', abilities: {dex: 2, str: 1}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Elven Weapon Training'], summary: 'Martial elf with strong weapon tradition.'},
+    {name: 'Dark Elf', abilities: {dex: 2, int: 1}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Elven Weapon Training', 'Survive on Less'], summary: 'Scholarly desert elf focused on arcane mastery.'},
+    {name: 'Common Elf', abilities: {dex: 2, cha: 1}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Elven Martial Training', 'Common Elf Acclimation'], summary: 'Versatile mixed-lineage elf with broad acclimation.'},
+  ],
+  Giant: [
+    {name: 'Jotunn', abilities: {con: 2, wis: 1}, baseAc: 8, speed: 12, hpBase: 8, hpPer: 6, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 8, autoSkills: [], feats: ['Jotunn Fortitude', 'Freezing Cold Acclimation'], summary: 'Massive nomadic giant with endurance and cold adaptation.'},
+    {name: 'Orc', abilities: {con: 2, str: 1}, baseAc: 10, speed: 10, hpBase: 7, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Aggressive', 'Temperate Acclimation'], summary: 'Powerful giant-kin built for aggression and warfare.'},
+  ],
+  Human: [
+    {name: 'Border Lords', abilities: {cha: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: ['Performance', 'Persuasion'], feats: ['Divine Mission'], summary: 'Mission-driven southern humans with divine tradition.'},
+    {name: 'Campestrians', abilities: {dex: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: ['Acrobatics', 'Insight'], feats: ['Artisans'], summary: 'Attentive dragon-serving humans with disciplined craft culture.'},
+    {name: 'Confederates', abilities: {str: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: ['Athletics', 'Persuasion'], feats: ['Legion Training'], summary: 'Militant imperial humans focused on force and cohesion.'},
+    {name: 'Desert Folk', abilities: {int: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: ['History', 'Investigation'], feats: ['Universal Education'], summary: 'Intellectual and artistic humans of the desert coasts.'},
+    {name: 'Nords', abilities: {con: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: ['Intimidation', 'Survival'], feats: ['Northern Star'], summary: 'Tough northern humans shaped by cold and scarcity.'},
+    {name: 'Wildeborn', abilities: {wis: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: ['Survival', 'Medicine'], feats: ['Wilderness Survival'], summary: 'Forest-dwelling humans tied to wild lands and ranger culture.'},
+    {name: 'Variant Human', abilities: {str: 1, dex: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: [], feats: ['Flexible Heritage'], summary: 'Adaptable human baseline for custom builds.'},
+  ],
+  'Half-Humans': [
+    {name: 'Halfdwarf', abilities: {int: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: [], feats: ['Dwarven Resilience', 'Tremorsense'], summary: 'Human-dwarf hybrid with poison resilience and tremorsense.'},
+    {name: 'Halfelf', abilities: {dex: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: [], feats: ['Infravision', 'Resolute'], summary: 'Human-elf hybrid with elven senses and mental resilience.'},
+    {name: 'Halfgiant', abilities: {str: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: [], feats: ['Brave', 'Darkvision'], summary: 'Human-giant hybrid with notable bulk and courage.'},
+  ],
+  Harpy: [
+    {name: 'Common Harpy', abilities: {dex: 2}, baseAc: 10, speed: 6, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 2, autoSkills: [], feats: ['Light Build', 'Flight', 'Mimicry'], summary: 'Fast aerial artist with light build and vocal mimicry.'},
+    {name: 'Northern Harpy', abilities: {str: 2}, baseAc: 10, speed: 6, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Burly Build', 'Flight'], summary: 'Larger harpy built for cold climates and hauling power.'},
+  ],
+  Fairy: [
+    {name: 'Fairy', abilities: {dex: 2}, baseAc: 10, speed: 8, hpBase: 4, hpPer: 4, vitalityBase: 12, vitalityPer: 6, carryMultiplier: 2, autoSkills: [], feats: ['Fairy Flight'], summary: 'Source page currently incomplete in the share export; represented as agile small flyer.'},
+  ],
+  Kobold: [
+    {name: 'Kobold', abilities: {dex: 2}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 2, autoSkills: [], feats: ['Small Frame'], summary: 'Source page currently incomplete in the share export; represented as agile small survivor.'},
+  ],
+  Merfolk: [
+    {name: 'Merfolk', abilities: {cha: 1, wis: 1}, baseAc: 10, speed: 8, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Amphibious'], summary: 'Source page currently incomplete in the share export; represented as amphibious support species.'},
+  ],
+  Wildling: [
+    {name: 'Wildling', abilities: {wis: 1, dex: 1}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Adaptive Form'], summary: 'Source page currently incomplete in the share export; represented as adaptable wild shapeshifter.'},
+  ],
+  Changeling: [
+    {name: 'Changeling', abilities: {str: -1, dex: -1, con: -1, int: -1, wis: -1, cha: -1}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: ['Deception', 'Persuasion'], feats: ['Shapechanger', 'Duplicity'], summary: 'Shapechanging infiltrator that trades raw stats for unmatched disguise capability.'},
+  ],
+  Lizardfolk: [
+    {name: 'Lizardfolk', abilities: {str: 1, con: 1}, baseAc: 10, speed: 10, hpBase: 6, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Natural Weapons'], summary: 'Source page currently incomplete in the share export; represented as hardy reptilian survivor.'},
+  ],
+};
+const CLASS_RULES = {
+  Barbarian: {description: 'Front-line bruiser with rage, durability and heavy physical pressure.', skillChoices: 2, skillList: ['Athletics', 'Animal Handling', 'Intimidation', 'Nature', 'Perception', 'Survival', 'Acrobatics'], hpBonus: 3, vitalityBonus: 0, spellMode: 'none', maneuverMode: 'martial', loadouts: ['Raider Kit', 'Survival Kit']},
+  Bard: {description: 'Performance-focused support caster with dialogue and aria control.', skillChoices: 3, skillList: ['Acrobatics', 'Arcana', 'Deception', 'History', 'Insight', 'Investigation', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand'], hpBonus: 1, vitalityBonus: 2, spellMode: 'full', maneuverMode: 'none', loadouts: ['Performer Kit', 'Diplomat Kit']},
+  Druid: {description: 'Wild caster with nature support, survival tools and beast synergy.', skillChoices: 2, skillList: ['Animal Handling', 'Arcana', 'Insight', 'Medicine', 'Nature', 'Perception', 'Religion', 'Survival'], hpBonus: 1, vitalityBonus: 2, spellMode: 'full', maneuverMode: 'none', loadouts: ['Warden Kit', 'Forager Kit']},
+  Fighter: {description: 'Flexible martial specialist with weapons, discipline and pressure.', skillChoices: 2, skillList: ['Acrobatics', 'Animal Handling', 'Athletics', 'History', 'Insight', 'Intimidation', 'Perception', 'Survival', 'Driving'], hpBonus: 2, vitalityBonus: 0, spellMode: 'none', maneuverMode: 'martial', loadouts: ['Soldier Kit', 'Skirmisher Kit']},
+  Mage: {description: 'Dedicated elemental caster built around lore choice and spell throughput.', skillChoices: 2, skillList: ['Arcana', 'History', 'Insight', 'Investigation', 'Medicine', 'Nature', 'Religion', 'Science'], hpBonus: 0, vitalityBonus: 3, spellMode: 'full', maneuverMode: 'none', loadouts: ['Scholar Kit', 'Path Kit']},
+  Monk: {description: 'Mobile unarmored combatant with focus, reactions and maneuvers.', skillChoices: 2, skillList: ['Acrobatics', 'Athletics', 'History', 'Insight', 'Medicine', 'Perception', 'Religion', 'Stealth'], hpBonus: 1, vitalityBonus: 1, spellMode: 'none', maneuverMode: 'martial', loadouts: ['Pilgrim Kit', 'Pursuer Kit']},
+  Paladin: {description: 'Durable divine front-liner mixing weapon pressure and holy techniques.', skillChoices: 2, skillList: ['Athletics', 'History', 'Insight', 'Intimidation', 'Medicine', 'Persuasion', 'Religion'], hpBonus: 2, vitalityBonus: 1, spellMode: 'half', maneuverMode: 'martial', loadouts: ['Knight Kit', 'Zealot Kit']},
+  Prophet: {description: 'Mind-focused divine manipulator with social and psychic control.', skillChoices: 2, skillList: ['Arcana', 'History', 'Insight', 'Medicine', 'Nature', 'Perception', 'Religion', 'Survival'], hpBonus: 0, vitalityBonus: 3, spellMode: 'full', maneuverMode: 'none', loadouts: ['Cultist Kit', 'Missionary Kit']},
+  Ranger: {description: 'Self-sufficient hybrid using weapons, wilderness knowledge and wild magic.', skillChoices: 3, skillList: ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Mechanics', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Science', 'Sleight of Hand', 'Stealth', 'Survival'], hpBonus: 2, vitalityBonus: 1, spellMode: 'half', maneuverMode: 'martial', loadouts: ['Scout Kit', 'Hunter Kit']},
+  Rogue: {description: 'Precision specialist for stealth, trickery, mobility and opportunistic combat.', skillChoices: 4, skillList: ['Acrobatics', 'Athletics', 'Deception', 'Insight', 'Intimidation', 'Investigation', 'Mechanics', 'Perception', 'Performance', 'Persuasion', 'Sleight of Hand', 'Stealth', 'Survival', 'Driving'], hpBonus: 1, vitalityBonus: 0, spellMode: 'none', maneuverMode: 'martial', loadouts: ['Infiltrator Kit', 'Scavenger Kit']},
+  Sorcerer: {description: 'Innate elemental caster defined by spark and raw magical expression.', skillChoices: 2, skillList: ['Arcana', 'Deception', 'Insight', 'Intimidation', 'Persuasion', 'Religion', 'Science', 'Survival'], hpBonus: 0, vitalityBonus: 3, spellMode: 'full', maneuverMode: 'none', loadouts: ['Channeler Kit', 'Traveler Kit']},
+  Witch: {description: 'Formula and enchantment specialist with preparation and resource play.', skillChoices: 2, skillList: ['Animal Handling', 'Arcana', 'Crafting', 'History', 'Insight', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Science', 'Survival'], hpBonus: 1, vitalityBonus: 2, spellMode: 'full', maneuverMode: 'none', loadouts: ['Coven Kit', 'Alchemy Kit']},
+};
+const SUBCLASS_SUMMARIES = {
+  'Way of the Berserker': 'Explosive offense and direct brutality.',
+  'Way of the War Crier': 'Leadership, intimidation and momentum.',
+  'Mythos of Eloquence': 'Dialogue, manipulation and polished support.',
+  'Mythos of Legends': 'Story-driven buffs and heroic escalation.',
+  'Circle of the Beast': 'Beast forms and physical adaptability.',
+  'Circle of the Land': 'Terrain magic and control.',
+  'Circle of the Moon': 'More aggressive transformation focus.',
+  'Eldritch Knight': 'Martial core plus a restricted elemental spell package.',
+  Soldier: 'Line fighter with teamwork, discipline and critical pressure.',
+  'School of the Path': 'Spell-and-blade combat with bladesong-like defense.',
+  'School of the Scholar': 'Pure magical study and stronger lore focus.',
+  'Tradition of the Fist': 'Reaction play and maneuver efficiency.',
+  'Tradition of the Weapon': 'Weapon mastery over pure body techniques.',
+  'Oath of Ancients': 'Protection and old faith resilience.',
+  'Oath of Devotion': 'Reliable holy offense and discipline.',
+  'Oath of Vengeance': 'Relentless pursuit and punishment.',
+  'Glory Domain': 'Power, dominance and direct divine force.',
+  'Valor Domain': 'Courage and front-line support.',
+  'Peace Domain': 'Calming, protection and conflict reduction.',
+  'Knowledge Domain': 'Curiosity, information and mental leverage.',
+  'Duty Domain': 'Structure, positioning and disciplined teamwork.',
+  'Love Domain': 'Charm, connection and social influence.',
+  'Path of the Beastmaster': 'Animal companion and shared pressure.',
+  'Path of the Hunter': 'Favored foe, pursuit and anti-prey tools.',
+  'Path of the Witcher': 'Formula use and monster preparation.',
+  Assassin: 'Burst damage, ambushes and clean takedowns.',
+  Spellblade: 'Rogue chassis plus restricted elemental casting.',
+  Thief: 'Mobility, objects, locks and scavenging expertise.',
+  'Spark of the Plains': 'Force and raw physical expression.',
+  'Spark of the Desert': 'Light and evasive expression.',
+  'Spark of the Mountain': 'Frost and hardiness.',
+  'Spark of the Coast': 'Life and restoration.',
+  'Spark of the Underground': 'Lightning and sudden bursts.',
+  'Spark of the Forest': 'Wilder elemental resonance.',
+  'Alchemy Coven': 'Potion and poison focus.',
+  'Forge Coven': 'Enchanting and crafted magic.',
+  'Hedge Coven': 'Improvisation and field utility.',
+};
+const LOADOUT_PACKAGES = {
+  'Raider Kit': {weight: 7, armorBase: 2, items: ['greataxe', 'javelins', 'rations', 'waterskin']},
+  'Survival Kit': {weight: 6, armorBase: 1, items: ['hatchet', 'bedroll', 'rope', 'rations']},
+  'Performer Kit': {weight: 4, armorBase: 0, items: ['instrument', 'light sidearm', 'journal', 'rations']},
+  'Diplomat Kit': {weight: 4, armorBase: 0, items: ['formal wear', 'light weapon', 'seal case', 'rations']},
+  'Warden Kit': {weight: 5, armorBase: 1, items: ['staff', 'herbs', 'cloak', 'rations']},
+  'Forager Kit': {weight: 5, armorBase: 1, items: ['spear', 'foraging tools', 'bedroll', 'rations']},
+  'Soldier Kit': {weight: 8, armorBase: 4, items: ['rifle', 'sidearm', 'combat armor', 'ammo']},
+  'Skirmisher Kit': {weight: 6, armorBase: 2, items: ['carbine', 'knife', 'light armor', 'ammo']},
+  'Scholar Kit': {weight: 3, armorBase: 0, items: ['spellbook', 'focus', 'satchel', 'rations']},
+  'Path Kit': {weight: 5, armorBase: 1, items: ['focus blade', 'light armor', 'journal', 'rations']},
+  'Pilgrim Kit': {weight: 4, armorBase: 0, items: ['staff', 'bandages', 'bedroll', 'rations']},
+  'Pursuer Kit': {weight: 5, armorBase: 1, items: ['polearm', 'travel pack', 'rope', 'rations']},
+  'Knight Kit': {weight: 8, armorBase: 4, items: ['shield', 'sword', 'mail', 'rations']},
+  'Zealot Kit': {weight: 6, armorBase: 2, items: ['mace', 'holy symbol', 'chain shirt', 'rations']},
+  'Cultist Kit': {weight: 3, armorBase: 0, items: ['focus', 'robe', 'satchel', 'rations']},
+  'Missionary Kit': {weight: 4, armorBase: 1, items: ['holy symbol', 'staff', 'journal', 'rations']},
+  'Scout Kit': {weight: 5, armorBase: 2, items: ['bow', 'knife', 'cloak', 'rations']},
+  'Hunter Kit': {weight: 6, armorBase: 2, items: ['rifle', 'trap tools', 'bedroll', 'rations']},
+  'Infiltrator Kit': {weight: 4, armorBase: 1, items: ['pistol', 'lock tools', 'cloak', 'rations']},
+  'Scavenger Kit': {weight: 5, armorBase: 1, items: ['crowbar', 'knife', 'sack', 'rations']},
+  'Channeler Kit': {weight: 3, armorBase: 0, items: ['focus', 'journal', 'travel cloak', 'rations']},
+  'Traveler Kit': {weight: 4, armorBase: 0, items: ['staff', 'pouch', 'bedroll', 'rations']},
+  'Coven Kit': {weight: 4, armorBase: 1, items: ['formula book', 'tools', 'cloak', 'rations']},
+  'Alchemy Kit': {weight: 5, armorBase: 1, items: ['alchemy set', 'knife', 'satchel', 'rations']},
+};
 
 const state = {
   tab: 'builder',
@@ -104,12 +261,12 @@ const state = {
 
 function defaultCharacter() {
   return {
-    profile: {name: '', player: '', pronouns: '', concept: '', level: 1, origin: '', species: 'Human', acquiredSpecies: 'None', className: 'Fighter', subclass: 'Soldier'},
-    abilities: {str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10},
-    combat: {hp: 12, vitality: 10, armorClass: 12, speed: 9, initiativeBonus: 0, exhaustion: 0, encumbrance: 0, carryLimit: 0},
-    proficiencies: {skills: [], tools: '', languages: '', savingThrows: '', armor: '', weapons: ''},
-    build: {feats: [], traits: '', classFeatures: '', speciesNotes: '', background: ''},
-    loadout: {equipment: '', weapons: '', armor: '', consumables: '', vehicle: '', money: ''},
+    profile: {name: '', player: '', level: 1, species: 'Human', speciesSubtype: 'Border Lords', acquiredSpecies: 'None', className: 'Fighter', subclass: 'Soldier'},
+    abilities: {str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8},
+    combat: {hp: 0, vitality: 0, armorClass: 0, speed: 0, encumbrance: 0, carryLimit: 0},
+    proficiencies: {skills: []},
+    build: {feats: []},
+    loadout: {package: 'Soldier Kit', extras: [], extraWeight: 0, notes: '', money: ''},
     magic: {arias: [], divine: [], elemental: [], wild: [], witchcraft: [], maneuvers: [], notes: ''},
     notes: {appearance: '', backstory: '', allies: '', goals: '', misc: ''},
   };
@@ -118,7 +275,20 @@ function defaultCharacter() {
 function loadState() {
   try {
     const parsed = JSON.parse(window.localStorage.getItem(AUTOSAVE_KEY) || 'null');
-    return parsed ? {...defaultCharacter(), ...parsed} : defaultCharacter();
+    const defaults = defaultCharacter();
+    if (!parsed) return defaults;
+    return {
+      ...defaults,
+      ...parsed,
+      profile: {...defaults.profile, ...(parsed.profile || {})},
+      abilities: {...defaults.abilities, ...(parsed.abilities || {})},
+      combat: {...defaults.combat, ...(parsed.combat || {})},
+      proficiencies: {...defaults.proficiencies, ...(parsed.proficiencies || {})},
+      build: {...defaults.build, ...(parsed.build || {})},
+      loadout: {...defaults.loadout, ...(parsed.loadout || {})},
+      magic: {...defaults.magic, ...(parsed.magic || {})},
+      notes: {...defaults.notes, ...(parsed.notes || {})},
+    };
   } catch {
     return defaultCharacter();
   }
@@ -192,7 +362,9 @@ function sanitizePageText(page) {
   const titleIndex = Math.max(0, lines.indexOf(page.title));
   const sliced = lines.slice(titleIndex >= 0 ? titleIndex : 0);
   const cutIndex = sliced.findIndex((line) => line === 'Math Assistant' || line === 'Add page');
-  const cleaned = (cutIndex >= 0 ? sliced.slice(0, cutIndex) : sliced).join('\n');
+  const duplicateTitleIndex = sliced.findIndex((line, index) => index > 8 && line === page.title);
+  const cleanedLines = duplicateTitleIndex > 0 ? sliced.slice(0, duplicateTitleIndex) : (cutIndex >= 0 ? sliced.slice(0, cutIndex) : sliced);
+  const cleaned = cleanedLines.join('\n');
   const marker = cleaned.slice(0, Math.floor(cleaned.length / 2));
   const repeatedAt = cleaned.indexOf(marker, Math.floor(cleaned.length / 3));
   const result = repeatedAt > 120 ? cleaned.slice(0, repeatedAt).trim() : cleaned.trim();
@@ -239,6 +411,143 @@ function availableSpellGroups() {
   const groups = buildSpellGroups();
   const access = magicAccess();
   return Object.fromEntries(Object.entries(groups).map(([key, value]) => [key, access[key] ? value : []]));
+}
+
+function selectedSpeciesOptions() {
+  return SPECIES_OPTIONS[state.character.profile.species] || [];
+}
+
+function selectedSpeciesData() {
+  return selectedSpeciesOptions().find((item) => item.name === state.character.profile.speciesSubtype) || selectedSpeciesOptions()[0] || null;
+}
+
+function selectedClassRule() {
+  return CLASS_RULES[state.character.profile.className] || CLASS_RULES.Fighter;
+}
+
+function speciesAbilityBonus(key) {
+  return Number(selectedSpeciesData()?.abilities?.[key] || 0);
+}
+
+function finalAbilityScore(key) {
+  return Number(state.character.abilities[key] || 8) + speciesAbilityBonus(key);
+}
+
+function pointBuySpent() {
+  return ABILITIES.reduce((sum, key) => sum + (POINT_BUY_COST[Number(state.character.abilities[key] || 8)] || 0), 0);
+}
+
+function pointBuyRemaining() {
+  return POINT_BUY_BUDGET - pointBuySpent();
+}
+
+function classSkillLimit() {
+  return selectedClassRule().skillChoices || 0;
+}
+
+function automaticSkills() {
+  return selectedSpeciesData()?.autoSkills || [];
+}
+
+function selectedSkillSet() {
+  return [...new Set([...automaticSkills(), ...state.character.proficiencies.skills])];
+}
+
+function featSlots() {
+  return (state.character.profile.level >= 8 ? 2 : 0) + (state.character.profile.level >= 4 ? 1 : 0);
+}
+
+function selectedPackage() {
+  return LOADOUT_PACKAGES[state.character.loadout.package] || null;
+}
+
+function carryLimit() {
+  return finalAbilityScore('str') * Number(selectedSpeciesData()?.carryMultiplier || 4);
+}
+
+function encumbrance() {
+  const base = selectedPackage()?.weight || 0;
+  return base + Number(state.character.loadout.extraWeight || 0);
+}
+
+function armorClass() {
+  const species = selectedSpeciesData();
+  const packageArmor = selectedPackage()?.armorBase || 0;
+  const dex = mod(finalAbilityScore('dex'));
+  let ac = Number(species?.baseAc || 10) + dex + packageArmor;
+  if (state.character.profile.className === 'Monk') ac += Math.max(0, mod(finalAbilityScore('wis')));
+  if (state.character.profile.className === 'Barbarian') ac += Math.max(0, mod(finalAbilityScore('con')));
+  return ac;
+}
+
+function hitPoints() {
+  const species = selectedSpeciesData();
+  const rule = selectedClassRule();
+  const con = mod(finalAbilityScore('con'));
+  const level = Number(state.character.profile.level || 1);
+  return Math.max(1, Number(species?.hpBase || 5) + con + Math.max(0, level - 1) * (Number(species?.hpPer || 5) + con + Number(rule.hpBonus || 0)));
+}
+
+function vitalityPoints() {
+  const species = selectedSpeciesData();
+  const rule = selectedClassRule();
+  const level = Number(state.character.profile.level || 1);
+  return Math.max(1, Number(species?.vitalityBase || 10) + Math.max(0, level - 1) * (Number(species?.vitalityPer || 5) + Number(rule.vitalityBonus || 0)));
+}
+
+function speedMeters() {
+  return Number(selectedSpeciesData()?.speed || 10);
+}
+
+function spellTierForTitle(sectionName, title) {
+  const section = handbookSection(sectionName);
+  let currentTier = '';
+  for (const page of section?.pages || []) {
+    if (/^(Novice|Apprentice|Adept|Expert|Master|Beginner|Veteran|Elite)/.test(page.title)) currentTier = page.title.split(' ')[0].replace(/[^A-Za-z]/g, '');
+    if (page.title === title) return currentTier || 'Novice';
+  }
+  return 'Novice';
+}
+
+function spellTierUnlocked(mode, tier) {
+  const level = Number(state.character.profile.level || 1);
+  const full = {Novice: 1, Apprentice: 3, Adept: 5, Expert: 7, Master: 9};
+  const half = {Novice: 3, Apprentice: 7, Adept: 9, Expert: 99, Master: 99};
+  const martial = {Beginner: 1, Veteran: 5, Elite: 9};
+  const table = mode === 'full' ? full : mode === 'half' ? half : martial;
+  return level >= (table[tier] || 99);
+}
+
+function spellPickLimit(groupKey) {
+  const level = Number(state.character.profile.level || 1);
+  const classRule = selectedClassRule();
+  if (groupKey === 'maneuvers') return 2 + Math.floor((level - 1) / 2);
+  if (classRule.spellMode === 'none') return 0;
+  if (classRule.spellMode === 'half') return Math.max(0, 1 + Math.floor(level / 2));
+  return level + 1;
+}
+
+function availableSpellChoices(groupKey) {
+  const section = SPELL_SECTION_LABELS[groupKey];
+  const classRule = selectedClassRule();
+  const mode = groupKey === 'maneuvers' ? 'martial' : classRule.spellMode;
+  return (availableSpellGroups()[groupKey] || []).filter((title) => spellTierUnlocked(mode, spellTierForTitle(section, title)));
+}
+
+function speciesFeatureText() {
+  const species = selectedSpeciesData();
+  if (!species) return [];
+  return [
+    ...Object.entries(species.abilities || {}).filter(([, value]) => value).map(([key, value]) => `${ABILITY_LABELS[key]} ${value >= 0 ? '+' : ''}${value}`),
+    `Base AC ${species.baseAc}`,
+    `Speed ${species.speed}m`,
+    `Carry x${species.carryMultiplier}`,
+    ...(species.feats || []),
+  ];
+}
+
+function activeMagicOptional() {
+  return Object.keys(SPELL_SECTION_LABELS).every((key) => !availableSpellChoices(key).length);
 }
 
 function classHandbookEntry() {
@@ -300,29 +609,28 @@ function openCompendiumButton(section, title, label = 'Im Compendium oeffnen') {
 
 function stepIsComplete(stepId) {
   const c = state.character;
-  if (stepId === 'profile') return Boolean(c.profile.name.trim() && c.profile.concept.trim());
-  if (stepId === 'species') return Boolean(c.profile.species);
+  if (stepId === 'profile') return Boolean(c.profile.name.trim());
+  if (stepId === 'species') return Boolean(c.profile.species && c.profile.speciesSubtype);
   if (stepId === 'class') return Boolean(c.profile.className && c.profile.subclass);
-  if (stepId === 'abilities') return ABILITIES.every((key) => Number(c.abilities[key]) > 0);
-  if (stepId === 'proficiencies') return c.proficiencies.skills.length > 0;
-  if (stepId === 'loadout') return Boolean(c.loadout.equipment.trim() || c.loadout.weapons.trim() || c.loadout.armor.trim());
+  if (stepId === 'abilities') return pointBuyRemaining() === 0;
+  if (stepId === 'proficiencies') return c.proficiencies.skills.length === classSkillLimit() && c.build.feats.length <= featSlots();
+  if (stepId === 'loadout') return Boolean(c.loadout.package);
   if (stepId === 'magic') {
-    const lists = Object.values(c.magic).filter(Array.isArray);
-    const required = Object.values(magicAccess()).some(Boolean);
-    return !required || lists.some((items) => items.length > 0);
+    const required = Object.entries(magicAccess()).some(([, enabled]) => enabled);
+    return !required || selectedMagicEntries().length > 0 || activeMagicOptional();
   }
   if (stepId === 'notes') return true;
   return false;
 }
 
 function stepDescription(stepId) {
-  if (stepId === 'profile') return 'Lege Konzept, Name und Stufe fest.';
-  if (stepId === 'species') return 'Species und erworbene Form bestimmen spaetere Optionen.';
+  if (stepId === 'profile') return 'Lege Name, Spieler und Stufe fest.';
+  if (stepId === 'species') return 'Species und Unterspezies bestimmen Werte und Traits.';
   if (stepId === 'class') return 'Klasse schaltet Subclass und Magiepfade frei.';
-  if (stepId === 'abilities') return 'Hier entstehen die abgeleiteten Kampfwerte.';
-  if (stepId === 'proficiencies') return 'Skills und Feats werden eingegrenzt.';
-  if (stepId === 'loadout') return 'Ausruestung nach den Handbook-Kapiteln.';
-  if (stepId === 'magic') return 'Nur freigeschaltete Listen und Maneuvers.';
+  if (stepId === 'abilities') return 'Point Buy mit automatischen Kampfwerten.';
+  if (stepId === 'proficiencies') return 'Klassen-Skills und Feats mit Limits.';
+  if (stepId === 'loadout') return 'Paketbasiertes Equipment statt Freitext.';
+  if (stepId === 'magic') return 'Nur freigeschaltete und levelgerechte Listen.';
   return 'Zum Schluss Notizen und Kampagnenhaken.';
 }
 
@@ -358,61 +666,58 @@ function panel(title, body, subtitle = '') {
 }
 
 function renderBuilder() {
-  const spells = availableSpellGroups();
   const c = state.character;
   const step = state.builderStep;
-  const speciesDetails = Object.fromEntries(SPECIES.map((item) => [item, handbookPreview(handbookPage('Species', item), '').split('\n').slice(0, 2).join(' ')]));
-  const subclassDetails = Object.fromEntries((SUBCLASS_MAP[c.profile.className] || []).map((item) => [item, handbookPreview(handbookPage('Classes', item), '').split('\n').slice(0, 2).join(' ')]));
-  const featDetails = Object.fromEntries(availableFeats().map((item) => [item, handbookPreview(handbookPage('Customization', item), '').split('\n').slice(0, 2).join(' ')]));
-  const activeMagicLists = Object.entries(spells).filter(([, items]) => items.length);
+  const species = selectedSpeciesData();
+  const classRule = selectedClassRule();
+  const speciesPage = handbookPage('Species', c.profile.speciesSubtype) || speciesHandbookEntry();
   const selectedMagic = selectedMagicEntries();
   let body = '';
+
   if (step === 'profile') {
-    body = `
-      ${panel('Step 1 - Identity', `
-        <div class="split-shell">
-          <div class="form-grid two">
-            <label><span>Name</span><input data-field="profile.name" value="${c.profile.name}"></label>
-            <label><span>Player</span><input data-field="profile.player" value="${c.profile.player}"></label>
-            <label><span>Pronouns</span><input data-field="profile.pronouns" value="${c.profile.pronouns}"></label>
-            <label><span>Concept</span><input data-field="profile.concept" value="${c.profile.concept}"></label>
-            <label><span>Origin</span><input data-field="profile.origin" value="${c.profile.origin}"></label>
-            <label><span>Level</span><input type="number" min="1" max="10" data-field="profile.level" value="${c.profile.level}"></label>
-          </div>
-          <div class="guide-card">
-            <div class="eyebrow">Build Order</div>
-            <h3>Von grob zu spezifisch</h3>
-            <p class="muted">Zuerst Konzept und Stufe, dann Species, dann Klasse. Spaetere Schritte verengen sich automatisch, sobald diese Kernentscheidungen gesetzt sind.</p>
-            <div class="summary-row">
-              <div class="summary-chip">Pflicht: Name</div>
-              <div class="summary-chip">Pflicht: Concept</div>
-              <div class="summary-chip">Level 1-10</div>
-            </div>
-          </div>
+    body = panel('Step 1 - Profile', `
+      <div class="split-shell">
+        <div class="form-grid three">
+          <label><span>Name</span><input data-field="profile.name" value="${c.profile.name}"></label>
+          <label><span>Player</span><input data-field="profile.player" value="${c.profile.player}"></label>
+          <label><span>Level</span><input type="number" min="1" max="10" data-field="profile.level" value="${c.profile.level}"></label>
         </div>
-      `, 'Der Wizard ist jetzt bewusst sequenziell. Ohne solides Konzept werden spaetere Entscheidungen unklar.')}
-      ${referencePanel('Character Creation', handbookPage('Introduction', 'Creating a Character'), 'Introduction')}
-    `;
+        <div class="guide-card">
+          <div class="eyebrow">Builder Scope</div>
+          <p class="muted">Dieses Profil beschraenkt sich jetzt bewusst auf die Daten, die fuer den restlichen Wizard wirklich regelrelevant sind.</p>
+        </div>
+      </div>
+    `, 'Nur Kernangaben, keine irrelevanten Freitextfelder mehr.');
   } else if (step === 'species') {
     body = `
       ${panel('Step 2 - Species', `
         <div class="stack">
           <div>
-            <div class="eyebrow">Core Species</div>
-            ${renderChoiceCards(SPECIES, c.profile.species, 'profile.species', speciesDetails)}
+            <div class="eyebrow">Species</div>
+            ${renderChoiceCards(SPECIES, c.profile.species, 'profile.species')}
           </div>
-          <div class="form-grid two">
-            <label><span>Acquired Species</span><select data-field="profile.acquiredSpecies">${ACQUIRED_SPECIES.map((item) => `<option ${item === c.profile.acquiredSpecies ? 'selected' : ''}>${item}</option>`).join('')}</select></label>
-            <label><span>Species Notes</span><textarea data-field="build.speciesNotes">${c.build.speciesNotes}</textarea></label>
+          <div>
+            <div class="eyebrow">Subspecies / Lineage</div>
+            ${renderChoiceCards(selectedSpeciesOptions().map((item) => item.name), c.profile.speciesSubtype, 'profile.speciesSubtype', Object.fromEntries(selectedSpeciesOptions().map((item) => [item.name, item.summary])))}
           </div>
           <div class="summary-row">
-            ${(SPECIES_FEATS[c.profile.species] || []).map((feat) => `<div class="summary-chip">${feat}</div>`).join('') || '<div class="summary-chip">Keine species-exklusiven Feats gefunden</div>'}
+            ${speciesFeatureText().map((feature) => `<div class="summary-chip">${feature}</div>`).join('')}
           </div>
         </div>
-      `, 'Species beeinflusst verfuegbare Species-Feats und die Referenztexte im weiteren Build.')}
+      `, 'Species zeigt jetzt klar Linie, Boni und Kernfaehigkeiten an.')}
       <div class="split-shell">
-        ${referencePanel('Chosen Species', speciesHandbookEntry(), 'Species')}
-        ${acquiredSpeciesEntry() ? referencePanel('Acquired Species', acquiredSpeciesEntry(), 'Species') : panel('Acquired Species', '<div class="empty-state compact">Keine zusaetzliche Species gewaehlt.</div>')}
+        ${panel('Species Benefits', `
+          <div class="guide-card">
+            <h3>${species?.name || 'Species'}</h3>
+            <p class="muted">${species?.summary || ''}</p>
+            <div class="stat-table">
+              <div><span>HP Formula</span><strong>${species?.hpBase || 0} + CON, dann ${species?.hpPer || 0} + CON/Lv</strong></div>
+              <div><span>Vitality Formula</span><strong>${species?.vitalityBase || 0}, dann ${species?.vitalityPer || 0}/Lv</strong></div>
+              <div><span>Carry Limit</span><strong>STR x ${species?.carryMultiplier || 4}</strong></div>
+            </div>
+          </div>
+        `)}
+        ${referencePanel('Species Reference', speciesPage, 'Species')}
       </div>
     `;
   } else if (step === 'class') {
@@ -421,171 +726,145 @@ function renderBuilder() {
         <div class="stack">
           <div>
             <div class="eyebrow">Class</div>
-            ${renderChoiceCards(CLASSES, c.profile.className, 'profile.className')}
+            ${renderChoiceCards(CLASSES, c.profile.className, 'profile.className', Object.fromEntries(CLASSES.map((name) => [name, CLASS_RULES[name].description])))}
           </div>
           <div>
             <div class="eyebrow">Subclass</div>
-            ${renderChoiceCards(SUBCLASS_MAP[c.profile.className] || [], c.profile.subclass, 'profile.subclass', subclassDetails, 'Diese Klasse hat aktuell keine Subclass-Liste.')}
-          </div>
-          <div class="form-grid two">
-            <label><span>Class Features</span><textarea data-field="build.classFeatures">${c.build.classFeatures}</textarea></label>
-            <label><span>Traits / Background</span><textarea data-field="build.traits">${c.build.traits}</textarea></label>
+            ${renderChoiceCards(SUBCLASS_MAP[c.profile.className] || [], c.profile.subclass, 'profile.subclass', Object.fromEntries((SUBCLASS_MAP[c.profile.className] || []).map((name) => [name, SUBCLASS_SUMMARIES[name] || 'Subclass summary not yet mapped.'])))}
           </div>
           <div class="summary-row">
-            ${Object.entries(magicAccess()).filter(([, enabled]) => enabled).map(([key]) => `<div class="summary-chip">${SPELL_SECTION_LABELS[key] || key}</div>`).join('') || '<div class="summary-chip">Keine Spell- oder Maneuver-Liste freigeschaltet</div>'}
+            <div class="summary-chip">${classRule.skillChoices} class skills</div>
+            <div class="summary-chip">HP bonus +${classRule.hpBonus}/Lv</div>
+            <div class="summary-chip">Vitality bonus +${classRule.vitalityBonus}/Lv</div>
+            ${Object.entries(magicAccess()).filter(([, enabled]) => enabled).map(([key]) => `<div class="summary-chip">${SPELL_SECTION_LABELS[key]}</div>`).join('')}
           </div>
         </div>
-      `, 'Klasse schaltet die Subclass-Liste um und bestimmt, welche Magie- oder Maneuver-Kapitel spaeter auswählbar sind.')}
+      `, 'Klasse und Subclass zeigen jetzt direkt ihren Nutzen und ihre Unterschiede.')}
       <div class="split-shell">
-        ${referencePanel('Chosen Class', classHandbookEntry(), 'Classes')}
-        ${referencePanel('Chosen Subclass', subclassHandbookEntry(), 'Classes')}
+        ${panel('Class Snapshot', `<div class="guide-card"><h3>${c.profile.className}</h3><p class="muted">${classRule.description}</p></div>`)}
+        ${panel('Subclass Snapshot', `<div class="guide-card"><h3>${c.profile.subclass}</h3><p class="muted">${SUBCLASS_SUMMARIES[c.profile.subclass] || 'Unterseiten-Text ist in der Share-Ansicht nicht vollstaendig verfuegbar; daher wird hier eine kuratierte Kurzbeschreibung gezeigt.'}</p></div>`)}
       </div>
     `;
   } else if (step === 'abilities') {
     body = `
-      ${panel('Step 4 - Abilities', `
+      ${panel('Step 4 - Ability Scores', `
         <div class="split-shell">
           <div class="stack">
             <div class="ability-grid">
               ${ABILITIES.map((key) => `
                 <label class="ability-card">
                   <span>${ABILITY_LABELS[key]}</span>
-                  <input type="number" min="1" max="30" data-field="abilities.${key}" value="${c.abilities[key]}">
-                  <strong>${mod(c.abilities[key]) >= 0 ? '+' : ''}${mod(c.abilities[key])}</strong>
+                  <input type="number" min="8" max="15" data-field="abilities.${key}" value="${c.abilities[key]}">
+                  <small>Base ${c.abilities[key]} / Species ${speciesAbilityBonus(key) >= 0 ? '+' : ''}${speciesAbilityBonus(key)}</small>
+                  <strong>${finalAbilityScore(key)}</strong>
                 </label>
               `).join('')}
             </div>
-            <div class="form-grid three">
-              <label><span>Hit Points</span><input type="number" data-field="combat.hp" value="${c.combat.hp}"></label>
-              <label><span>Vitality</span><input type="number" data-field="combat.vitality" value="${c.combat.vitality}"></label>
-              <label><span>Armor Class</span><input type="number" data-field="combat.armorClass" value="${c.combat.armorClass}"></label>
-              <label><span>Speed (m)</span><input type="number" data-field="combat.speed" value="${c.combat.speed}"></label>
-              <label><span>Initiative Bonus</span><input type="number" data-field="combat.initiativeBonus" value="${c.combat.initiativeBonus}"></label>
-              <label><span>Exhaustion</span><input type="number" min="0" max="6" data-field="combat.exhaustion" value="${c.combat.exhaustion}"></label>
+            <div class="summary-row">
+              <div class="summary-chip">Point Buy ${pointBuySpent()}/${POINT_BUY_BUDGET}</div>
+              <div class="summary-chip">${pointBuyRemaining()} points left</div>
+              <div class="summary-chip">Range 8-15 before species</div>
             </div>
           </div>
           <div class="guide-card">
-            <div class="eyebrow">Derived Values</div>
+            <div class="eyebrow">Derived Stats</div>
             <div class="stat-table">
-              <div><span>Proficiency</span><strong>+${proficiencyBonus()}</strong></div>
-              <div><span>Initiative</span><strong>${mod(c.abilities.dex) + Number(c.combat.initiativeBonus || 0) >= 0 ? '+' : ''}${mod(c.abilities.dex) + Number(c.combat.initiativeBonus || 0)}</strong></div>
-              <div><span>Passive Perception</span><strong>${10 + mod(c.abilities.wis)}</strong></div>
-              <div><span>Carry Limit</span><strong>${c.combat.carryLimit || '-'}</strong></div>
+              <div><span>HP</span><strong>${hitPoints()}</strong></div>
+              <div><span>Vitality</span><strong>${vitalityPoints()}</strong></div>
+              <div><span>Armor Class</span><strong>${armorClass()}</strong></div>
+              <div><span>Speed</span><strong>${speedMeters()}m</strong></div>
+              <div><span>Carry Limit</span><strong>${carryLimit()}</strong></div>
             </div>
-            <p class="muted">Diese Werte stehen absichtlich seitlich, damit die Zahleneingabe nicht mit den abgeleiteten Kampfwerten kollidiert.</p>
           </div>
         </div>
-      `, 'Ab hier werden die Kernwerte gesetzt, auf denen Kampf und Skills aufbauen.')}
-      ${referencePanel('Playing the Game', handbookPage('Playing the Game', 'Creating Ability Scores') || handbookPage('Playing the Game', 'Ability Checks') || handbookPage('Introduction', 'Creating a Character'), 'Playing the Game')}
+      `, 'Point Buy mit klarer Begrenzung, Kampfwerte nur automatisch.')}
+      ${referencePanel('Ability Rules', handbookPage('Playing the Game', 'Chapter 6: Using Ability Scores-'), 'Playing the Game')}
     `;
   } else if (step === 'proficiencies') {
+    const featPreview = c.build.feats[0] ? handbookPage('Customization', c.build.feats[0]) : null;
     body = `
       ${panel('Step 5 - Skills & Feats', `
         <div class="split-shell">
           <div class="stack">
-            <label><span>Skill Proficiencies</span>${renderOptionList(SKILLS, c.proficiencies.skills, 'proficiencies.skills')}</label>
-            <label><span>Available Feats</span>${renderOptionList(availableFeats(), c.build.feats, 'build.feats')}</label>
-            <div class="form-grid two">
-              <label><span>Saving Throws</span><textarea data-field="proficiencies.savingThrows">${c.proficiencies.savingThrows}</textarea></label>
-              <label><span>Armor</span><textarea data-field="proficiencies.armor">${c.proficiencies.armor}</textarea></label>
-              <label><span>Weapons</span><textarea data-field="proficiencies.weapons">${c.proficiencies.weapons}</textarea></label>
-              <label><span>Tools</span><textarea data-field="proficiencies.tools">${c.proficiencies.tools}</textarea></label>
-              <label><span>Languages</span><textarea data-field="proficiencies.languages">${c.proficiencies.languages}</textarea></label>
-              <label><span>Background / Hook</span><textarea data-field="build.background">${c.build.background}</textarea></label>
-            </div>
+            <label><span>Automatic Species Skills</span><div class="summary-row">${automaticSkills().map((skill) => `<div class="summary-chip">${skill}</div>`).join('') || '<div class="summary-chip">None</div>'}</div></label>
+            <label><span>Class Skills (${c.proficiencies.skills.length}/${classSkillLimit()})</span>${renderOptionList(classRule.skillList || [], c.proficiencies.skills, 'proficiencies.skills')}</label>
+            <label><span>Feats (${c.build.feats.length}/${featSlots()})</span>${renderOptionList(availableFeats(), c.build.feats, 'build.feats')}</label>
           </div>
           <div class="guide-card">
-            <div class="eyebrow">Filtered Feats</div>
-            <p class="muted">Species-exklusive Feats werden sofort nach der Species-Auswahl gefiltert. Caster- und Martial-Feats werden auf Basis deiner aktuellen Klassenfreischaltungen ausgeduennt.</p>
+            <div class="eyebrow">Selected Detail</div>
             <div class="mini-list">
-              ${availableFeats().slice(0, 8).map((feat) => `<button class="mini-link" data-open-section="Customization" data-open-page="${feat}">${feat}</button>`).join('')}
+              ${selectedSkillSet().map((skill) => `<div class="summary-chip">${skill}: ${SKILL_DESCRIPTIONS[skill] || 'No description mapped yet.'}</div>`).join('')}
             </div>
           </div>
         </div>
-      `, 'Diese Auswahl ist jetzt nicht mehr statisch: Species und Klasse schraenken die Liste real ein.')}
+      `, 'Skill- und Feat-Auswahl ist jetzt begrenzt, erklaert und systemnah.')}
       <div class="split-shell">
-        ${referencePanel('Feat Rules', handbookPage('Customization', 'Feats'), 'Customization')}
-        ${c.build.feats[0] ? referencePanel(`Selected Feat: ${c.build.feats[0]}`, handbookPage('Customization', c.build.feats[0]), 'Customization') : panel('Feat Reference', '<div class="empty-state compact">Waehle mindestens ein Feat, um hier direkt dessen Regeltext zu sehen.</div>')}
+        ${panel('Skills Reference', `<div class="guide-card">${selectedSkillSet().slice(0, 6).map((skill) => `<div class="summary-chip">${skill}: ${SKILL_DESCRIPTIONS[skill] || 'No description mapped yet.'}</div>`).join('') || '<div class="empty-state compact">Waehle Skills, um ihre Funktion zu sehen.</div>'}</div>`)}
+        ${featPreview ? referencePanel(`Feat Reference: ${c.build.feats[0]}`, featPreview, 'Customization') : referencePanel('Feat Rules', handbookPage('Customization', 'Feats'), 'Customization')}
       </div>
     `;
   } else if (step === 'loadout') {
+    const packageOptions = classRule.loadouts || [];
     body = `
       ${panel('Step 6 - Loadout', `
-        <div class="split-shell">
-          <div class="stack">
-            <div class="form-grid three">
-              <label><span>Encumbrance</span><input type="number" data-field="combat.encumbrance" value="${c.combat.encumbrance}"></label>
-              <label><span>Carry Limit</span><input type="number" data-field="combat.carryLimit" value="${c.combat.carryLimit}"></label>
-              <label><span>Money / Wealth</span><input data-field="loadout.money" value="${c.loadout.money}"></label>
-            </div>
-            <div class="form-grid two">
-              <label><span>Equipment</span><textarea data-field="loadout.equipment">${c.loadout.equipment}</textarea></label>
-              <label><span>Weapons</span><textarea data-field="loadout.weapons">${c.loadout.weapons}</textarea></label>
-              <label><span>Armor</span><textarea data-field="loadout.armor">${c.loadout.armor}</textarea></label>
-              <label><span>Consumables</span><textarea data-field="loadout.consumables">${c.loadout.consumables}</textarea></label>
-              <label class="full"><span>Vehicle</span><textarea data-field="loadout.vehicle">${c.loadout.vehicle}</textarea></label>
-            </div>
+        <div class="stack">
+          <div>
+            <div class="eyebrow">Loadout Package</div>
+            ${renderChoiceCards(packageOptions, c.loadout.package, 'loadout.package', Object.fromEntries(packageOptions.map((name) => [name, `${LOADOUT_PACKAGES[name].items.join(', ')} | ${LOADOUT_PACKAGES[name].weight} enc.`])))}
           </div>
-          <div class="guide-card">
-            <div class="eyebrow">Equipment Chapters</div>
-            <div class="mini-list">
-              ${EQUIPMENT_REFERENCES.map((title) => `<button class="mini-link" data-open-section="Equipment" data-open-page="${title}">${title}</button>`).join('')}
+          <div class="split-shell">
+            <div class="guide-card">
+              <h3>${c.loadout.package}</h3>
+              <p class="muted">${selectedPackage()?.items.join(', ') || ''}</p>
+              <div class="stat-table">
+                <div><span>Encumbrance</span><strong>${encumbrance()}</strong></div>
+                <div><span>Carry Limit</span><strong>${carryLimit()}</strong></div>
+                <div><span>Armor from Loadout</span><strong>+${selectedPackage()?.armorBase || 0}</strong></div>
+              </div>
             </div>
-            <p class="muted">Die Ausruestung wird absichtlich als freie Zusammenstellung erfasst, aber die relevanten Kapitel sind direkt nebenan verlinkt.</p>
+            <label><span>Additions / Notes</span><textarea data-field="loadout.notes">${c.loadout.notes}</textarea></label>
           </div>
         </div>
-      `, 'Loadout und Gewichtsangaben greifen jetzt unmittelbar auf die Equipment-Unterseiten zurueck.')}
+      `, 'Loadout kommt jetzt aus Listen statt aus freiem Tippen.')}
       <div class="split-shell">
         ${referencePanel('Weapons', handbookPage('Equipment', 'Weapons'), 'Equipment')}
-        ${referencePanel('Armor and Shields', handbookPage('Equipment', 'Armor and Shields'), 'Equipment')}
+        ${referencePanel('Gear Rules', handbookPage('Equipment', 'Basic Gear') || handbookPage('Equipment', 'Tools'), 'Equipment')}
       </div>
     `;
   } else if (step === 'magic') {
+    const activeMagicLists = Object.entries(SPELL_SECTION_LABELS)
+      .map(([key, label]) => ({key, label, items: availableSpellChoices(key)}))
+      .filter(({items}) => items.length);
     body = `
       ${panel('Step 7 - Magic & Maneuvers', `
         ${activeMagicLists.length ? `
           <div class="stack">
-            ${activeMagicLists.map(([key, items]) => `
+            ${activeMagicLists.map(({key, label, items}) => `
               <label>
-                <span>${SPELL_SECTION_LABELS[key]}</span>
-                <div class="spell-picker">${renderOptionList(items, c.magic[key], `magic.${key}`)}</div>
+                <span>${label} (${state.character.magic[key].length}/${spellPickLimit(key)})</span>
+                <div class="spell-picker">${renderOptionList(items, state.character.magic[key], `magic.${key}`)}</div>
               </label>
             `).join('')}
-            <label><span>Magic Notes</span><textarea data-field="magic.notes">${c.magic.notes}</textarea></label>
           </div>
-        ` : '<div class="empty-state compact">Diese Klasse/Subclass schaltet aktuell keine Zauberliste oder Maneuver-Liste frei.</div>'}
-      `, 'Die Auswahl stammt jetzt direkt aus den Unterseiten der jeweiligen Magie-Kapitel und wird pro Klasse/Subclass freigeschaltet.')}
+        ` : '<div class="empty-state compact">Diese Klasse/Subclass hat auf diesem Level keine waehlbare Magie oder Maneuvers.</div>'}
+      `, 'Spells und Maneuvers sind jetzt nach Tier und Level gefiltert und haben Pick-Limits.')}
       <div class="split-shell">
-        ${referencePanel('Spellcasting Rules', handbookPage('Magic', 'Casting Spells') || handbookPage('Magic', 'Chapter 10: The Rules of Spellcasting'), 'Magic')}
-        ${selectedMagic[0] ? referencePanel(`${selectedMagic[0].label}: ${selectedMagic[0].title}`, handbookPage(selectedMagic[0].label, selectedMagic[0].title), selectedMagic[0].label) : panel('Selected Magic', '<div class="empty-state compact">Waehle einen Spell oder Maneuver, um hier direkt seine Unterseite zu sehen.</div>')}
+        ${referencePanel('Spellcasting Rules', handbookPage('Magic', 'Chapter 10: The Rules of Spellcasting') || handbookPage('Magic', 'Casting Spells'), 'Magic')}
+        ${selectedMagic[0] ? referencePanel(`${selectedMagic[0].label}: ${selectedMagic[0].title}`, handbookPage(selectedMagic[0].label, selectedMagic[0].title), selectedMagic[0].label) : panel('Selected Spell', '<div class="empty-state compact">Waehle einen Spell oder Maneuver, um Effekt und Beschreibung zu sehen.</div>')}
       </div>
     `;
   } else if (step === 'notes') {
-    body = `
-      ${panel('Step 8 - Finish', `
-        <div class="split-shell">
-          <div class="form-grid two">
-            <label><span>Appearance</span><textarea data-field="notes.appearance">${c.notes.appearance}</textarea></label>
-            <label><span>Backstory</span><textarea data-field="notes.backstory">${c.notes.backstory}</textarea></label>
-            <label><span>Allies & Companions</span><textarea data-field="notes.allies">${c.notes.allies}</textarea></label>
-            <label><span>Goals</span><textarea data-field="notes.goals">${c.notes.goals}</textarea></label>
-            <label class="full"><span>Misc</span><textarea data-field="notes.misc">${c.notes.misc}</textarea></label>
-          </div>
-          <div class="guide-card">
-            <div class="eyebrow">Ready To Export</div>
-            <div class="stat-table">
-              <div><span>Species</span><strong>${c.profile.species}</strong></div>
-              <div><span>Class</span><strong>${c.profile.className}</strong></div>
-              <div><span>Subclass</span><strong>${c.profile.subclass || '-'}</strong></div>
-              <div><span>Selected Magic</span><strong>${selectedMagic.length}</strong></div>
-            </div>
-            <p class="muted">Hier endet der Wizard. Export und Reimport arbeiten mit dem kompletten Character State.</p>
-          </div>
-        </div>
-      `, 'Jetzt bleiben nur noch frei formulierbare Details und der Export.')}
-      ${referencePanel('Campaign Notes Reference', handbookPage('Introduction', 'Introduction') || handbookPage('Playing the Game', 'Social Interaction'), 'Introduction')}
-    `;
+    body = panel('Step 8 - Finish', `
+      <div class="form-grid two">
+        <label><span>Appearance</span><textarea data-field="notes.appearance">${c.notes.appearance}</textarea></label>
+        <label><span>Backstory</span><textarea data-field="notes.backstory">${c.notes.backstory}</textarea></label>
+        <label><span>Allies & Companions</span><textarea data-field="notes.allies">${c.notes.allies}</textarea></label>
+        <label><span>Goals</span><textarea data-field="notes.goals">${c.notes.goals}</textarea></label>
+        <label class="full"><span>Misc</span><textarea data-field="notes.misc">${c.notes.misc}</textarea></label>
+      </div>
+    `, 'Nur freie Abschlussnotizen bleiben hier uebrig.');
   }
+
   return `
     <section class="wizard-strip">
       ${BUILDER_STEPS.map((item, index) => `<button class="wizard-step ${item.id === step ? 'active' : ''} ${stepIsComplete(item.id) ? 'done' : ''}" data-step="${item.id}"><span>${index + 1}</span><div><strong>${item.label}</strong><small>${stepDescription(item.id)}</small></div></button>`).join('')}
@@ -613,7 +892,8 @@ function renderBuilder() {
 function renderCompendium() {
   const page = selectedPageRecord();
   const sections = handbookSections();
-  const currentPages = state.handbook.find((entry) => entry.section === state.selectedSection)?.pages || [];
+  const currentPages = (state.handbook.find((entry) => entry.section === state.selectedSection)?.pages || [])
+    .filter((item) => sanitizePageText(item));
   return `
     <section class="panel compendium-shell">
       <div class="compendium-sidebar">
@@ -664,7 +944,7 @@ function renderExport() {
 
 function renderSummary() {
   const c = state.character;
-  const skillCount = c.proficiencies.skills.length;
+  const skillCount = selectedSkillSet().length;
   const spellCount = c.magic.arias.length + c.magic.divine.length + c.magic.elemental.length + c.magic.wild.length + c.magic.witchcraft.length;
   const maneuverCount = c.magic.maneuvers.length;
   return `
@@ -672,17 +952,17 @@ function renderSummary() {
       <a class="back-link" href="../index.html#games">Zurueck zur Startseite</a>
       <div class="eyebrow">SoaNW Character Studio</div>
       <h1>${c.profile.name || 'Unbenannter Charakter'}</h1>
-      <p class="muted">${c.profile.species} ${c.profile.className} ${c.profile.subclass ? `- ${c.profile.subclass}` : ''}</p>
+      <p class="muted">${c.profile.speciesSubtype || c.profile.species} ${c.profile.className} ${c.profile.subclass ? `- ${c.profile.subclass}` : ''}</p>
       <div class="summary-stats">
         <div><span>Level</span><strong>${c.profile.level}</strong></div>
         <div><span>Proficiency</span><strong>+${proficiencyBonus()}</strong></div>
-        <div><span>HP</span><strong>${c.combat.hp}</strong></div>
-        <div><span>Vitality</span><strong>${c.combat.vitality}</strong></div>
-        <div><span>AC</span><strong>${c.combat.armorClass}</strong></div>
-        <div><span>Speed</span><strong>${c.combat.speed}m</strong></div>
+        <div><span>HP</span><strong>${hitPoints()}</strong></div>
+        <div><span>Vitality</span><strong>${vitalityPoints()}</strong></div>
+        <div><span>AC</span><strong>${armorClass()}</strong></div>
+        <div><span>Speed</span><strong>${speedMeters()}m</strong></div>
       </div>
       <div class="ability-summary">
-        ${ABILITIES.map((key) => `<div><span>${ABILITY_LABELS[key].slice(0,3).toUpperCase()}</span><strong>${c.abilities[key]}</strong><small>${mod(c.abilities[key]) >= 0 ? '+' : ''}${mod(c.abilities[key])}</small></div>`).join('')}
+        ${ABILITIES.map((key) => `<div><span>${ABILITY_LABELS[key].slice(0,3).toUpperCase()}</span><strong>${finalAbilityScore(key)}</strong><small>${mod(finalAbilityScore(key)) >= 0 ? '+' : ''}${mod(finalAbilityScore(key))}</small></div>`).join('')}
       </div>
       <div class="summary-foot">
         <span>${skillCount} Skills</span>
@@ -753,13 +1033,39 @@ function toggleArrayValue(path, value) {
   let target = state.character;
   while (keys.length > 1) target = target[keys.shift()];
   const arr = target[keys[0]];
-  target[keys[0]] = arr.includes(value) ? arr.filter((item) => item !== value) : [...arr, value];
+  if (arr.includes(value)) {
+    target[keys[0]] = arr.filter((item) => item !== value);
+    return;
+  }
+  if (path === 'proficiencies.skills' && arr.length >= classSkillLimit()) return;
+  if (path === 'build.feats' && arr.length >= featSlots()) return;
+  if (path.startsWith('magic.')) {
+    const groupKey = path.split('.')[1];
+    if (!availableSpellChoices(groupKey).includes(value) || arr.length >= spellPickLimit(groupKey)) return;
+  }
+  target[keys[0]] = [...arr, value];
 }
 
 function applyFieldChange(path, value) {
+  if (path.startsWith('abilities.')) {
+    const spentWithout = pointBuySpent() - (POINT_BUY_COST[Number(state.character.abilities[path.split('.')[1]] || 8)] || 0);
+    const nextCost = POINT_BUY_COST[Number(value)] || 0;
+    if (Number(value) < 8 || Number(value) > 15 || spentWithout + nextCost > POINT_BUY_BUDGET) return;
+  }
   setByPath(path, value);
+  if (path === 'profile.species') {
+    state.character.profile.speciesSubtype = (SPECIES_OPTIONS[value] || [])[0]?.name || '';
+    state.character.proficiencies.skills = [];
+    state.character.build.feats = state.character.build.feats.filter((feat) => availableFeats().includes(feat));
+  }
+  if (path === 'profile.speciesSubtype') {
+    state.character.proficiencies.skills = state.character.proficiencies.skills.filter((skill) => !automaticSkills().includes(skill));
+    state.character.build.feats = state.character.build.feats.filter((feat) => availableFeats().includes(feat));
+  }
   if (path === 'profile.className') {
     state.character.profile.subclass = SUBCLASS_MAP[value]?.[0] || '';
+    state.character.proficiencies.skills = [];
+    state.character.loadout.package = CLASS_RULES[value]?.loadouts?.[0] || '';
     const access = {...(CLASS_MAGIC_ACCESS[value] || {}), ...(SUBCLASS_MAGIC_ACCESS[state.character.profile.subclass] || {})};
     for (const key of ['arias', 'divine', 'elemental', 'wild', 'witchcraft', 'maneuvers']) {
       if (!access[key]) state.character.magic[key] = [];
@@ -771,10 +1077,7 @@ function applyFieldChange(path, value) {
       if (!access[key]) state.character.magic[key] = [];
     }
   }
-  if (path === 'profile.species') {
-    const allowedFeats = new Set(availableFeats());
-    state.character.build.feats = state.character.build.feats.filter((feat) => allowedFeats.has(feat));
-  }
+  if (path === 'profile.level') state.character.build.feats = state.character.build.feats.slice(0, featSlots());
 }
 
 function handleFieldInput(event) {
@@ -784,6 +1087,9 @@ function handleFieldInput(event) {
   const value = input.type === 'number' ? Number(input.value) : input.value;
   applyFieldChange(path, value);
   saveState();
+  if (path.startsWith('abilities.') || path === 'profile.level') {
+    renderPreservingFocus();
+  }
 }
 
 function handleFieldCommit(event) {
@@ -811,16 +1117,16 @@ async function exportPdf() {
   const lines = [
     ['Name', c.profile.name || '-'],
     ['Player', c.profile.player || '-'],
-    ['Species', `${c.profile.species} ${c.profile.acquiredSpecies !== 'None' ? `/ ${c.profile.acquiredSpecies}` : ''}`.trim()],
+    ['Species', `${c.profile.species} / ${c.profile.speciesSubtype || '-'}`],
     ['Class', `${c.profile.className} / ${c.profile.subclass || '-'}`],
     ['Level', String(c.profile.level)],
-    ['HP / Vitality / AC', `${c.combat.hp} / ${c.combat.vitality} / ${c.combat.armorClass}`],
-    ['Speed / Prof', `${c.combat.speed}m / +${proficiencyBonus()}`],
-    ['Skills', c.proficiencies.skills.join(', ') || '-'],
+    ['HP / Vitality / AC', `${hitPoints()} / ${vitalityPoints()} / ${armorClass()}`],
+    ['Speed / Prof', `${speedMeters()}m / +${proficiencyBonus()}`],
+    ['Skills', selectedSkillSet().join(', ') || '-'],
     ['Feats', c.build.feats.join(', ') || '-'],
     ['Spells', [...c.magic.arias, ...c.magic.divine, ...c.magic.elemental, ...c.magic.wild, ...c.magic.witchcraft].join(', ') || '-'],
     ['Maneuvers', c.magic.maneuvers.join(', ') || '-'],
-    ['Equipment', c.loadout.equipment || '-'],
+    ['Equipment', `${c.loadout.package || '-'}${c.loadout.notes ? ` | ${c.loadout.notes}` : ''}`],
     ['Notes', [c.notes.appearance, c.notes.backstory, c.notes.goals].filter(Boolean).join(' | ') || '-'],
   ];
   doc.setFillColor(18, 16, 28);
