@@ -1,0 +1,30 @@
+{
+  "name": "website",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "script.js",
+  "scripts": {
+    "build:pokemon-draft:data": "node scripts/generate-pokemon-draft-data.mjs",
+    "build:pokemon-draft:bundle": "esbuild src/pokemon-draft-app.js --bundle --platform=browser --format=iife --minify --outfile=games/pokemon-draft.js",
+    "build:pokemon-draft": "npm run build:pokemon-draft:data && npm run build:pokemon-draft:bundle",
+    "check:pokemon-draft": "node scripts/check-pokemon-draft.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/TimSchoendorf/TimSchoendorf.github.io.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/TimSchoendorf/TimSchoendorf.github.io/issues"
+  },
+  "homepage": "https://github.com/TimSchoendorf/TimSchoendorf.github.io#readme",
+  "description": "",
+  "dependencies": {
+    "@pkmn/data": "^0.10.7",
+    "@pkmn/dex": "^0.10.7",
+    "@pkmn/sim": "^0.10.7",
+    "esbuild": "^0.27.3"
+  }
+}
