@@ -715,6 +715,32 @@ function render() {
   bindEvents();
 }
 
+function snapshotFocusedField() {
+  const active = document.activeElement;
+  if (!active?.dataset?.field) return null;
+  return {
+    path: active.dataset.field,
+    start: typeof active.selectionStart === 'number' ? active.selectionStart : null,
+    end: typeof active.selectionEnd === 'number' ? active.selectionEnd : null,
+  };
+}
+
+function restoreFocusedField(snapshot) {
+  if (!snapshot?.path) return;
+  const target = document.querySelector(`[data-field="${snapshot.path}"]`);
+  if (!target) return;
+  target.focus();
+  if (typeof target.setSelectionRange === 'function' && snapshot.start !== null && snapshot.end !== null) {
+    target.setSelectionRange(snapshot.start, snapshot.end);
+  }
+}
+
+function renderPreservingFocus() {
+  const snapshot = snapshotFocusedField();
+  render();
+  restoreFocusedField(snapshot);
+}
+
 function setByPath(path, value) {
   const keys = path.split('.');
   let target = state.character;
@@ -762,7 +788,9 @@ function handleFieldInput(event) {
 
 function handleFieldCommit(event) {
   handleFieldInput(event);
-  render();
+  if (event.target.tagName === 'SELECT') {
+    renderPreservingFocus();
+  }
 }
 
 function refreshSearch() {
