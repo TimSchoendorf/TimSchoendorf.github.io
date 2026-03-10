@@ -1,6 +1,7 @@
 import {BattleStreams, Dex, Teams} from '@pkmn/sim';
 import {
   drawPack,
+  draftSynergy,
   generateSet,
   pickOpponentDraft,
   previewMoves,
@@ -28,6 +29,7 @@ const state = {
   logs: [],
   message: 'Waehle dein erstes Draft-Pokemon.',
   lastMove: {p1: '', p2: ''},
+  flash: {p1: '', p2: ''},
 };
 
 function typeGradient(types) {
@@ -82,10 +84,12 @@ function render() {
         <div class="panel team-panel">
           <div class="panel-title">Dein Draft</div>
           ${renderRoster(state.playerDraft, true)}
+          ${state.playerDraft.length ? renderSynergy(state.playerDraft) : ''}
         </div>
         <div class="panel team-panel">
           <div class="panel-title">Gegnerischer Draft</div>
           ${renderRoster(state.opponentDraft, false)}
+          ${state.opponentDraft.length ? renderSynergy(state.opponentDraft) : ''}
         </div>
       </aside>
       <main class="column center">
@@ -137,6 +141,17 @@ function renderRoster(team, revealDetails) {
       ${revealDetails ? `<div class="tiny">BST ${totalStats(species.baseStats)}</div>` : '<div class="tiny">Draft-Pick bestaetigt</div>'}
     </div>
   `).join('');
+}
+
+function renderSynergy(team) {
+  const synergy = draftSynergy(team);
+  return `
+    <div class="synergy-box">
+      <div><span class="tiny">Type Coverage</span><strong>${synergy.typeCoverage}</strong></div>
+      <div><span class="tiny">Role Coverage</span><strong>${synergy.roleCoverage}</strong></div>
+      <div><span class="tiny">Synergy</span><strong>${synergy.score}</strong></div>
+    </div>
+  `;
 }
 
 function renderDraftStage() {
@@ -278,7 +293,7 @@ function renderCombatant(mon, label) {
     return `<div class="combat-card"><div class="tiny">${label}</div><strong>Wartet auf Aktivierung</strong></div>`;
   }
   return `
-    <div class="combat-card" style="background:${typeGradient(mon.types || ['Normal'])}">
+    <div class="combat-card ${state.flash[label === 'Du' ? 'p1' : 'p2']}" style="background:${typeGradient(mon.types || ['Normal'])}">
       <div class="tiny">${label}</div>
       <strong>${mon.name}</strong>
       <div>${mon.condition || 'unbekannt'}</div>
@@ -392,6 +407,7 @@ function parseBattleLine(line) {
         target.condition = condition;
         target.active = true;
         state.active.p2 = target;
+        flashSide('p2', 'flash-switch');
       }
     } else if (slot.startsWith('p1')) {
       const target = state.playerTeamState.find((mon) => mon.name === name);
@@ -400,6 +416,7 @@ function parseBattleLine(line) {
         target.condition = condition;
         target.active = true;
         state.active.p1 = target;
+        flashSide('p1', 'flash-switch');
       }
     }
   } else if (type === '-damage' || type === '-heal') {
@@ -409,14 +426,21 @@ function parseBattleLine(line) {
     const roster = targetSlot.startsWith('p2') ? state.opponentTeamState : state.playerTeamState;
     const target = roster.find((mon) => mon.name === targetName);
     if (target) target.condition = condition;
-    if (targetSlot.startsWith('p2') && target) state.active.p2 = target;
-    if (targetSlot.startsWith('p1') && target) state.active.p1 = target;
+    if (targetSlot.startsWith('p2') && target) {
+      state.active.p2 = target;
+      flashSide('p2', type === '-damage' ? 'flash-hit' : 'flash-heal');
+    }
+    if (targetSlot.startsWith('p1') && target) {
+      state.active.p1 = target;
+      flashSide('p1', type === '-damage' ? 'flash-hit' : 'flash-heal');
+    }
   } else if (type === 'faint') {
     const targetSlot = parts[2];
     const targetName = targetSlot.split(': ').pop();
     const roster = targetSlot.startsWith('p2') ? state.opponentTeamState : state.playerTeamState;
     const target = roster.find((mon) => mon.name === targetName);
     if (target) target.condition = '0 fnt';
+    flashSide(targetSlot.startsWith('p2') ? 'p2' : 'p1', 'flash-faint');
     logLine(`${targetName} faellt aus.`);
   } else if (type === 'win') {
     state.message = `${parts[2]} gewinnt den Draft Clash.`;
@@ -492,6 +516,15 @@ function submitChoice(choice) {
   state.battle.streams.p1.write(choice);
 }
 
+function flashSide(side, cls) {
+  state.flash[side] = cls;
+  render();
+  setTimeout(() => {
+    state.flash[side] = '';
+    render();
+  }, 380);
+}
+
 function movePreviewMon(index, direction) {
   const swapIndex = index + direction;
   if (swapIndex < 0 || swapIndex >= state.playerPreview.length) return;
@@ -516,6 +549,7 @@ function resetDraft() {
   state.logs = [];
   state.message = 'Waehle dein erstes Draft-Pokemon.';
   state.lastMove = {p1: '', p2: ''};
+  state.flash = {p1: '', p2: ''};
   nextPack();
 }
 
@@ -528,10 +562,10 @@ function injectStyles() {
     .back-link{text-decoration:none;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.06)}.eyebrow{text-transform:uppercase;letter-spacing:.16em;color:#ffb184;font-size:.8rem}.title-block h1{margin:8px 0 10px;font-size:clamp(2.1rem,4.4vw,4rem);line-height:.92}.title-block p{color:var(--muted)}
     .panel,.hero-panel,.draft-card,.roster-card,.metric,.combat-card,.choice-btn,.empty-card,.draft-message,.summary,.log-line{border:1px solid var(--line);border-radius:22px;background:rgba(255,255,255,.04)}
     .panel{padding:16px}.panel-title{font-size:.84rem;text-transform:uppercase;letter-spacing:.16em;color:#ffbe9c;margin-bottom:12px}.metric-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}.metric{padding:12px}.metric span{display:block;color:var(--muted);font-size:.78rem}.metric strong{font-size:1.15rem}
-    .team-panel{display:grid;gap:10px}.roster-card{padding:12px;color:#1a1012}.roster-head{display:flex;justify-content:space-between;gap:10px}.types,.move-preview{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.types span,.move-preview span{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.38);font-size:.8rem}.tiny{font-size:.82rem;opacity:.9}
+    .team-panel{display:grid;gap:10px}.roster-card{padding:12px;color:#1a1012}.roster-head{display:flex;justify-content:space-between;gap:10px}.types,.move-preview{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}.types span,.move-preview span{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.38);font-size:.8rem}.tiny{font-size:.82rem;opacity:.9}.synergy-box{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 0 0}.synergy-box div{padding:10px;border-radius:16px;background:rgba(255,255,255,.04)}
     .hero-panel{padding:18px;display:flex;justify-content:space-between;gap:16px;align-items:end}.draft-message{padding:14px 16px;min-height:64px;max-width:360px}.draft-grid,.preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.preview-grid{grid-template-columns:repeat(2,1fr)}.preview-panel{padding:18px;border-radius:24px;background:rgba(255,255,255,.03);border:1px solid var(--line)}.preview-list{display:grid;gap:12px}.preview-card{padding:14px;color:#1a1012;border-radius:20px;display:flex;justify-content:space-between;gap:10px;align-items:center}.preview-controls{display:flex;gap:8px}.mini-btn{padding:8px 10px;border:none;border-radius:12px;background:rgba(255,255,255,.55);font:inherit;cursor:pointer}
     .draft-card{padding:18px;text-align:left;color:#1a1012;cursor:pointer;transition:transform .16s ease}.draft-card:hover{transform:translateY(-3px)}.draft-num{font-size:.82rem;opacity:.7}.draft-card h3{margin:8px 0 10px;font-size:1.6rem}.stat-strip{display:flex;flex-wrap:wrap;gap:10px;font-size:.84rem;margin-top:10px}
-    .battle-field{display:grid;gap:14px;padding:18px;border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.06))}.combatant.top{justify-self:end}.combatant.bottom{justify-self:start}.combat-card{min-width:260px;padding:18px;color:#1a1012}.hp-bar{height:12px;background:rgba(0,0,0,.14);border-radius:999px;overflow:hidden;margin-top:10px}.hp-bar.slim{height:9px}.hp-fill{height:100%;background:linear-gradient(90deg,#5be18c,#d6ffb8)}.status-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:10px}.status-pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.45);font-size:.8rem}
+    .battle-field{display:grid;gap:14px;padding:18px;border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.06))}.combatant.top{justify-self:end}.combatant.bottom{justify-self:start}.combat-card{min-width:260px;padding:18px;color:#1a1012;transition:transform .18s ease, filter .18s ease, opacity .18s ease}.combat-card.flash-hit{transform:translateX(8px);filter:brightness(.92)}.combat-card.flash-heal{transform:scale(1.03);filter:saturate(1.2)}.combat-card.flash-switch{transform:translateY(-6px)}.combat-card.flash-faint{opacity:.45;filter:grayscale(1)}.hp-bar{height:12px;background:rgba(0,0,0,.14);border-radius:999px;overflow:hidden;margin-top:10px}.hp-bar.slim{height:9px}.hp-fill{height:100%;background:linear-gradient(90deg,#5be18c,#d6ffb8)}.status-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:10px}.status-pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.45);font-size:.8rem}
     .arena-center{min-height:220px;border-radius:26px;background:radial-gradient(circle at center,rgba(255,204,103,.18),transparent 36%),rgba(255,255,255,.03);display:grid;place-items:center;position:relative;overflow:hidden}.arena-ring{width:220px;height:220px;border-radius:50%;border:2px solid rgba(255,255,255,.12)}.turn-banner{position:absolute;top:18px;left:18px;right:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}.turn-banner div{padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.06)}.arena-log{position:absolute;inset:auto 18px 18px 18px;display:grid;gap:6px;font-size:.88rem;color:#ffe6da}
     .bench-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.bench-panel{padding:16px;border-radius:24px;background:rgba(255,255,255,.03);border:1px solid var(--line)}.bench-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.bench-card{padding:12px;color:#1a1012;border-radius:18px}
     .action-panel{display:grid;gap:14px;padding:18px;border-radius:26px;background:rgba(255,255,255,.03)}.choice-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.choice-btn,.secondary-btn{padding:14px 16px;border:none;font:inherit;font-weight:700;cursor:pointer}.choice-btn{display:flex;justify-content:space-between;gap:10px;color:#190f13;background:linear-gradient(180deg,#ffe6bf,#ffc27f)}.choice-btn.switch{background:linear-gradient(180deg,#ffd0e9,#ff9bd4)}.secondary-btn{border-radius:18px;background:linear-gradient(180deg,#ffe8bc,#ffd064);color:#190f13}

@@ -8,6 +8,9 @@ const STRONG_STATUS = new Set([
   'leechseed', 'nastyplot', 'protect', 'recover', 'rest', 'roost', 'sleeppowder', 'spikes',
   'stealthrock', 'substitute', 'swordsdance', 'thunderwave', 'toxic', 'willowisp', 'wish',
 ]);
+const HAZARDS = new Set(['spikes', 'stealthrock']);
+const RECOVERY = new Set(['recover', 'rest', 'roost', 'softboiled', 'synthesis', 'moonlight', 'wish']);
+const SETUP = new Set(['agility', 'amnesia', 'bulkup', 'calmmind', 'dragondance', 'nastyplot', 'swordsdance']);
 
 export function rand(max) {
   return Math.floor(Math.random() * max);
@@ -37,15 +40,27 @@ export function drawPack(excludedIds = new Set(), count = 3) {
 
 export function pickOpponentDraft(pack, existingTeam = []) {
   const teamTypes = new Set(existingTeam.flatMap((member) => member.types));
+  const teamRoles = existingTeam.map(estimateRole);
   return pack
     .map((species) => {
       const freshTypes = species.types.filter((type) => !teamTypes.has(type)).length;
       const speedBias = species.baseStats.spe >= 95 ? 18 : 0;
       const bulkBias = species.baseStats.hp + species.baseStats.def + species.baseStats.spd >= 240 ? 14 : 0;
-      const score = totalStats(species.baseStats) + freshTypes * 18 + (species.nfe ? -12 : 12) + speedBias + bulkBias;
+      const role = estimateRole(species);
+      const rolePenalty = teamRoles.includes(role) ? -14 : 12;
+      const score = totalStats(species.baseStats) + freshTypes * 18 + (species.nfe ? -12 : 12) + speedBias + bulkBias + rolePenalty;
       return {species, score};
     })
     .sort((a, b) => b.score - a.score)[0].species;
+}
+
+export function estimateRole(species) {
+  const {hp, atk, def, spa, spd, spe} = species.baseStats;
+  if (spe >= 110) return 'speedster';
+  if (atk >= 105 && atk > spa + 10) return 'physical';
+  if (spa >= 105 && spa > atk + 10) return 'special';
+  if (hp + def + spd >= 255) return 'tank';
+  return 'balanced';
 }
 
 function moveScore(move, species) {
@@ -100,6 +115,27 @@ function chooseMoves(species, dex) {
   return chosen.slice(0, 4);
 }
 
+function refineMovesByRole(species, moves) {
+  const role = estimateRole(species);
+  const status = moves.filter((move) => move.category === 'Status');
+  const damaging = moves.filter((move) => move.category !== 'Status');
+
+  if (role === 'tank') {
+    const recovery = status.find((move) => RECOVERY.has(move.id));
+    if (recovery && !moves.includes(recovery)) moves[3] = recovery;
+  }
+  if ((role === 'physical' || role === 'special') && status.find((move) => SETUP.has(move.id))) {
+    return moves;
+  }
+  if (role === 'balanced') {
+    const hazard = status.find((move) => HAZARDS.has(move.id));
+    if (hazard && damaging.length >= 2) {
+      return [damaging[0], damaging[1], hazard, status.find((move) => RECOVERY.has(move.id)) || moves[3]].filter(Boolean).slice(0, 4);
+    }
+  }
+  return moves;
+}
+
 function chooseAbility(species, chosenMoves) {
   if (species.abilities.length === 1) return species.abilities[0];
   const setupMove = chosenMoves.find((move) => ['swordsdance', 'dragondance', 'calmmind', 'nastyplot', 'bulkup'].includes(move.id));
@@ -137,7 +173,7 @@ function chooseEVs(species) {
 }
 
 export function generateSet(species, dex) {
-  const moves = chooseMoves(species, dex);
+  const moves = refineMovesByRole(species, chooseMoves(species, dex));
   return {
     name: species.name,
     species: species.name,
@@ -159,8 +195,8 @@ export function chooseTeamOrder(team) {
   return team
     .slice()
     .sort((a, b) => {
-      const aScore = a.baseStats.spe + a.baseStats.hp / 2 + (a.types.length === 2 ? 8 : 0);
-      const bScore = b.baseStats.spe + b.baseStats.hp / 2 + (b.types.length === 2 ? 8 : 0);
+      const aScore = a.baseStats.spe + a.baseStats.hp / 2 + (estimateRole(a) === 'tank' ? -16 : 0) + (a.types.length === 2 ? 8 : 0);
+      const bScore = b.baseStats.spe + b.baseStats.hp / 2 + (estimateRole(b) === 'tank' ? -16 : 0) + (b.types.length === 2 ? 8 : 0);
       return bScore - aScore;
     });
 }
@@ -208,5 +244,35 @@ export function chooseBattleAction(request, dex, ownTeam, opposingActive) {
       score: evaluateMoveChoice(move, dex, attackerTypes, defenderTypes),
     }))
     .sort((a, b) => b.score - a.score);
-  return `move ${rankedMoves[0].index + 1}`;
+
+  const bestMove = rankedMoves[0];
+  const bench = request.side.pokemon
+    .map((mon, index) => ({mon, index}))
+    .filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt'));
+
+  if (bench.length && opposingActive && bestMove.score < 70) {
+    const bestSwitch = bench
+      .map(({mon, index}) => {
+        const species = ownTeam.find((candidate) => candidate.name === mon.details.split(',')[0]);
+        const pivotScore = species ? species.types.reduce((sum, type) => {
+          const mod = dex.types.getEffectiveness(type, defenderTypes);
+          return sum + (mod < 0 ? 16 : mod === 0 ? 8 : 0);
+        }, totalStats(species.baseStats) / 20) : 0;
+        return {index, score: pivotScore};
+      })
+      .sort((a, b) => b.score - a.score)[0];
+    if (bestSwitch && bestSwitch.score > 20) return `switch ${bestSwitch.index + 1}`;
+  }
+
+  return `move ${bestMove.index + 1}`;
+}
+
+export function draftSynergy(team) {
+  const types = new Set(team.flatMap((species) => species.types));
+  const roles = new Set(team.map(estimateRole));
+  return {
+    typeCoverage: types.size,
+    roleCoverage: roles.size,
+    score: types.size * 8 + roles.size * 12,
+  };
 }
