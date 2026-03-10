@@ -72,7 +72,7 @@ async function simulate(teamA, teamB) {
   if (!complete) throw new Error('Simulation timeout');
 }
 
-for (let i = 0; i < 12; i += 1) {
+for (let i = 0; i < 24; i += 1) {
   await simulate(buildTeam(), buildTeam());
 }
 
