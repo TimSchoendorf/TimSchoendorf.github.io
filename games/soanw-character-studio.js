@@ -758,6 +758,10 @@ function handleFieldInput(event) {
   const value = input.type === 'number' ? Number(input.value) : input.value;
   applyFieldChange(path, value);
   saveState();
+}
+
+function handleFieldCommit(event) {
+  handleFieldInput(event);
   render();
 }
 
@@ -852,7 +856,7 @@ async function importPdf(file) {
 function bindEvents() {
   document.querySelectorAll('[data-field]').forEach((input) => {
     input.addEventListener('input', handleFieldInput);
-    input.addEventListener('change', handleFieldInput);
+    input.addEventListener('change', handleFieldCommit);
   });
   document.querySelectorAll('[data-toggle-field]').forEach((button) => {
     button.addEventListener('click', () => {
