@@ -33,6 +33,18 @@ export function totalStats(stats) {
   return stats.hp + stats.atk + stats.def + stats.spa + stats.spd + stats.spe;
 }
 
+function typeMultiplier(attackingType, defendingTypes = [], dex) {
+  if (!attackingType || !defendingTypes.length || !dex) return 1;
+  return defendingTypes.reduce((multiplier, defendingType) => {
+    const typeData = dex.types.get(defendingType);
+    const effect = typeData?.damageTaken?.[attackingType];
+    if (effect === 1) return multiplier * 2;
+    if (effect === 2) return multiplier * 0.5;
+    if (effect === 3) return multiplier * 0;
+    return multiplier;
+  }, 1);
+}
+
 export function drawPack(excludedIds = new Set(), count = 3) {
   const available = shuffle(POKEMON_POOL.filter((species) => !excludedIds.has(species.id)));
   return available.slice(0, count);
@@ -41,8 +53,8 @@ export function drawPack(excludedIds = new Set(), count = 3) {
 export function matchupScore(species, opposingTeam = [], dex) {
   if (!opposingTeam.length || !dex) return 0;
   return opposingTeam.reduce((sum, foe) => {
-    const offensive = species.types.reduce((score, type) => score + dex.types.getEffectiveness(type, foe.types), 0);
-    const defensive = foe.types.reduce((score, type) => score + species.types.reduce((acc, ownType) => acc + dex.types.getEffectiveness(type, [ownType]), 0), 0);
+    const offensive = species.types.reduce((score, type) => score + typeMultiplier(type, foe.types, dex), 0);
+    const defensive = foe.types.reduce((score, type) => score + typeMultiplier(type, species.types, dex), 0);
     return sum + offensive * 8 - defensive * 4;
   }, 0);
 }
@@ -234,8 +246,7 @@ export function evaluateMoveChoice(moveSlot, dex, attackerTypes, defenderTypes =
   }
 
   const stab = attackerTypes.includes(move.type) ? 1.3 : 1;
-  const typeMod = defenderTypes.length ? dex.types.getEffectiveness(move.type, defenderTypes) : 0;
-  const effectiveness = typeMod >= 2 ? 2 : typeMod === 1 ? 1.5 : typeMod === 0 ? 1 : 0.65;
+  const effectiveness = defenderTypes.length ? typeMultiplier(move.type, defenderTypes, dex) : 1;
   const accuracy = move.accuracy === true ? 1 : Number(move.accuracy || 100) / 100;
   return (move.basePower || 0) * stab * effectiveness * accuracy + (move.priority > 0 ? 20 : 0) + (move.secondary ? 8 : 0);
 }

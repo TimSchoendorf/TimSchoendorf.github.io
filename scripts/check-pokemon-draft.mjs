@@ -1,6 +1,6 @@
-import {BattleStreams, RandomPlayerAI, Teams} from '@pkmn/sim';
+import {BattleStreams, Teams} from '@pkmn/sim';
 import {Dex} from '@pkmn/sim';
-import {POKEMON_POOL, generateSet, shuffle} from '../src/pokemon-draft-core.js';
+import {POKEMON_POOL, chooseBattleAction, generateSet, shuffle} from '../src/pokemon-draft-core.js';
 
 function buildTeam() {
   return shuffle(POKEMON_POOL).slice(0, 3).map((species) => generateSet(species, Dex));
@@ -8,28 +8,54 @@ function buildTeam() {
 
 async function simulate(teamA, teamB) {
   const streams = BattleStreams.getPlayerStreams(new BattleStreams.BattleStream());
-  const p2 = new RandomPlayerAI(streams.p2);
-  void p2.start();
-
-  let p1LastRequest = null;
   let complete = false;
+  let activeNames = {p1: null, p2: null};
+
+  const teamSpeciesA = teamA.map((set) => POKEMON_POOL.find((species) => species.name === set.species));
+  const teamSpeciesB = teamB.map((set) => POKEMON_POOL.find((species) => species.name === set.species));
+
+  void (async () => {
+    for await (const chunk of streams.omniscient) {
+      for (const line of chunk.split('\n')) {
+        if (line.startsWith('|switch|')) {
+          const parts = line.split('|');
+          const slot = parts[2];
+          const name = slot.split(': ').pop();
+          if (slot.startsWith('p1')) activeNames.p1 = name;
+          if (slot.startsWith('p2')) activeNames.p2 = name;
+        }
+        if (line.startsWith('|win|') || line.startsWith('|tie')) complete = true;
+      }
+    }
+  })();
 
   void (async () => {
     for await (const chunk of streams.p1) {
       for (const line of chunk.split('\n')) {
         if (line.startsWith('|request|')) {
-          p1LastRequest = JSON.parse(line.slice(9));
-          if (p1LastRequest.teamPreview) {
+          const request = JSON.parse(line.slice(9));
+          if (request.teamPreview) {
             void streams.p1.write('team 1, 2, 3');
-          } else if (p1LastRequest.forceSwitch) {
-            const nextIndex = p1LastRequest.side.pokemon.findIndex((mon) => !mon.active && !mon.condition.endsWith(' fnt'));
-            if (nextIndex >= 0) void streams.p1.write(`switch ${nextIndex + 1}`);
-          } else if (p1LastRequest.active) {
-            void streams.p1.write('move 1');
+          } else {
+            const opposing = teamSpeciesB.find((species) => species?.name === activeNames.p2);
+            void streams.p1.write(chooseBattleAction(request, Dex, teamSpeciesA, opposing));
           }
         }
-        if (line.startsWith('|win|') || line.startsWith('|tie')) {
-          complete = true;
+      }
+    }
+  })();
+
+  void (async () => {
+    for await (const chunk of streams.p2) {
+      for (const line of chunk.split('\n')) {
+        if (line.startsWith('|request|')) {
+          const request = JSON.parse(line.slice(9));
+          if (request.teamPreview) {
+            void streams.p2.write('team 1, 2, 3');
+          } else {
+            const opposing = teamSpeciesA.find((species) => species?.name === activeNames.p1);
+            void streams.p2.write(chooseBattleAction(request, Dex, teamSpeciesB, opposing));
+          }
         }
       }
     }
@@ -46,7 +72,7 @@ async function simulate(teamA, teamB) {
   if (!complete) throw new Error('Simulation timeout');
 }
 
-for (let i = 0; i < 5; i += 1) {
+for (let i = 0; i < 12; i += 1) {
   await simulate(buildTeam(), buildTeam());
 }
 
