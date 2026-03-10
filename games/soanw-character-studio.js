@@ -116,6 +116,15 @@ const SPELL_SECTION_LABELS = {
   witchcraft: 'Witchcraft',
   maneuvers: 'Maneuvers',
 };
+const ELEMENTAL_LORES = ['Force', 'Light', 'Frost', 'Lightning', 'Fire', 'Life'];
+const FIXED_ELEMENTAL_LORES = {
+  'Spark of the Plains': 'Force',
+  'Spark of the Desert': 'Light',
+  'Spark of the Mountain': 'Frost',
+  'Spark of the Coast': 'Lightning',
+  'Spark of the Underground': 'Fire',
+  'Spark of the Forest': 'Life',
+};
 const EQUIPMENT_REFERENCES = ['Weapons', 'Firearms', 'Armor and Shields', 'Basic Gear', 'Tools', 'Consumables', 'Vehicles'];
 const SPECIES_OPTIONS = {
   Dwarf: [
@@ -257,11 +266,12 @@ const state = {
   selectedPage: '',
   character: loadState(),
   filteredPages: [],
+  magicPreview: null,
 };
 
 function defaultCharacter() {
   return {
-    profile: {name: '', player: '', level: 1, species: 'Human', speciesSubtype: 'Border Lords', acquiredSpecies: 'None', className: 'Fighter', subclass: 'Soldier'},
+    profile: {name: '', player: '', level: 1, species: 'Human', speciesSubtype: 'Border Lords', acquiredSpecies: 'None', className: 'Fighter', subclass: 'Soldier', elementalLore: 'Force'},
     abilities: {str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8},
     combat: {hp: 0, vitality: 0, armorClass: 0, speed: 0, encumbrance: 0, carryLimit: 0},
     proficiencies: {skills: []},
@@ -312,6 +322,10 @@ function handbookSections() {
 
 function normalizeTitle(value) {
   return String(value || '').replace(/[\s_-]+$/g, '').trim().toLowerCase();
+}
+
+function cleanLabel(value) {
+  return String(value || '').replace(/[\s_-]+$/g, '').trim();
 }
 
 function handbookSection(sectionName) {
@@ -383,11 +397,40 @@ function buildSpellGroups() {
   return {
     arias: (bySection.Arias || []).filter((name) => !/Chapter|Novice|Apprentice|Adept|Expert|Master/.test(name)),
     divine: (bySection['Divine Magic'] || []).filter((name) => !/Chapter|Novice|Apprentice|Adept|Expert|Master/.test(name)),
-    elemental: (bySection['Elemental Magic'] || []).filter((name) => !/Chapter|Lore of|Novice|Apprentice|Adept|Expert|Master|Spell$/.test(name)),
+    elemental: (bySection['Elemental Magic'] || []).filter((name) => !/Chapter|Lore of|Novice|Apprentice|Adept|Expert|Master|Spell$|Overview/.test(name)),
     wild: (bySection['Wild Magic'] || []).filter((name) => !/Chapter|Novice|Apprentice|Adept|Expert|Master/.test(name)),
     witchcraft: (bySection.Witchcraft || []).filter((name) => !/Chapter|Potion Formulas|Enchantements|Novice|Apprentice|Adept|Expert|Master|Ingredients/.test(name)),
     maneuvers: (bySection.Maneuvers || []).filter((name) => !/Chapter|Beginner|Veteran|Elite|Focus-?$|Stance-?$/.test(name)),
   };
+}
+
+function elementalLoreBySpell(title) {
+  const section = handbookSection('Elemental Magic');
+  let currentLore = '';
+  for (const page of section?.pages || []) {
+    if (/^The Lore of /.test(page.title)) currentLore = page.title.replace('The Lore of ', '').replace(/\s*\(.*\)$/,'');
+    if (page.title === title) return currentLore;
+  }
+  return '';
+}
+
+function fixedElementalLore() {
+  return FIXED_ELEMENTAL_LORES[state.character.profile.subclass] || '';
+}
+
+function chosenElementalLore() {
+  return fixedElementalLore() || state.character.profile.elementalLore || 'Force';
+}
+
+function elementalLoreChoices() {
+  if (!magicAccess().elemental) return [];
+  return ELEMENTAL_LORES;
+}
+
+function autoChannelSpellName() {
+  const lore = chosenElementalLore();
+  if (!lore || !magicAccess().elemental) return '';
+  return `Channel ${lore} I`;
 }
 
 function currentStepIndex() {
@@ -516,29 +559,107 @@ function spellTierForTitle(sectionName, title) {
   return 'Novice';
 }
 
-function spellTierUnlocked(mode, tier) {
-  const level = Number(state.character.profile.level || 1);
+function spellTierLevelRequirement(mode, tier) {
   const full = {Novice: 1, Apprentice: 3, Adept: 5, Expert: 7, Master: 9};
   const half = {Novice: 3, Apprentice: 7, Adept: 9, Expert: 99, Master: 99};
   const martial = {Beginner: 1, Veteran: 5, Elite: 9};
   const table = mode === 'full' ? full : mode === 'half' ? half : martial;
-  return level >= (table[tier] || 99);
+  return table[tier] || 99;
+}
+
+function spellTierUnlocked(mode, tier) {
+  const level = Number(state.character.profile.level || 1);
+  return level >= spellTierLevelRequirement(mode, tier);
+}
+
+function effectiveSpellMode(groupKey) {
+  const classRule = selectedClassRule();
+  if (groupKey === 'maneuvers') return 'martial';
+  if (classRule.spellMode !== 'none') return classRule.spellMode;
+  const access = magicAccess();
+  if (access[groupKey]) return 'half';
+  return 'none';
 }
 
 function spellPickLimit(groupKey) {
   const level = Number(state.character.profile.level || 1);
-  const classRule = selectedClassRule();
   if (groupKey === 'maneuvers') return 2 + Math.floor((level - 1) / 2);
-  if (classRule.spellMode === 'none') return 0;
-  if (classRule.spellMode === 'half') return Math.max(0, 1 + Math.floor(level / 2));
+  const mode = effectiveSpellMode(groupKey);
+  if (mode === 'none') return 0;
+  if (mode === 'half') return Math.max(0, 1 + Math.floor(level / 2));
   return level + 1;
 }
 
 function availableSpellChoices(groupKey) {
   const section = SPELL_SECTION_LABELS[groupKey];
-  const classRule = selectedClassRule();
-  const mode = groupKey === 'maneuvers' ? 'martial' : classRule.spellMode;
-  return (availableSpellGroups()[groupKey] || []).filter((title) => spellTierUnlocked(mode, spellTierForTitle(section, title)));
+  const mode = effectiveSpellMode(groupKey);
+  let choices = (availableSpellGroups()[groupKey] || []).filter((title) => spellTierUnlocked(mode, spellTierForTitle(section, title)));
+  if (groupKey === 'elemental') choices = choices.filter((title) => elementalLoreBySpell(title) === chosenElementalLore());
+  return choices;
+}
+
+function spellContextForTitle(groupKey, title) {
+  const section = handbookSection(SPELL_SECTION_LABELS[groupKey]);
+  let currentTier = '';
+  let currentTierTitle = '';
+  let currentLore = '';
+  let currentTierPage = null;
+  for (const page of section?.pages || []) {
+    if (/^The Lore of /.test(page.title)) currentLore = cleanLabel(page.title.replace('The Lore of ', '').replace(/\s*\(.*\)$/, ''));
+    if (/^(Novice|Apprentice|Adept|Expert|Master|Beginner|Veteran|Elite)/.test(page.title)) {
+      currentTier = page.title.split(' ')[0].replace(/[^A-Za-z]/g, '');
+      currentTierTitle = page.title;
+      currentTierPage = page;
+    }
+    if (normalizeTitle(page.title) === normalizeTitle(title)) {
+      return {tier: currentTier || 'Novice', tierTitle: currentTierTitle || page.title, lore: currentLore, tierPage: currentTierPage};
+    }
+  }
+  return {tier: spellTierForTitle(SPELL_SECTION_LABELS[groupKey], title), tierTitle: '', lore: groupKey === 'elemental' ? elementalLoreBySpell(title) : '', tierPage: null};
+}
+
+function spellLearnRequirement(groupKey, title) {
+  const mode = effectiveSpellMode(groupKey);
+  const context = spellContextForTitle(groupKey, title);
+  return spellTierLevelRequirement(mode, context.tier);
+}
+
+function autoChannelSpellNames() {
+  if (!magicAccess().elemental) return [];
+  const lore = chosenElementalLore();
+  if (!lore) return [];
+  const tiers = ['Novice', 'Apprentice', 'Adept', 'Expert', 'Master'];
+  const mode = effectiveSpellMode('elemental');
+  return tiers
+    .filter((tier) => spellTierUnlocked(mode, tier))
+    .map((tier, index) => `Channel ${lore} ${index + 1}`);
+}
+
+function spellPreviewText(groupKey, title) {
+  const page = spellPageRecord(groupKey, title);
+  const cleaned = sanitizePageText(page || {});
+  if (cleaned) return cleaned.split('\n').slice(0, 20).join('\n');
+  const context = spellContextForTitle(groupKey, title);
+  const requirementLevel = spellLearnRequirement(groupKey, title);
+  const requirementLine = `Freischaltung: ${context.tier} ab Stufe ${requirementLevel}.`;
+  const loreLine = context.lore ? `Lore: ${context.lore}.` : '';
+  const channelLine = groupKey === 'elemental'
+    ? `Voraussetzung: ${context.tier === 'Novice' ? `Channel ${context.lore || chosenElementalLore()} I` : `Channel ${context.lore || chosenElementalLore()} ${['Novice', 'Apprentice', 'Adept', 'Expert', 'Master'].indexOf(context.tier) + 1}`}, das im Studio automatisch mit der Tier-Freischaltung gelernt wird.`
+    : '';
+  const tierIntro = sanitizePageText(context.tierPage || {});
+  const tierSnippet = tierIntro
+    ? tierIntro.split('\n').slice(0, 14).join('\n')
+    : 'Die OneDrive-Share-Ansicht liefert fuer diese konkrete Unterseite keinen sauberen Effekttext.';
+  return [cleanLabel(title), requirementLine, loreLine, channelLine, '', tierSnippet].filter(Boolean).join('\n');
+}
+
+function spellPageRecord(groupKey, title) {
+  const section = SPELL_SECTION_LABELS[groupKey];
+  return handbookPage(section, title);
+}
+
+function previewTextFor(groupKey, title) {
+  return spellPreviewText(groupKey, title).split('\n').join(' ').slice(0, 320);
 }
 
 function speciesFeatureText() {
@@ -579,11 +700,11 @@ function selectedPageRecord() {
   return section?.pages.find((page) => page.title === state.selectedPage) || null;
 }
 
-function renderOptionList(options, selected, field) {
+function renderOptionList(options, selected, field, descriptions = {}, previewGroup = '') {
   return `
     <div class="pill-grid">
       ${options.map((option) => `
-        <button class="pill ${selected.includes(option) ? 'active' : ''}" data-toggle-field="${field}" data-toggle-value="${option}">${option}</button>
+        <button class="pill ${selected.includes(option) ? 'active' : ''}" data-toggle-field="${field}" data-toggle-value="${option}" title="${String(descriptions[option] || option).replace(/"/g, '&quot;')}" ${previewGroup ? `data-preview-group="${previewGroup}" data-preview-title="${option}"` : ''}>${cleanLabel(option)}</button>
       `).join('')}
     </div>
   `;
@@ -656,6 +777,12 @@ function groupedHandbookOptions(sectionName, excludePattern) {
 
 function selectedMagicEntries() {
   return Object.entries(SPELL_SECTION_LABELS).flatMap(([key, label]) => state.character.magic[key].map((title) => ({key, label, title})));
+}
+
+function currentMagicPreview() {
+  const preview = state.magicPreview;
+  if (preview?.key && preview?.title) return preview;
+  return selectedMagicEntries()[0] || null;
 }
 
 function panel(title, body, subtitle = '') {
@@ -794,12 +921,12 @@ function renderBuilder() {
         <div class="split-shell">
           <div class="stack">
             <label><span>Automatic Species Skills</span><div class="summary-row">${automaticSkills().map((skill) => `<div class="summary-chip">${skill}</div>`).join('') || '<div class="summary-chip">None</div>'}</div></label>
-            <label><span>Class Skills (${c.proficiencies.skills.length}/${classSkillLimit()})</span>${renderOptionList(classRule.skillList || [], c.proficiencies.skills, 'proficiencies.skills')}</label>
-            <label><span>Feats (${c.build.feats.length}/${featSlots()})</span>${renderOptionList(availableFeats(), c.build.feats, 'build.feats')}</label>
+            <label><span>Class Skills (${c.proficiencies.skills.length}/${classSkillLimit()})</span>${renderOptionList(classRule.skillList || [], c.proficiencies.skills, 'proficiencies.skills', SKILL_DESCRIPTIONS, 'skills')}</label>
+            <label><span>Feats (${c.build.feats.length}/${featSlots()})</span>${renderOptionList(availableFeats(), c.build.feats, 'build.feats', Object.fromEntries(availableFeats().map((feat) => [feat, handbookPreview(handbookPage('Customization', feat), feat)])), 'feats')}</label>
           </div>
           <div class="guide-card">
             <div class="eyebrow">Selected Detail</div>
-            <div class="mini-list">
+            <div id="skillsHoverPanel" class="mini-list">
               ${selectedSkillSet().length ? selectedSkillSet().map((skill) => `<div class="summary-chip">${skill}: ${SKILL_DESCRIPTIONS[skill] || 'No description mapped yet.'}</div>`).join('') : '<div class="empty-state compact">Waehle Skills oder Feats, um hier direkt ihren Nutzen zu sehen.</div>'}
             </div>
           </div>
@@ -857,22 +984,43 @@ function renderBuilder() {
     const activeMagicLists = Object.entries(SPELL_SECTION_LABELS)
       .map(([key, label]) => ({key, label, items: availableSpellChoices(key)}))
       .filter(({items}) => items.length);
+    const preview = currentMagicPreview();
     body = `
       ${panel('Step 7 - Magic & Maneuvers', `
         ${activeMagicLists.length ? `
           <div class="stack">
+            ${magicAccess().elemental ? `
+              <div class="guide-card">
+                <div class="eyebrow">Elemental Access</div>
+                <div class="summary-row">
+                  <div class="summary-chip">Lore: ${chosenElementalLore()}</div>
+                  ${autoChannelSpellNames().map((spell) => `<div class="summary-chip">${spell}</div>`).join('')}
+                </div>
+                ${elementalLoreChoices().length ? `<div class="inline-actions">${fixedElementalLore() ? `<div class="summary-chip">Feste Lore durch Subclass</div>` : renderChoiceCards(elementalLoreChoices(), chosenElementalLore(), 'profile.elementalLore')}</div>` : ''}
+              </div>
+            ` : ''}
             ${activeMagicLists.map(({key, label, items}) => `
               <label>
                 <span>${label} (${state.character.magic[key].length}/${spellPickLimit(key)})</span>
-                <div class="spell-picker">${renderOptionList(items, state.character.magic[key], `magic.${key}`)}</div>
+                <small class="muted">${items.length} verfuegbar auf diesem Level${key === 'elemental' ? ` in der Lore ${chosenElementalLore()}` : ''}.</small>
+                <div class="spell-picker">${renderOptionList(items, state.character.magic[key], `magic.${key}`, Object.fromEntries(items.map((title) => [title, previewTextFor(key, title)])), key)}</div>
               </label>
             `).join('')}
           </div>
         ` : '<div class="empty-state compact">Diese Klasse/Subclass hat auf diesem Level keine waehlbare Magie oder Maneuvers.</div>'}
       `, 'Spells und Maneuvers sind jetzt nach Tier und Level gefiltert und haben Pick-Limits.')}
       <div class="split-shell">
-        ${referencePanel('Spellcasting Rules', handbookPage('Magic', 'Casting Spells') || handbookPage('Magic', 'What Is A Spell?'), 'Magic')}
-        ${selectedMagic[0] ? referencePanel(`${selectedMagic[0].label}: ${selectedMagic[0].title}`, handbookPage(selectedMagic[0].label, selectedMagic[0].title), selectedMagic[0].label) : panel('Selected Spell', '<div class="empty-state compact">Waehle einen Spell oder Maneuver, um Effekt und Beschreibung zu sehen.</div>')}
+        ${panel('Spellcasting Rules', `
+          <pre class="reader-text compact">${handbookPreview(handbookPage('Magic', 'Casting Spells') || handbookPage('Magic', 'What Is A Spell?'))}</pre>
+          <div class="summary-row">
+            ${magicAccess().elemental ? `<div class="summary-chip">Lore: ${chosenElementalLore()}</div>` : ''}
+            ${autoChannelSpellNames().length ? `<div class="summary-chip">${autoChannelSpellNames().length} Auto-Channel freigeschaltet</div>` : ''}
+          </div>
+        `)}
+        ${panel('Spell Preview', `
+          <pre id="hoverPreviewPanel" class="reader-text compact">${preview ? spellPreviewText(preview.key, preview.title) : 'Fahre ueber einen Spell oder Maneuver oder waehle ihn aus, um Effekt, Freischaltung und Beschreibung zu sehen.'}</pre>
+          <div class="inline-actions"><button class="ghost-btn ${preview ? '' : 'hidden'}" id="hoverPreviewOpen" ${preview ? `data-open-section="${preview.label}" data-open-page="${preview.title}"` : ''}>Im Compendium oeffnen</button></div>
+        `)}
       </div>
     `;
   } else if (step === 'notes') {
@@ -1085,6 +1233,8 @@ function applyFieldChange(path, value) {
   }
   if (path === 'profile.className') {
     state.character.profile.subclass = SUBCLASS_MAP[value]?.[0] || '';
+    state.character.profile.elementalLore = FIXED_ELEMENTAL_LORES[state.character.profile.subclass] || state.character.profile.elementalLore || 'Force';
+    state.magicPreview = null;
     state.character.proficiencies.skills = [];
     state.character.loadout.package = CLASS_RULES[value]?.loadouts?.[0] || '';
     const access = {...(CLASS_MAGIC_ACCESS[value] || {}), ...(SUBCLASS_MAGIC_ACCESS[state.character.profile.subclass] || {})};
@@ -1093,12 +1243,26 @@ function applyFieldChange(path, value) {
     }
   }
   if (path === 'profile.subclass') {
+    state.character.profile.elementalLore = FIXED_ELEMENTAL_LORES[value] || state.character.profile.elementalLore || 'Force';
+    state.magicPreview = null;
     const access = magicAccess();
     for (const key of ['arias', 'divine', 'elemental', 'wild', 'witchcraft', 'maneuvers']) {
       if (!access[key]) state.character.magic[key] = [];
     }
   }
-  if (path === 'profile.level') state.character.build.feats = state.character.build.feats.slice(0, featSlots());
+  if (path === 'profile.elementalLore') {
+    state.character.magic.elemental = state.character.magic.elemental.filter((title) => elementalLoreBySpell(title) === value && availableSpellChoices('elemental').includes(title));
+    if (state.magicPreview?.key === 'elemental' && elementalLoreBySpell(state.magicPreview.title) !== value) state.magicPreview = null;
+  }
+  if (path === 'profile.level') {
+    state.character.build.feats = state.character.build.feats.slice(0, featSlots());
+    for (const key of Object.keys(SPELL_SECTION_LABELS)) {
+      state.character.magic[key] = state.character.magic[key].filter((title) => availableSpellChoices(key).includes(title));
+    }
+    if (state.magicPreview && !availableSpellChoices(state.magicPreview.key).includes(state.magicPreview.title) && !selectedMagicEntries().some((entry) => entry.key === state.magicPreview.key && entry.title === state.magicPreview.title)) {
+      state.magicPreview = null;
+    }
+  }
 }
 
 function handleFieldInput(event) {
@@ -1135,42 +1299,76 @@ async function exportPdf() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit: 'pt', format: 'a4'});
   const c = state.character;
-  const lines = [
-    ['Name', c.profile.name || '-'],
-    ['Player', c.profile.player || '-'],
-    ['Species', `${c.profile.species} / ${c.profile.speciesSubtype || '-'}`],
-    ['Class', `${c.profile.className} / ${c.profile.subclass || '-'}`],
-    ['Level', String(c.profile.level)],
-    ['HP / Vitality / AC', `${hitPoints()} / ${vitalityPoints()} / ${armorClass()}`],
-    ['Speed / Prof', `${speedMeters()}m / +${proficiencyBonus()}`],
-    ['Skills', selectedSkillSet().join(', ') || '-'],
-    ['Feats', c.build.feats.join(', ') || '-'],
-    ['Spells', [...c.magic.arias, ...c.magic.divine, ...c.magic.elemental, ...c.magic.wild, ...c.magic.witchcraft].join(', ') || '-'],
-    ['Maneuvers', c.magic.maneuvers.join(', ') || '-'],
-    ['Equipment', `${c.loadout.package || '-'}${c.loadout.notes ? ` | ${c.loadout.notes}` : ''}`],
-    ['Notes', [c.notes.appearance, c.notes.backstory, c.notes.goals].filter(Boolean).join(' | ') || '-'],
-  ];
+  const drawSection = (title, rows) => {
+    if (y > 700) {
+      doc.addPage();
+      y = 60;
+    }
+    doc.setFillColor(245, 238, 224);
+    doc.roundedRect(40, y, 515, 24, 8, 8, 'F');
+    doc.setTextColor(38, 30, 34);
+    doc.setFontSize(12);
+    doc.setFont(undefined, 'bold');
+    doc.text(title, 52, y + 16);
+    y += 38;
+    for (const [label, value] of rows) {
+      const wrapped = doc.splitTextToSize(String(value), 340);
+      doc.setFont(undefined, 'bold');
+      doc.text(label, 48, y);
+      doc.setFont(undefined, 'normal');
+      doc.text(wrapped, 190, y);
+      y += Math.max(24, wrapped.length * 13 + 6);
+      if (y > 730) {
+        doc.addPage();
+        y = 60;
+      }
+    }
+    y += 10;
+  };
   doc.setFillColor(18, 16, 28);
   doc.rect(0, 0, 595, 120, 'F');
   doc.setTextColor(255, 245, 231);
   doc.setFontSize(28);
   doc.text('SoaNW Character Studio', 40, 60);
   doc.setFontSize(12);
-  doc.text('D&D-inspired character sheet and restore payload', 40, 84);
+  doc.text('Character sheet and restore payload', 40, 84);
+  let y = 148;
   doc.setTextColor(30, 24, 32);
-  let y = 150;
-  for (const [label, value] of lines) {
-    const wrapped = doc.splitTextToSize(String(value), 360);
-    doc.setFont(undefined, 'bold');
-    doc.text(label, 40, y);
-    doc.setFont(undefined, 'normal');
-    doc.text(wrapped, 180, y);
-    y += Math.max(26, wrapped.length * 14 + 8);
-    if (y > 720) {
-      doc.addPage();
-      y = 60;
-    }
-  }
+  drawSection('Identity', [
+    ['Name', c.profile.name || '-'],
+    ['Player', c.profile.player || '-'],
+    ['Species', `${c.profile.species} / ${c.profile.speciesSubtype || '-'}`],
+    ['Class', `${c.profile.className} / ${c.profile.subclass || '-'}`],
+    ['Level / Prof', `${c.profile.level} / +${proficiencyBonus()}`],
+    ['Elemental Lore', chosenElementalLore() && magicAccess().elemental ? chosenElementalLore() : '-'],
+  ]);
+  drawSection('Combat', [
+    ['HP', hitPoints()],
+    ['Vitality', vitalityPoints()],
+    ['Armor Class', armorClass()],
+    ['Speed', `${speedMeters()}m`],
+    ['Carry / Encumbrance', `${carryLimit()} / ${encumbrance()}`],
+  ]);
+  drawSection('Abilities', ABILITIES.map((key) => [ABILITY_LABELS[key], `${finalAbilityScore(key)} (${mod(finalAbilityScore(key)) >= 0 ? '+' : ''}${mod(finalAbilityScore(key))})`]));
+  drawSection('Build', [
+    ['Skills', selectedSkillSet().join(', ') || '-'],
+    ['Feats', c.build.feats.join(', ') || '-'],
+    ['Equipment', `${c.loadout.package || '-'}${c.loadout.notes ? ` | ${c.loadout.notes}` : ''}`],
+    ['Encumbrance', `${encumbrance()} / ${carryLimit()}`],
+  ]);
+  drawSection('Magic', [
+    ['Elemental Lore', magicAccess().elemental ? chosenElementalLore() : '-'],
+    ['Auto Channel', autoChannelSpellNames().join(', ') || '-'],
+    ['Spells', [...c.magic.arias, ...c.magic.divine, ...c.magic.elemental, ...c.magic.wild, ...c.magic.witchcraft].map(cleanLabel).join(', ') || '-'],
+    ['Maneuvers', c.magic.maneuvers.map(cleanLabel).join(', ') || '-'],
+  ]);
+  drawSection('Notes', [
+    ['Appearance', c.notes.appearance || '-'],
+    ['Backstory', c.notes.backstory || '-'],
+    ['Allies', c.notes.allies || '-'],
+    ['Goals', c.notes.goals || '-'],
+    ['Misc', c.notes.misc || '-'],
+  ]);
   const payload = btoa(unescape(encodeURIComponent(JSON.stringify(state.character))));
   doc.addPage();
   doc.setFontSize(14);
@@ -1215,6 +1413,13 @@ function bindEvents() {
   });
   document.querySelectorAll('[data-toggle-field]').forEach((button) => {
     button.addEventListener('click', () => {
+      if (button.dataset.toggleField.startsWith('magic.')) {
+        state.magicPreview = {
+          key: button.dataset.toggleField.split('.')[1],
+          label: SPELL_SECTION_LABELS[button.dataset.toggleField.split('.')[1]],
+          title: button.dataset.toggleValue,
+        };
+      }
       toggleArrayValue(button.dataset.toggleField, button.dataset.toggleValue);
       saveState();
       render();
@@ -1264,6 +1469,16 @@ function bindEvents() {
     state.filteredPages = [];
     render();
   }));
+  document.getElementById('hoverPreviewOpen')?.addEventListener('click', (event) => {
+    const button = event.currentTarget;
+    if (!button.dataset.openPage) return;
+    state.tab = 'compendium';
+    state.selectedSection = button.dataset.openSection;
+    state.selectedPage = button.dataset.openPage;
+    state.search = '';
+    state.filteredPages = [];
+    render();
+  });
   document.getElementById('searchInput')?.addEventListener('input', (event) => {
     state.search = event.target.value;
     refreshSearch();
@@ -1279,6 +1494,31 @@ function bindEvents() {
       alert(error.message);
     }
   });
+  document.querySelectorAll('[data-preview-group]').forEach((button) => {
+    const updatePreview = () => {
+      const group = button.dataset.previewGroup;
+      const title = button.dataset.previewTitle;
+      const skillsPanel = document.getElementById('skillsHoverPanel');
+      const spellPanel = document.getElementById('hoverPreviewPanel');
+      if ((group === 'skills' || group === 'feats') && skillsPanel) {
+        const text = group === 'skills' ? `${title}: ${SKILL_DESCRIPTIONS[title] || title}` : handbookPreview(handbookPage('Customization', title), title);
+        skillsPanel.innerHTML = `<div class="summary-chip wide">${text}</div>`;
+      }
+      if (spellPanel && SPELL_SECTION_LABELS[group]) {
+        state.magicPreview = {key: group, label: SPELL_SECTION_LABELS[group], title};
+        spellPanel.className = 'reader-text compact';
+        spellPanel.textContent = spellPreviewText(group, title);
+        const previewOpen = document.getElementById('hoverPreviewOpen');
+        if (previewOpen) {
+          previewOpen.dataset.openSection = SPELL_SECTION_LABELS[group];
+          previewOpen.dataset.openPage = title;
+          previewOpen.classList.remove('hidden');
+        }
+      }
+    };
+    button.addEventListener('mouseenter', updatePreview);
+    button.addEventListener('focus', updatePreview);
+  });
 }
 
 function injectStyles() {
@@ -1287,7 +1527,7 @@ function injectStyles() {
     :root{--bg:#11111a;--bg2:#201924;--panel:#191622;--soft:#221d2b;--line:rgba(255,255,255,.11);--text:#f8f4ef;--muted:#b9afbf;--accent:#f0c36c;--accent2:#7fd1ff;--ink:#211923}
     *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:"Segoe UI",system-ui,sans-serif;background:radial-gradient(circle at top left,rgba(127,209,255,.16),transparent 24%),radial-gradient(circle at bottom right,rgba(240,195,108,.14),transparent 26%),linear-gradient(180deg,#100f18,#1b1420 52%,#120f18);color:var(--text);padding:24px}button,input,select,textarea{font:inherit}
     .studio-shell{width:min(1480px,100%);margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px}.left-rail{display:grid}.summary-card,.panel,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn,.choice-card,.ghost-btn,.wizard-step,.guide-card,.search-box{border:1px solid var(--line);border-radius:24px;background:rgba(25,22,34,.82);backdrop-filter:blur(14px)}.summary-card.sticky{position:sticky;top:24px;padding:20px}.back-link{text-decoration:none;display:inline-flex;margin-bottom:14px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--text)}h1,h2,h3{margin:0}.muted{color:var(--muted)}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.78rem;color:var(--accent)}
-    .summary-stats,.ability-summary{display:grid;gap:10px}.summary-stats{grid-template-columns:repeat(2,1fr);margin:18px 0}.summary-stats div,.ability-summary div,.summary-chip,.summary-pill{padding:12px;border-radius:18px;background:rgba(255,255,255,.04)}.summary-stats span,.ability-summary span{display:block;color:var(--muted);font-size:.78rem}.ability-summary{grid-template-columns:repeat(3,1fr)}.ability-summary strong{display:block;font-size:1.1rem}.ability-summary small{color:var(--accent2)}.summary-foot{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)}
+    .summary-stats,.ability-summary{display:grid;gap:10px}.summary-stats{grid-template-columns:repeat(2,1fr);margin:18px 0}.summary-stats div,.ability-summary div,.summary-chip,.summary-pill{padding:12px;border-radius:18px;background:rgba(255,255,255,.04)}.summary-chip.wide{width:100%;line-height:1.45}.summary-stats span,.ability-summary span{display:block;color:var(--muted);font-size:.78rem}.ability-summary{grid-template-columns:repeat(3,1fr)}.ability-summary strong{display:block;font-size:1.1rem}.ability-summary small{color:var(--accent2)}.summary-foot{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)}
     .main-column{display:grid;gap:18px}.hero{padding:18px;display:flex;justify-content:space-between;gap:18px;align-items:end}.tab-row{display:flex;gap:10px;flex-wrap:wrap}.tab-btn{padding:12px 16px;color:var(--text);cursor:pointer}.tab-btn.active,.primary-btn,.upload-btn{background:linear-gradient(135deg,#f0c36c,#ffdd96);color:var(--ink)}.tab-btn.disabled{opacity:.45;cursor:default}
     .panel{padding:18px;display:grid;gap:16px}.panel.soft{background:rgba(255,255,255,.04)}.panel-head{display:flex;justify-content:space-between;gap:12px}.form-grid{display:grid;gap:14px}.form-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}label{display:grid;gap:8px}label.full{grid-column:1/-1}input,select,textarea{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text)}textarea{min-height:112px;resize:vertical}
     .ability-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}.ability-card{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.ability-card strong{font-size:1.4rem}.summary-row{display:flex;gap:10px;flex-wrap:wrap}.summary-chip{color:var(--text)}
@@ -1295,7 +1535,7 @@ function injectStyles() {
     .wizard-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.wizard-step{display:flex;align-items:center;gap:12px;text-align:left;border-radius:22px;background:rgba(255,255,255,.04)}.wizard-step.done{box-shadow:inset 0 0 0 1px rgba(240,195,108,.35)}.wizard-step span{display:grid;place-items:center;min-width:30px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.08)}.wizard-step small{display:block;color:inherit;opacity:.72}.wizard-nav{display:flex;justify-content:space-between;gap:12px}.reader-text.compact{max-height:360px}
     .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}
     .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto}
-    .export-actions{display:flex;gap:12px;flex-wrap:wrap}.primary-btn,.upload-btn{padding:14px 18px;font-weight:700;cursor:pointer}.upload-btn input{display:none}.notes{margin:0;padding-left:18px;display:grid;gap:8px}.empty-state{padding:28px;border-radius:22px;background:rgba(255,255,255,.04);color:var(--muted)}
+    .export-actions{display:flex;gap:12px;flex-wrap:wrap}.primary-btn,.upload-btn{padding:14px 18px;font-weight:700;cursor:pointer}.upload-btn input{display:none}.notes{margin:0;padding-left:18px;display:grid;gap:8px}.empty-state{padding:28px;border-radius:22px;background:rgba(255,255,255,.04);color:var(--muted)}.hidden{display:none!important}
     @media (max-width:1180px){.studio-shell,.compendium-shell,.form-grid.two,.form-grid.three,.ability-grid,.split-shell,.choice-grid,.wizard-strip{grid-template-columns:1fr}.left-rail{order:2}.main-column{order:1}.summary-card.sticky{position:static}.hero,.wizard-nav{flex-direction:column;align-items:flex-start}}
     @media (max-width:720px){body{padding:16px}.summary-stats,.ability-summary{grid-template-columns:1fr}.panel,.summary-card.sticky,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn{border-radius:18px}}
   `;

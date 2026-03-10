@@ -42,6 +42,62 @@ async function fillWizard(page) {
   await page.locator('[data-toggle-field="magic.elemental"][data-toggle-value="Blast"]').click();
 }
 
+async function assertMageMagic(page) {
+  const pills = page.locator('[data-toggle-field="magic.elemental"]');
+  const labels = await pills.allTextContents();
+  if (!labels.includes('Apprehend') || !labels.includes('Blast')) {
+    throw new Error(`Expected Force novice spells, got ${labels.join(', ')}`);
+  }
+  if (!labels.includes('Brake Fall')) {
+    throw new Error(`Expected Apprentice Force spell at level 4 mage, got ${labels.join(', ')}`);
+  }
+  if (labels.includes('Concussion Wave')) {
+    throw new Error('Adept spell was shown before level 5 unlock.');
+  }
+  if (labels.includes('Blinding Glare') || labels.includes('Disguise')) {
+    throw new Error('Non-selected lore spells are still visible.');
+  }
+  await page.locator('[data-preview-group="elemental"][data-preview-title="Brake Fall"]').hover();
+  const preview = await page.locator('#hoverPreviewPanel').textContent();
+  if (!/Brake Fall/.test(preview || '') && !/Apprentice/.test(preview || '')) {
+    throw new Error(`Spell preview did not update on hover: ${preview}`);
+  }
+}
+
+async function assertSpellbladeRestrictions(browser) {
+  const context = await browser.newContext({viewport: {width: 1440, height: 1600}});
+  const page = await context.newPage();
+  await page.goto(baseUrl, {waitUntil: 'networkidle', timeout: 120000});
+  await page.locator('[data-field="profile.name"]').fill('Sil Vane');
+  await page.locator('[data-field="profile.player"]').fill('Tim');
+  await page.locator('[data-field="profile.level"]').fill('6');
+  await page.getByRole('button', {name: 'Weiter', exact: true}).click();
+  await page.getByRole('button', {name: /^Human/}).click();
+  await page.getByRole('button', {name: /^Variant Human/}).click();
+  await page.getByRole('button', {name: 'Weiter', exact: true}).click();
+  await page.getByRole('button', {name: /^Rogue/}).click();
+  await page.getByRole('button', {name: /^Spellblade/}).click();
+  await page.getByRole('button', {name: 'Weiter', exact: true}).click();
+  for (const [field, value] of Object.entries({str: 8, dex: 15, con: 13, int: 15, wis: 12, cha: 8})) {
+    await page.locator(`[data-field="abilities.${field}"]`).fill(String(value));
+  }
+  await page.getByRole('button', {name: 'Weiter', exact: true}).click();
+  await page.locator('[data-toggle-field="proficiencies.skills"][data-toggle-value="Stealth"]').click();
+  await page.locator('[data-toggle-field="proficiencies.skills"][data-toggle-value="Investigation"]').click();
+  await page.locator('[data-toggle-field="proficiencies.skills"][data-toggle-value="Sleight of Hand"]').click();
+  await page.locator('[data-toggle-field="proficiencies.skills"][data-toggle-value="Mechanics"]').click();
+  await page.getByRole('button', {name: 'Weiter', exact: true}).click();
+  await page.getByRole('button', {name: 'Weiter', exact: true}).click();
+  const labels = await page.locator('[data-toggle-field="magic.elemental"]').allTextContents();
+  if (!labels.includes('Apprehend') || !labels.includes('Blast')) {
+    throw new Error(`Spellblade missing novice lore spells: ${labels.join(', ')}`);
+  }
+  if (labels.includes('Brake Fall')) {
+    throw new Error('Spellblade gained apprentice elemental spells before level 7.');
+  }
+  await context.close();
+}
+
 async function main() {
   await ensureDir(screenshotDir);
   await ensureDir(downloadDir);
@@ -57,6 +113,7 @@ async function main() {
   });
 
   await fillWizard(page);
+  await assertMageMagic(page);
   await page.screenshot({path: path.join(screenshotDir, 'soanw-check-desktop.png'), fullPage: true});
 
   await page.getByRole('button', {name: 'Compendium', exact: true}).click();
@@ -86,6 +143,8 @@ async function main() {
   if (restored?.trim() !== 'Aela Frost') {
     throw new Error(`PDF restore failed, got "${restored}"`);
   }
+
+  await assertSpellbladeRestrictions(browser);
 
   if (errors.length) {
     throw new Error(errors.join('\n'));
