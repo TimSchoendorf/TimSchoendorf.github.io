@@ -38,7 +38,16 @@ export function drawPack(excludedIds = new Set(), count = 3) {
   return available.slice(0, count);
 }
 
-export function pickOpponentDraft(pack, existingTeam = []) {
+export function matchupScore(species, opposingTeam = [], dex) {
+  if (!opposingTeam.length || !dex) return 0;
+  return opposingTeam.reduce((sum, foe) => {
+    const offensive = species.types.reduce((score, type) => score + dex.types.getEffectiveness(type, foe.types), 0);
+    const defensive = foe.types.reduce((score, type) => score + species.types.reduce((acc, ownType) => acc + dex.types.getEffectiveness(type, [ownType]), 0), 0);
+    return sum + offensive * 8 - defensive * 4;
+  }, 0);
+}
+
+export function pickOpponentDraft(pack, existingTeam = [], opposingTeam = [], dex = null) {
   const teamTypes = new Set(existingTeam.flatMap((member) => member.types));
   const teamRoles = existingTeam.map(estimateRole);
   return pack
@@ -48,7 +57,8 @@ export function pickOpponentDraft(pack, existingTeam = []) {
       const bulkBias = species.baseStats.hp + species.baseStats.def + species.baseStats.spd >= 240 ? 14 : 0;
       const role = estimateRole(species);
       const rolePenalty = teamRoles.includes(role) ? -14 : 12;
-      const score = totalStats(species.baseStats) + freshTypes * 18 + (species.nfe ? -12 : 12) + speedBias + bulkBias + rolePenalty;
+      const matchupBias = matchupScore(species, opposingTeam, dex);
+      const score = totalStats(species.baseStats) + freshTypes * 18 + (species.nfe ? -12 : 12) + speedBias + bulkBias + rolePenalty + matchupBias;
       return {species, score};
     })
     .sort((a, b) => b.score - a.score)[0].species;
@@ -136,6 +146,15 @@ function refineMovesByRole(species, moves) {
   return moves;
 }
 
+export function setArchetype(species, moves) {
+  const role = estimateRole(species);
+  if (moves.some((move) => HAZARDS.has(move.id))) return 'hazard';
+  if (moves.some((move) => RECOVERY.has(move.id)) && role === 'tank') return 'wall';
+  if (moves.some((move) => SETUP.has(move.id))) return 'setup';
+  if (role === 'speedster') return 'revenge';
+  return role;
+}
+
 function chooseAbility(species, chosenMoves) {
   if (species.abilities.length === 1) return species.abilities[0];
   const setupMove = chosenMoves.find((move) => ['swordsdance', 'dragondance', 'calmmind', 'nastyplot', 'bulkup'].includes(move.id));
@@ -174,6 +193,7 @@ function chooseEVs(species) {
 
 export function generateSet(species, dex) {
   const moves = refineMovesByRole(species, chooseMoves(species, dex));
+  const archetype = setArchetype(species, moves);
   return {
     name: species.name,
     species: species.name,
@@ -184,6 +204,7 @@ export function generateSet(species, dex) {
     level: 50,
     evs: chooseEVs(species),
     ivs: {hp: 31, atk: 31, def: 31, spa: 31, spd: 31, spe: 31},
+    archetype,
   };
 }
 
@@ -250,14 +271,11 @@ export function chooseBattleAction(request, dex, ownTeam, opposingActive) {
     .map((mon, index) => ({mon, index}))
     .filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt'));
 
-  if (bench.length && opposingActive && bestMove.score < 70) {
+  if (bench.length && opposingActive && bestMove.score < 78) {
     const bestSwitch = bench
       .map(({mon, index}) => {
         const species = ownTeam.find((candidate) => candidate.name === mon.details.split(',')[0]);
-        const pivotScore = species ? species.types.reduce((sum, type) => {
-          const mod = dex.types.getEffectiveness(type, defenderTypes);
-          return sum + (mod < 0 ? 16 : mod === 0 ? 8 : 0);
-        }, totalStats(species.baseStats) / 20) : 0;
+        const pivotScore = species ? matchupScore(species, [opposingActive], dex) + totalStats(species.baseStats) / 22 : 0;
         return {index, score: pivotScore};
       })
       .sort((a, b) => b.score - a.score)[0];

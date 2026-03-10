@@ -7,6 +7,8 @@ import {
   previewMoves,
   chooseBattleAction,
   chooseTeamOrder,
+  estimateRole,
+  matchupScore,
   totalStats,
 } from './pokemon-draft-core.js';
 
@@ -30,6 +32,7 @@ const state = {
   message: 'Waehle dein erstes Draft-Pokemon.',
   lastMove: {p1: '', p2: ''},
   flash: {p1: '', p2: ''},
+  fxText: '',
 };
 
 function typeGradient(types) {
@@ -139,6 +142,7 @@ function renderRoster(team, revealDetails) {
       </div>
       <div class="types">${species.types.map((type) => `<span>${type}</span>`).join('')}</div>
       ${revealDetails ? `<div class="tiny">BST ${totalStats(species.baseStats)}</div>` : '<div class="tiny">Draft-Pick bestaetigt</div>'}
+      <div class="tiny">Rolle ${estimateRole(species)}</div>
     </div>
   `).join('');
 }
@@ -176,6 +180,7 @@ function renderDraftStage() {
             <span>SPE ${species.baseStats.spe}</span>
           </div>
           <div class="tiny">Abilities: ${species.abilities.join(', ')}</div>
+          <div class="tiny">Archetyp: ${estimateRole(species)}</div>
           <div class="move-preview">${previewMoves(species, Dex).map((move) => `<span>${move}</span>`).join('')}</div>
         </button>
       `).join('')}
@@ -200,7 +205,7 @@ function renderPreviewStage() {
             <div class="preview-card" style="background:${typeGradient(species.types)}">
               <div>
                 <strong>${index + 1}. ${species.name}</strong>
-                <div class="tiny">${species.types.join(' / ')}</div>
+                <div class="tiny">${species.types.join(' / ')} · ${estimateRole(species)}</div>
               </div>
               <div class="preview-controls">
                 <button class="mini-btn" data-move-index="${index}" data-move-dir="-1" ${index === 0 ? 'disabled' : ''}>hoch</button>
@@ -217,7 +222,7 @@ function renderPreviewStage() {
             <div class="preview-card" style="background:${typeGradient(species.types)}">
               <div>
                 <strong>${index + 1}. ${species.name}</strong>
-                <div class="tiny">${species.types.join(' / ')}</div>
+                <div class="tiny">${species.types.join(' / ')} · ${estimateRole(species)}</div>
               </div>
             </div>
           `).join('')}
@@ -252,6 +257,7 @@ function renderBattleStage() {
           <div><span class="tiny">Letzter Zug CPU</span><strong>${state.lastMove.p2 || 'noch keiner'}</strong></div>
           <div><span class="tiny">Letzter Zug Du</span><strong>${state.lastMove.p1 || 'noch keiner'}</strong></div>
         </div>
+        <div class="fx-text ${state.fxText ? 'show' : ''}">${state.fxText}</div>
         <div class="arena-log">${state.logs.slice(0, 6).map((line) => `<div>${line}</div>`).join('')}</div>
       </div>
       <div class="combatant bottom">
@@ -299,7 +305,7 @@ function renderCombatant(mon, label) {
       <div>${mon.condition || 'unbekannt'}</div>
       <div class="hp-bar"><div class="hp-fill" style="width:${toPercent(mon.condition)}%"></div></div>
       <div class="status-row">
-        <span class="tiny">${mon.item || ''}</span>
+        <span class="tiny">${mon.item || ''} ${mon.archetype ? `· ${mon.archetype}` : ''}</span>
         <span class="status-pill">${mon.status || 'OK'}</span>
       </div>
     </div>
@@ -335,7 +341,7 @@ function draftSpecies(id) {
   state.playerDraft.push(picked);
   state.draftedIds.add(picked.id);
 
-  const opponentPick = pickOpponentDraft(state.pack.filter((species) => species.id !== id), state.opponentDraft);
+  const opponentPick = pickOpponentDraft(state.pack.filter((species) => species.id !== id), state.opponentDraft, state.playerDraft, Dex);
   state.opponentDraft.push(opponentPick);
   state.draftedIds.add(opponentPick.id);
 
@@ -365,6 +371,7 @@ function updatePlayerStateFromRequest(request) {
       active: mon.active,
       item: mon.item,
       status: mon.status || (mon.condition.endsWith(' fnt') ? 'fainted' : ''),
+      archetype: drafted?.archetype || estimateRole(drafted || {baseStats:{hp:0,atk:0,def:0,spa:0,spd:0,spe:0}}),
     };
   });
   state.active.p1 = state.playerTeamState.find((mon) => mon.active) || state.playerTeamState[0];
@@ -379,6 +386,7 @@ function ensureOpponentTeamState() {
       active: false,
       status: '',
       item: '',
+      archetype: estimateRole(species),
     }));
   }
 }
@@ -394,6 +402,7 @@ function parseBattleLine(line) {
     const move = parts[3];
     if (actorSlot.startsWith('p1')) state.lastMove.p1 = move;
     if (actorSlot.startsWith('p2')) state.lastMove.p2 = move;
+    showFx(move);
     logLine(`${actor} nutzt ${move}.`);
   } else if (type === 'switch') {
     const slot = parts[2];
@@ -448,6 +457,9 @@ function parseBattleLine(line) {
     state.playerRequest = null;
   } else if (type === 'turn') {
     state.message = `Zug ${parts[2]}.`;
+  } else if (type === '-status') {
+    showFx(parts[3] || 'Status');
+    logLine(`${parts[2]?.split(': ').pop()} erhaelt ${parts[3]}.`);
   }
 }
 
@@ -460,6 +472,8 @@ async function startBattle() {
 
   const playerTeam = state.playerPreview.map((species) => generateSet(species, Dex));
   const opponentTeam = state.opponentPreview.map((species) => generateSet(species, Dex));
+  state.playerPreview = state.playerPreview.map((species, index) => ({...species, archetype: playerTeam[index].archetype}));
+  state.opponentPreview = state.opponentPreview.map((species, index) => ({...species, archetype: opponentTeam[index].archetype}));
 
   const streams = BattleStreams.getPlayerStreams(new BattleStreams.BattleStream());
 
@@ -525,6 +539,15 @@ function flashSide(side, cls) {
   }, 380);
 }
 
+function showFx(text) {
+  state.fxText = text;
+  render();
+  setTimeout(() => {
+    state.fxText = '';
+    render();
+  }, 700);
+}
+
 function movePreviewMon(index, direction) {
   const swapIndex = index + direction;
   if (swapIndex < 0 || swapIndex >= state.playerPreview.length) return;
@@ -550,6 +573,7 @@ function resetDraft() {
   state.message = 'Waehle dein erstes Draft-Pokemon.';
   state.lastMove = {p1: '', p2: ''};
   state.flash = {p1: '', p2: ''};
+  state.fxText = '';
   nextPack();
 }
 
@@ -566,7 +590,7 @@ function injectStyles() {
     .hero-panel{padding:18px;display:flex;justify-content:space-between;gap:16px;align-items:end}.draft-message{padding:14px 16px;min-height:64px;max-width:360px}.draft-grid,.preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.preview-grid{grid-template-columns:repeat(2,1fr)}.preview-panel{padding:18px;border-radius:24px;background:rgba(255,255,255,.03);border:1px solid var(--line)}.preview-list{display:grid;gap:12px}.preview-card{padding:14px;color:#1a1012;border-radius:20px;display:flex;justify-content:space-between;gap:10px;align-items:center}.preview-controls{display:flex;gap:8px}.mini-btn{padding:8px 10px;border:none;border-radius:12px;background:rgba(255,255,255,.55);font:inherit;cursor:pointer}
     .draft-card{padding:18px;text-align:left;color:#1a1012;cursor:pointer;transition:transform .16s ease}.draft-card:hover{transform:translateY(-3px)}.draft-num{font-size:.82rem;opacity:.7}.draft-card h3{margin:8px 0 10px;font-size:1.6rem}.stat-strip{display:flex;flex-wrap:wrap;gap:10px;font-size:.84rem;margin-top:10px}
     .battle-field{display:grid;gap:14px;padding:18px;border-radius:28px;background:linear-gradient(180deg,rgba(255,255,255,.03),rgba(255,255,255,.06))}.combatant.top{justify-self:end}.combatant.bottom{justify-self:start}.combat-card{min-width:260px;padding:18px;color:#1a1012;transition:transform .18s ease, filter .18s ease, opacity .18s ease}.combat-card.flash-hit{transform:translateX(8px);filter:brightness(.92)}.combat-card.flash-heal{transform:scale(1.03);filter:saturate(1.2)}.combat-card.flash-switch{transform:translateY(-6px)}.combat-card.flash-faint{opacity:.45;filter:grayscale(1)}.hp-bar{height:12px;background:rgba(0,0,0,.14);border-radius:999px;overflow:hidden;margin-top:10px}.hp-bar.slim{height:9px}.hp-fill{height:100%;background:linear-gradient(90deg,#5be18c,#d6ffb8)}.status-row{display:flex;justify-content:space-between;gap:10px;align-items:center;margin-top:10px}.status-pill{padding:6px 10px;border-radius:999px;background:rgba(255,255,255,.45);font-size:.8rem}
-    .arena-center{min-height:220px;border-radius:26px;background:radial-gradient(circle at center,rgba(255,204,103,.18),transparent 36%),rgba(255,255,255,.03);display:grid;place-items:center;position:relative;overflow:hidden}.arena-ring{width:220px;height:220px;border-radius:50%;border:2px solid rgba(255,255,255,.12)}.turn-banner{position:absolute;top:18px;left:18px;right:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}.turn-banner div{padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.06)}.arena-log{position:absolute;inset:auto 18px 18px 18px;display:grid;gap:6px;font-size:.88rem;color:#ffe6da}
+    .arena-center{min-height:220px;border-radius:26px;background:radial-gradient(circle at center,rgba(255,204,103,.18),transparent 36%),rgba(255,255,255,.03);display:grid;place-items:center;position:relative;overflow:hidden}.arena-ring{width:220px;height:220px;border-radius:50%;border:2px solid rgba(255,255,255,.12)}.turn-banner{position:absolute;top:18px;left:18px;right:18px;display:grid;grid-template-columns:1fr 1fr;gap:10px}.turn-banner div{padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.06)}.fx-text{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) scale(.85);padding:12px 18px;border-radius:999px;background:rgba(255,255,255,.14);opacity:0;font-weight:800;letter-spacing:.08em;transition:all .18s ease}.fx-text.show{opacity:1;transform:translate(-50%,-50%) scale(1)}.arena-log{position:absolute;inset:auto 18px 18px 18px;display:grid;gap:6px;font-size:.88rem;color:#ffe6da}
     .bench-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.bench-panel{padding:16px;border-radius:24px;background:rgba(255,255,255,.03);border:1px solid var(--line)}.bench-list{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.bench-card{padding:12px;color:#1a1012;border-radius:18px}
     .action-panel{display:grid;gap:14px;padding:18px;border-radius:26px;background:rgba(255,255,255,.03)}.choice-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.choice-btn,.secondary-btn{padding:14px 16px;border:none;font:inherit;font-weight:700;cursor:pointer}.choice-btn{display:flex;justify-content:space-between;gap:10px;color:#190f13;background:linear-gradient(180deg,#ffe6bf,#ffc27f)}.choice-btn.switch{background:linear-gradient(180deg,#ffd0e9,#ff9bd4)}.secondary-btn{border-radius:18px;background:linear-gradient(180deg,#ffe8bc,#ffd064);color:#190f13}
     .notes{margin:0;padding-left:18px;color:var(--muted)}.log-list{display:grid;gap:10px;max-height:420px;overflow:auto}.log-line{padding:12px 14px;color:#ffe6da}.empty-card{padding:14px 16px;color:var(--muted)}
