@@ -3,85 +3,311 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Pokemon Arena | Tim Schoendorf</title>
+    <title>Pokemon Safari Sprint | Tim Schoendorf</title>
     <style>
-        :root{--bg:#08111f;--panel:rgba(10,22,39,.86);--line:rgba(255,255,255,.12);--text:#eef6ff;--muted:#98afc7;--accent:#ffd84d;--accent2:#59d7ff;--good:#62f0a8;--shadow:0 24px 60px rgba(0,0,0,.32)}
-        *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:"Segoe UI",Tahoma,sans-serif;color:var(--text);background:radial-gradient(circle at top left,rgba(255,216,77,.18),transparent 26%),radial-gradient(circle at top right,rgba(89,215,255,.2),transparent 28%),linear-gradient(160deg,#06101d 0%,#0f1e34 48%,#132d45 100%)}
-        a{color:inherit}.page{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:28px 0 40px}.back-link{display:inline-flex;align-items:center;gap:10px;padding:10px 16px;border-radius:999px;text-decoration:none;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(12px)}
-        .hero,.main-grid,.trainer-grid,.action-row{display:grid;gap:24px}.hero{grid-template-columns:1.2fr .8fr;margin-top:22px}.hero-card,.panel{background:var(--panel);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);backdrop-filter:blur(18px)}.hero-card{padding:28px}.roster{padding:22px}
-        .eyebrow{color:var(--accent);text-transform:uppercase;letter-spacing:.18em;font-size:.8rem;font-weight:700}h1{margin:14px 0 10px;font-size:clamp(2.4rem,5vw,4rem);line-height:.95}.hero-card p{max-width:58ch;color:var(--muted);font-size:1.05rem}
-        .meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}.pill{padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08);font-size:.92rem}
-        .trainer-grid{grid-template-columns:repeat(3,1fr);gap:14px}.trainer-card{border:1px solid rgba(255,255,255,.1);background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border-radius:22px;padding:18px;cursor:pointer;transition:transform .18s ease,border-color .18s ease}.trainer-card:hover,.trainer-card.active{transform:translateY(-3px);border-color:rgba(255,216,77,.65)}.trainer-card h3{margin:4px 0 6px;font-size:1.2rem}.sprite{font-size:3rem}.type{color:var(--accent2);font-weight:700;font-size:.88rem;letter-spacing:.08em;text-transform:uppercase}.trainer-card p{color:var(--muted);min-height:54px;margin-bottom:10px}.stats{display:flex;justify-content:space-between;color:#cfe3f8;font-size:.92rem}
-        .main-grid{grid-template-columns:1.5fr .9fr}.battle-panel,.panel{padding:22px}.arena{overflow:hidden;border-radius:24px;background:radial-gradient(circle at top,rgba(255,255,255,.1),transparent 35%),linear-gradient(180deg,#1e4978 0%,#173c62 44%,#0e243e 44%,#0e243e 100%);min-height:430px;padding:24px}.combatant{width:min(320px,70%)}.combatant.enemy{margin-left:auto;text-align:right}.combatant.player{margin-top:118px}
-        .monster-card{display:inline-flex;flex-direction:column;gap:8px;padding:16px 18px;border-radius:22px;background:rgba(8,15,28,.58);border:1px solid rgba(255,255,255,.1);min-width:190px}.monster-name{font-size:1.12rem;font-weight:700}.monster-level{color:var(--muted);font-size:.9rem}.bar{width:100%;height:12px;border-radius:999px;background:rgba(255,255,255,.08);overflow:hidden}.bar-fill{height:100%;border-radius:inherit;transition:width .28s ease;background:linear-gradient(90deg,var(--good),#baffcd)}.bar-fill.low{background:linear-gradient(90deg,#ff9d5c,#ffd36a)}.bar-fill.critical{background:linear-gradient(90deg,#ff4d6c,#ff8c98)}.combat-sprite{font-size:clamp(4rem,9vw,6.5rem);margin-top:16px}.enemy .combat-sprite{transform:scaleX(-1)}
-        .action-row{grid-template-columns:repeat(4,1fr);gap:12px;margin-top:18px}button{font:inherit;border:none;cursor:pointer}.move-btn,.reset-btn{border-radius:18px;padding:14px 12px;color:#04111d;background:linear-gradient(135deg,var(--accent),#fff0a8);font-weight:700}.move-btn.alt{background:linear-gradient(135deg,var(--accent2),#b8f0ff)}.move-btn.utility{background:linear-gradient(135deg,#b4ffb1,#72f7ca)}.move-btn.special{background:linear-gradient(135deg,#ff8cc4,#ffd5ec)}.move-btn:disabled{opacity:.48;cursor:default}
-        .side-panel{display:grid;gap:24px}.scoreboard,.battle-log{display:grid;gap:12px}.score-row{display:flex;justify-content:space-between;padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05)}.battle-log{max-height:360px;overflow:auto}.log-entry{border-left:3px solid rgba(255,216,77,.5);padding:10px 12px;background:rgba(255,255,255,.04);border-radius:0 14px 14px 0;color:#dbe9f8}.log-entry.enemy{border-left-color:rgba(255,113,143,.6)}.log-entry.system{border-left-color:rgba(89,215,255,.55)}
-        .status{margin-top:18px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}.status-card{padding:12px 14px;border-radius:16px;background:rgba(255,255,255,.05)}.result-banner{margin-top:18px;padding:16px 18px;border-radius:18px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);display:none}.result-banner.show{display:block}.result-banner.win{border-color:rgba(98,240,168,.45);background:rgba(98,240,168,.12)}.result-banner.lose{border-color:rgba(255,113,143,.45);background:rgba(255,113,143,.12)}
-        @media (max-width:980px){.hero,.main-grid,.trainer-grid,.action-row{grid-template-columns:1fr}.combatant{width:100%}.combatant.player{margin-top:80px}}
+        :root { --bg:#d8ef9e; --screen:#26452b; --shell:#e7d39a; --shell-dark:#b7965c; --ink:#142018; --soft:#4c6b4a; --light:#edf7d1; --accent:#ff7a59; --gold:#ffe07a; }
+        * { box-sizing:border-box; }
+        body { margin:0; min-height:100vh; font-family:"Verdana",sans-serif; background:linear-gradient(180deg,#b8df78,#dcedae 50%,#f1f2cc); color:var(--ink); display:flex; align-items:center; justify-content:center; padding:24px; }
+        a { color:inherit; }
+        .device { width:min(1080px,100%); background:linear-gradient(180deg,var(--shell),#d8bb82); border:6px solid var(--shell-dark); border-radius:34px; padding:24px; box-shadow:0 28px 60px rgba(0,0,0,.18); }
+        .topbar { display:flex; justify-content:space-between; gap:16px; align-items:center; margin-bottom:18px; }
+        .back { text-decoration:none; padding:10px 14px; border-radius:999px; background:rgba(255,255,255,.42); }
+        .brand { text-transform:uppercase; letter-spacing:.16em; font-size:.8rem; color:#6f5320; }
+        .shell-grid { display:grid; grid-template-columns:1.2fr .8fr; gap:20px; }
+        .screen { background:linear-gradient(180deg,#3e6542,#1c3020); color:var(--light); border:6px solid #1b2817; border-radius:26px; padding:22px; min-height:620px; display:grid; grid-template-rows:auto auto 1fr auto; gap:16px; }
+        h1 { margin:0; font-size:clamp(2rem,4vw,3.3rem); line-height:.92; }
+        .intro { color:#d6e8c0; max-width:52ch; }
+        .hud { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+        .stat, .panel, .option, .log-entry, .caught-card { background:rgba(255,255,255,.08); border:1px solid rgba(255,255,255,.09); border-radius:18px; }
+        .stat { padding:12px 14px; }
+        .label { display:block; font-size:.76rem; text-transform:uppercase; letter-spacing:.12em; color:#b8d4aa; margin-bottom:4px; }
+        .value { font-size:1.35rem; font-weight:700; }
+        .encounter { display:grid; grid-template-columns:.85fr 1.15fr; gap:18px; align-items:stretch; }
+        .portrait { background:radial-gradient(circle at top,rgba(255,224,122,.26),transparent 48%),rgba(255,255,255,.06); border-radius:24px; padding:20px; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+        .sprite { font-size:5rem; filter:drop-shadow(0 8px 12px rgba(0,0,0,.35)); }
+        .mood { margin-top:10px; color:#ffeeb4; font-weight:700; }
+        .details { display:grid; gap:12px; }
+        .encounter-card { padding:18px; border-radius:22px; background:rgba(0,0,0,.16); }
+        .encounter-card h2 { margin:0 0 8px; font-size:1.6rem; }
+        .meta { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:12px; }
+        .chip { padding:8px 12px; border-radius:999px; background:rgba(255,255,255,.08); font-size:.88rem; }
+        .odds { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+        .option-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+        button { border:none; font:inherit; cursor:pointer; }
+        .option { padding:14px 12px; color:#142018; font-weight:700; background:linear-gradient(180deg,#f8f6d8,#d6e39f); }
+        .option.alt { background:linear-gradient(180deg,#ffe8a8,#f7ca63); }
+        .option.risk { background:linear-gradient(180deg,#ffc4a8,#ff8d67); }
+        .option.ghost { background:linear-gradient(180deg,#d9e8cc,#afc89b); }
+        .sidebar { display:grid; gap:16px; }
+        .panel { padding:16px; background:rgba(20,32,24,.08); }
+        .panel h2 { margin:0 0 12px; font-size:1rem; text-transform:uppercase; letter-spacing:.12em; color:#6f5320; }
+        .collection { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; }
+        .caught-card { padding:12px; background:rgba(255,255,255,.45); min-height:76px; }
+        .caught-card strong { display:block; }
+        .log { display:grid; gap:10px; max-height:250px; overflow:auto; }
+        .log-entry { padding:12px 14px; background:rgba(255,255,255,.45); }
+        .footer { display:flex; justify-content:space-between; gap:12px; align-items:center; flex-wrap:wrap; }
+        .banner { padding:14px 16px; border-radius:18px; background:rgba(255,255,255,.08); min-height:54px; flex:1; }
+        .reset { padding:12px 16px; border-radius:16px; background:linear-gradient(180deg,#fff3bf,#ffd46a); font-weight:700; }
+        @media (max-width:960px) { .shell-grid,.encounter,.hud,.option-grid,.collection { grid-template-columns:1fr; } .screen { min-height:auto; } }
     </style>
 </head>
 <body>
-    <div class="page">
-        <a class="back-link" href="../index.html#games">Zurück zur Startseite</a>
-        <section class="hero">
-            <div class="hero-card">
-                <div class="eyebrow">Arena Challenge</div>
-                <h1>Pokemon Arena</h1>
-                <p>Wähle dein Pokemon, besiege drei Arena-Gegner in Folge und nutze Typvorteile, Heilung und starke Signature-Moves im richtigen Moment.</p>
-                <div class="meta"><div class="pill">3 spielbare Pokemon</div><div class="pill">3 Arena-Leiter</div><div class="pill">Typvorteile und KI</div></div>
-            </div>
-            <div class="hero-card roster"><h2>Dein Team</h2><div class="trainer-grid" id="trainerGrid"></div></div>
-        </section>
-        <section class="main-grid">
-            <div class="battle-panel hero-card">
-                <h2>Arena</h2>
-                <div class="arena">
-                    <div class="combatant enemy">
-                        <div class="monster-card"><div class="monster-name" id="enemyName"></div><div class="monster-level" id="enemyMeta"></div><div class="bar"><div class="bar-fill" id="enemyHp"></div></div><div id="enemyHpText"></div></div>
-                        <div class="combat-sprite" id="enemySprite"></div>
+    <div class="device">
+        <div class="topbar">
+            <a class="back" href="../index.html#games">Zurueck zur Startseite</a>
+            <div class="brand">Pokemon Safari Sprint</div>
+        </div>
+        <div class="shell-grid">
+            <section class="screen">
+                <div>
+                    <h1>Safari Sprint</h1>
+                    <p class="intro">Ein Catch-Spiel mit hohem Wiederspielwert: jede Runde bringt andere Pokemon, Stimmungen, Fangchancen, seltene Shinies und knappe Safari-Ressourcen.</p>
+                </div>
+                <div class="hud">
+                    <div class="stat"><span class="label">Schritte</span><span class="value" id="stepsStat"></span></div>
+                    <div class="stat"><span class="label">Bait</span><span class="value" id="baitStat"></span></div>
+                    <div class="stat"><span class="label">Balle</span><span class="value" id="ballStat"></span></div>
+                    <div class="stat"><span class="label">Score</span><span class="value" id="scoreStat"></span></div>
+                </div>
+                <div class="encounter">
+                    <div class="portrait">
+                        <div class="sprite" id="sprite"></div>
+                        <div class="mood" id="moodText"></div>
                     </div>
-                    <div class="combatant player">
-                        <div class="monster-card"><div class="monster-name" id="playerName"></div><div class="monster-level" id="playerMeta"></div><div class="bar"><div class="bar-fill" id="playerHp"></div></div><div id="playerHpText"></div></div>
-                        <div class="combat-sprite" id="playerSprite"></div>
+                    <div class="details">
+                        <div class="encounter-card">
+                            <h2 id="nameText"></h2>
+                            <div class="meta" id="meta"></div>
+                            <p id="desc"></p>
+                            <div class="odds">
+                                <div class="stat"><span class="label">Fangchance</span><span class="value" id="catchStat"></span></div>
+                                <div class="stat"><span class="label">Fluchtchance</span><span class="value" id="fleeStat"></span></div>
+                            </div>
+                        </div>
+                        <div class="option-grid">
+                            <button class="option alt" id="ballBtn">Safari Ball</button>
+                            <button class="option" id="baitBtn">Bait werfen</button>
+                            <button class="option ghost" id="watchBtn">Beobachten</button>
+                            <button class="option risk" id="skipBtn">Weiterziehen</button>
+                        </div>
                     </div>
                 </div>
-                <div class="action-row">
-                    <button class="move-btn" id="basicBtn"></button>
-                    <button class="move-btn alt" id="typeBtn"></button>
-                    <button class="move-btn utility" id="healBtn"></button>
-                    <button class="move-btn special" id="specialBtn"></button>
+                <div class="footer">
+                    <div class="banner" id="banner"></div>
+                    <button class="reset" id="resetBtn">Neue Safari</button>
                 </div>
-                <div class="status"><div class="status-card" id="matchInfo"></div><div class="status-card" id="specialInfo"></div><button class="reset-btn" id="resetBtn">Neustart</button></div>
-                <div class="result-banner" id="resultBanner"></div>
-            </div>
-            <div class="side-panel">
-                <div class="panel"><h2>Fortschritt</h2><div class="scoreboard"><div class="score-row"><span>Gewonnene Kämpfe</span><strong id="wins">0 / 3</strong></div><div class="score-row"><span>Heiltränke übrig</span><strong id="potions">2</strong></div><div class="score-row"><span>Trainer</span><strong id="trainerName"></strong></div></div></div>
-                <div class="panel"><h2>Kampfprotokoll</h2><div class="battle-log" id="battleLog"></div></div>
-            </div>
-        </section>
+            </section>
+            <aside class="sidebar">
+                <div class="panel">
+                    <h2>Bestleistung</h2>
+                    <div class="stat"><span class="label">Bestscore</span><span class="value" id="bestStat"></span></div>
+                    <div class="stat" style="margin-top:10px;"><span class="label">Shinies</span><span class="value" id="shinyStat"></span></div>
+                </div>
+                <div class="panel">
+                    <h2>Sammlung</h2>
+                    <div class="collection" id="collection"></div>
+                </div>
+                <div class="panel">
+                    <h2>Safari Log</h2>
+                    <div class="log" id="log"></div>
+                </div>
+            </aside>
+        </div>
     </div>
     <script>
-        const starters=[{id:"pikachu",name:"Pikachu",sprite:"⚡",type:"electric",label:"Elektro",hp:108,attack:24,defense:7,description:"Tempo, Kontrolle und gefährliche Schockwellen.",moves:{basic:{name:"Ruckzuckhieb",power:22,text:"Pikachu stürmt vor."},type:{name:"Donnerschock",power:28,type:"electric",text:"Elektrische Ladung schießt durch die Arena."},heal:{name:"Beerensaft",heal:28,text:"Pikachu tankt Energie mit einem Beerensaft."},special:{name:"Volttackle",power:42,type:"electric",cost:1,text:"Pikachu entfesselt Volttackle."}}},{id:"charmander",name:"Glumanda",sprite:"🔥",type:"fire",label:"Feuer",hp:114,attack:26,defense:6,description:"Hoher Schaden und explosive Finisher.",moves:{basic:{name:"Kratzer",power:20,text:"Glumanda greift im Nahkampf an."},type:{name:"Flammenwurf",power:31,type:"fire",text:"Eine heiße Flammensäule trifft das Ziel."},heal:{name:"Sonnenkraft",heal:24,text:"Glumanda sammelt Wärme und regeneriert sich."},special:{name:"Feuersturm",power:45,type:"fire",cost:1,text:"Glumanda ruft einen Feuersturm herbei."}}},{id:"squirtle",name:"Schiggy",sprite:"💧",type:"water",label:"Wasser",hp:124,attack:22,defense:9,description:"Zäher Starter mit solider Heilung.",moves:{basic:{name:"Tackle",power:18,text:"Schiggy rammt den Gegner."},type:{name:"Aquaknarre",power:29,type:"water",text:"Ein Druckstrahl aus Wasser trifft präzise."},heal:{name:"Panzerfokus",heal:26,text:"Schiggy stärkt den Panzer und erholt sich."},special:{name:"Hydropumpe",power:44,type:"water",cost:1,text:"Schiggy setzt eine mächtige Hydropumpe frei."}}}];
-        const opponents=[{name:"Rocko",pokemon:"Onix",sprite:"🪨",type:"rock",label:"Gestein",hp:110,attack:20,defense:8,move:"Steinwurf"},{name:"Misty",pokemon:"Starmie",sprite:"🌊",type:"water",label:"Wasser",hp:116,attack:23,defense:7,move:"Aquastrahl"},{name:"Lt. Surge",pokemon:"Raichu",sprite:"⚡",type:"electric",label:"Elektro",hp:124,attack:25,defense:7,move:"Donnerblitz"}];
-        const advantage={electric:["water"],fire:["grass","rock"],water:["fire","rock"],rock:["electric","fire"]};
-        const trainerGrid=document.getElementById("trainerGrid"),battleLog=document.getElementById("battleLog"),resultBanner=document.getElementById("resultBanner");
-        const ui={playerName:document.getElementById("playerName"),playerMeta:document.getElementById("playerMeta"),playerSprite:document.getElementById("playerSprite"),playerHp:document.getElementById("playerHp"),playerHpText:document.getElementById("playerHpText"),enemyName:document.getElementById("enemyName"),enemyMeta:document.getElementById("enemyMeta"),enemySprite:document.getElementById("enemySprite"),enemyHp:document.getElementById("enemyHp"),enemyHpText:document.getElementById("enemyHpText"),wins:document.getElementById("wins"),potions:document.getElementById("potions"),trainerName:document.getElementById("trainerName"),matchInfo:document.getElementById("matchInfo"),specialInfo:document.getElementById("specialInfo"),basicBtn:document.getElementById("basicBtn"),typeBtn:document.getElementById("typeBtn"),healBtn:document.getElementById("healBtn"),specialBtn:document.getElementById("specialBtn")};
-        const controls=[ui.basicBtn,ui.typeBtn,ui.healBtn,ui.specialBtn];let state={};
-        const clone=(x)=>JSON.parse(JSON.stringify(x));
-        const mult=(moveType,targetType)=>moveType&&advantage[moveType]?.includes(targetType)?1.45:1;
-        const dmg=(a,d,m)=>Math.round(Math.max(8,m.power+a.attack-d.defense+Math.floor(Math.random()*6))*mult(m.type||a.type,d.type));
-        const heal=(e,m)=>Math.min(m.heal,e.maxHp-e.hp);
-        function setBar(el,ratio){el.style.width=`${Math.max(0,ratio)*100}%`;el.classList.toggle("low",ratio<=.5&&ratio>.2);el.classList.toggle("critical",ratio<=.2)}
-        function addLog(text,kind="system"){const e=document.createElement("div");e.className=`log-entry ${kind}`;e.textContent=text;battleLog.prepend(e)}
-        function disable(disabled){controls.forEach((b)=>b.disabled=disabled)}
-        function buildRoster(){trainerGrid.innerHTML="";starters.forEach((s)=>{const card=document.createElement("button");card.className=`trainer-card ${state.player?.id===s.id?"active":""}`;card.innerHTML=`<div class="sprite">${s.sprite}</div><div class="type">${s.label}</div><h3>${s.name}</h3><p>${s.description}</p><div class="stats"><span>KP ${s.hp}</span><span>ATK ${s.attack}</span></div>`;card.addEventListener("click",()=>selectStarter(s.id));trainerGrid.appendChild(card)})}
-        function selectStarter(id){const starter=starters.find((i)=>i.id===id);state.player=clone(starter);state.player.maxHp=state.player.hp;state.specialCharges=1;state.potions=2;state.wins=0;state.opponentIndex=0;resultBanner.className="result-banner";resultBanner.textContent="";battleLog.innerHTML="";addLog(`${state.player.name} betritt die Arena.`);nextOpponent();buildRoster();updateUI()}
-        function nextOpponent(){if(state.opponentIndex>=opponents.length){showResult(true);return}const foe=clone(opponents[state.opponentIndex]);foe.maxHp=foe.hp;state.enemy=foe;addLog(`${foe.name} schickt ${foe.pokemon} in den Kampf.`)}
-        function updateUI(){if(!state.player||!state.enemy)return;ui.playerName.textContent=state.player.name;ui.playerMeta.textContent=`${state.player.label} · Arena-Held`;ui.playerSprite.textContent=state.player.sprite;ui.playerHpText.textContent=`${state.player.hp} / ${state.player.maxHp} KP`;setBar(ui.playerHp,state.player.hp/state.player.maxHp);ui.enemyName.textContent=state.enemy.pokemon;ui.enemyMeta.textContent=`${state.enemy.name} · ${state.enemy.label}`;ui.enemySprite.textContent=state.enemy.sprite;ui.enemyHpText.textContent=`${state.enemy.hp} / ${state.enemy.maxHp} KP`;setBar(ui.enemyHp,state.enemy.hp/state.enemy.maxHp);ui.wins.textContent=`${state.wins} / 3`;ui.potions.textContent=state.potions;ui.trainerName.textContent=state.player.name;ui.matchInfo.textContent=`Kampf ${Math.min(state.opponentIndex+1,3)} von 3`;ui.specialInfo.textContent=`Signature-Move bereit: ${state.specialCharges>0?"Ja":"Nein"}`;ui.basicBtn.textContent=state.player.moves.basic.name;ui.typeBtn.textContent=state.player.moves.type.name;ui.healBtn.textContent=state.player.moves.heal.name;ui.specialBtn.textContent=state.player.moves.special.name;ui.healBtn.disabled=state.potions<=0||state.player.hp===state.player.maxHp;ui.specialBtn.disabled=state.specialCharges<=0}
-        function showResult(win){disable(true);resultBanner.className=`result-banner show ${win?"win":"lose"}`;resultBanner.textContent=win?`${state.player.name} gewinnt alle drei Arenakämpfe. Perfekter Run.`:`${state.player.name} wurde besiegt. Wähle ein Pokemon und starte den Run erneut.`;addLog(resultBanner.textContent)}
-        function playerTurn(key){if(!state.player||!state.enemy)return;disable(true);const move=state.player.moves[key];if(key==="heal"){if(state.potions<=0||state.player.hp===state.player.maxHp){disable(false);updateUI();return}const rec=heal(state.player,move);state.player.hp+=rec;state.potions-=1;addLog(`${move.text} +${rec} KP.`,"player")}else{if(key==="special")state.specialCharges-=move.cost;const dealt=dmg(state.player,state.enemy,move);state.enemy.hp=Math.max(0,state.enemy.hp-dealt);addLog(`${move.text} ${state.enemy.pokemon} verliert ${dealt} KP.${mult(move.type||state.player.type,state.enemy.type)>1?" Es ist sehr effektiv.":""}`,"player")}updateUI();if(state.enemy.hp<=0){state.wins+=1;state.opponentIndex+=1;if(state.specialCharges<1)state.specialCharges=1;addLog(`${state.enemy.pokemon} ist kampfunfähig.`);if(state.opponentIndex>=opponents.length){showResult(true);updateUI();return}nextOpponent();updateUI();disable(false);return}setTimeout(enemyTurn,520)}
-        function enemyTurn(){const move={name:state.enemy.move,power:state.opponentIndex===2?31:26,type:state.enemy.type};const dealt=dmg(state.enemy,state.player,move);state.player.hp=Math.max(0,state.player.hp-dealt);addLog(`${state.enemy.name}s ${move.name} trifft für ${dealt} KP.${mult(move.type,state.player.type)>1?" Volltreffer.":""}`,"enemy");updateUI();if(state.player.hp<=0){showResult(false);return}disable(false);updateUI()}
-        ui.basicBtn.addEventListener("click",()=>playerTurn("basic"));ui.typeBtn.addEventListener("click",()=>playerTurn("type"));ui.healBtn.addEventListener("click",()=>playerTurn("heal"));ui.specialBtn.addEventListener("click",()=>playerTurn("special"));document.getElementById("resetBtn").addEventListener("click",()=>selectStarter(state.player?.id||"pikachu"));buildRoster();selectStarter("pikachu");
+        const speciesPool = [
+            { name: "Pikachu", sprite: "P", biome: "Kanto Grass", baseCatch: 52, flee: 18, points: 120, rarity: "rare" },
+            { name: "Eevee", sprite: "E", biome: "Route Edge", baseCatch: 58, flee: 16, points: 110, rarity: "rare" },
+            { name: "Bulbasaur", sprite: "B", biome: "Moss Grove", baseCatch: 48, flee: 18, points: 130, rarity: "rare" },
+            { name: "Charmander", sprite: "C", biome: "Warm Rock", baseCatch: 45, flee: 20, points: 140, rarity: "rare" },
+            { name: "Squirtle", sprite: "S", biome: "Pond Bend", baseCatch: 46, flee: 18, points: 135, rarity: "rare" },
+            { name: "Snorlax", sprite: "Z", biome: "Sleeping Trail", baseCatch: 34, flee: 8, points: 180, rarity: "epic" },
+            { name: "Dratini", sprite: "D", biome: "River Spiral", baseCatch: 30, flee: 22, points: 210, rarity: "epic" },
+            { name: "Psyduck", sprite: "Y", biome: "Marsh", baseCatch: 62, flee: 13, points: 95, rarity: "common" },
+            { name: "Oddish", sprite: "O", biome: "Thicket", baseCatch: 68, flee: 10, points: 80, rarity: "common" },
+            { name: "Abra", sprite: "A", biome: "Quiet Field", baseCatch: 28, flee: 34, points: 160, rarity: "epic" },
+            { name: "Lapras", sprite: "L", biome: "Blue Bay", baseCatch: 25, flee: 11, points: 230, rarity: "legend" },
+            { name: "Magikarp", sprite: "M", biome: "Old Dock", baseCatch: 75, flee: 9, points: 55, rarity: "common" }
+        ];
+
+        const moods = [
+            { name: "ruhig", catchMod: 12, fleeMod: -6, note: "Es wirkt entspannt." },
+            { name: "neugierig", catchMod: 6, fleeMod: -2, note: "Es beobachtet jede Bewegung." },
+            { name: "verspielt", catchMod: 8, fleeMod: 2, note: "Es springt aufgeregt umher." },
+            { name: "nervoes", catchMod: -10, fleeMod: 12, note: "Ein falscher Schritt und es ist weg." },
+            { name: "aggressiv", catchMod: -6, fleeMod: 8, note: "Es laesst niemanden nah heran." }
+        ];
+
+        const ui = {
+            steps: document.getElementById("stepsStat"),
+            bait: document.getElementById("baitStat"),
+            balls: document.getElementById("ballStat"),
+            score: document.getElementById("scoreStat"),
+            best: document.getElementById("bestStat"),
+            shiny: document.getElementById("shinyStat"),
+            sprite: document.getElementById("sprite"),
+            mood: document.getElementById("moodText"),
+            name: document.getElementById("nameText"),
+            meta: document.getElementById("meta"),
+            desc: document.getElementById("desc"),
+            catch: document.getElementById("catchStat"),
+            flee: document.getElementById("fleeStat"),
+            banner: document.getElementById("banner"),
+            collection: document.getElementById("collection"),
+            log: document.getElementById("log")
+        };
+
+        let state = {};
+
+        function bestScore() { return Number(localStorage.getItem("safari_best") || 0); }
+        function bestShinies() { return Number(localStorage.getItem("safari_shiny") || 0); }
+        function log(text) { const entry = document.createElement("div"); entry.className = "log-entry"; entry.textContent = text; ui.log.prepend(entry); }
+        function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
+
+        function randomEncounter() {
+            const species = speciesPool[Math.floor(Math.random() * speciesPool.length)];
+            const mood = moods[Math.floor(Math.random() * moods.length)];
+            const shiny = Math.random() < 0.07;
+            return {
+                species,
+                mood,
+                shiny,
+                baited: false,
+                watchBonus: 0,
+                catchChance: clamp(species.baseCatch + mood.catchMod + (shiny ? -14 : 0), 12, 88),
+                fleeChance: clamp(species.flee + mood.fleeMod + (shiny ? 6 : 0), 4, 48)
+            };
+        }
+
+        function scoreFor(encounter) {
+            const uniqueBonus = state.caught.find((item) => item.name === encounter.species.name) ? 0 : 40;
+            const shinyBonus = encounter.shiny ? 180 : 0;
+            return encounter.species.points + uniqueBonus + shinyBonus;
+        }
+
+        function setEncounter() {
+            if (state.steps <= 0 || state.balls <= 0) {
+                endRun();
+                return;
+            }
+            state.current = randomEncounter();
+            render();
+        }
+
+        function renderCollection() {
+            ui.collection.innerHTML = "";
+            if (!state.caught.length) {
+                ui.collection.innerHTML = '<div class="caught-card"><strong>Noch leer</strong><span>Fange Pokemon fuer Combo und Score.</span></div>';
+                return;
+            }
+            state.caught.slice(-6).reverse().forEach((entry) => {
+                const card = document.createElement("div");
+                card.className = "caught-card";
+                card.innerHTML = `<strong>${entry.name}${entry.shiny ? " *" : ""}</strong><span>${entry.biome}</span><div>${entry.points} Punkte</div>`;
+                ui.collection.appendChild(card);
+            });
+        }
+
+        function render() {
+            const encounter = state.current;
+            ui.steps.textContent = state.steps;
+            ui.bait.textContent = state.bait;
+            ui.balls.textContent = state.balls;
+            ui.score.textContent = state.score;
+            ui.best.textContent = bestScore();
+            ui.shiny.textContent = bestShinies();
+            ui.sprite.textContent = encounter.shiny ? `${encounter.species.sprite}*` : encounter.species.sprite;
+            ui.mood.textContent = `${encounter.species.name} ist ${encounter.mood.name}`;
+            ui.name.textContent = `${encounter.species.name}${encounter.shiny ? " Shiny" : ""}`;
+            ui.meta.innerHTML = `<span class="chip">${encounter.species.biome}</span><span class="chip">${encounter.species.rarity}</span><span class="chip">${encounter.baited ? "bait aktiv" : "kein bait"}</span>`;
+            ui.desc.textContent = encounter.mood.note;
+            ui.catch.textContent = `${clamp(encounter.catchChance + encounter.watchBonus + (encounter.baited ? 14 : 0), 5, 95)}%`;
+            ui.flee.textContent = `${clamp(encounter.fleeChance - (encounter.baited ? 10 : 0), 2, 55)}%`;
+            ui.banner.textContent = state.banner;
+            renderCollection();
+        }
+
+        function fleeRoll(encounter) {
+            const fleeChance = clamp(encounter.fleeChance - (encounter.baited ? 10 : 0), 2, 55);
+            if (Math.random() * 100 < fleeChance) {
+                state.banner = `${encounter.species.name} ist geflohen.`;
+                log(state.banner);
+                state.steps -= 1;
+                setEncounter();
+                return true;
+            }
+            return false;
+        }
+
+        function throwBall() {
+            if (state.over) return;
+            if (state.balls <= 0) return;
+            const encounter = state.current;
+            const catchChance = clamp(encounter.catchChance + encounter.watchBonus + (encounter.baited ? 14 : 0), 5, 95);
+            state.balls -= 1;
+            if (Math.random() * 100 < catchChance) {
+                const points = scoreFor(encounter);
+                state.score += points;
+                if (encounter.shiny) localStorage.setItem("safari_shiny", String(bestShinies() + 1));
+                state.caught.push({ name: encounter.species.name, biome: encounter.species.biome, shiny: encounter.shiny, points });
+                state.banner = `${encounter.species.name}${encounter.shiny ? " Shiny" : ""} gefangen. +${points} Punkte.`;
+                log(state.banner);
+                state.steps -= 1;
+                setEncounter();
+                return;
+            }
+            state.banner = `Der Ball wackelt, aber ${encounter.species.name} bricht aus.`;
+            log(state.banner);
+            if (!fleeRoll(encounter)) render();
+        }
+
+        function useBait() {
+            if (state.over) return;
+            if (state.bait <= 0) return;
+            state.bait -= 1;
+            state.current.baited = true;
+            state.banner = `Bait geworfen. ${state.current.species.name} bleibt laenger.`;
+            log(state.banner);
+            render();
+        }
+
+        function watchPokemon() {
+            if (state.over) return;
+            state.current.watchBonus = Math.min(20, state.current.watchBonus + 8);
+            state.banner = `Du beobachtest ruhig. Die Fangchance steigt.`;
+            log(state.banner);
+            if (!fleeRoll(state.current)) render();
+        }
+
+        function skipEncounter() {
+            if (state.over) return;
+            state.banner = `Du ziehst weiter und suchst ein besseres Ziel.`;
+            log(state.banner);
+            state.steps -= 1;
+            setEncounter();
+        }
+
+        function endRun() {
+            state.over = true;
+            localStorage.setItem("safari_best", String(Math.max(bestScore(), state.score)));
+            state.banner = `Safari beendet. Endscore ${state.score}. Fangliste ${state.caught.length}.`;
+            render();
+        }
+
+        function start() {
+            state = { steps: 12, bait: 4, balls: 9, score: 0, caught: [], banner: "Eine neue Safari startet.", over: false };
+            ui.log.innerHTML = "";
+            log(state.banner);
+            setEncounter();
+        }
+
+        document.getElementById("ballBtn").addEventListener("click", throwBall);
+        document.getElementById("baitBtn").addEventListener("click", useBait);
+        document.getElementById("watchBtn").addEventListener("click", watchPokemon);
+        document.getElementById("skipBtn").addEventListener("click", skipEncounter);
+        document.getElementById("resetBtn").addEventListener("click", start);
+        start();
     </script>
 </body>
 </html>

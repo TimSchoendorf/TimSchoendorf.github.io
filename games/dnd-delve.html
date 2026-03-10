@@ -3,53 +3,376 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>D&amp;D Delve | Tim Schoendorf</title>
+    <title>D&amp;D Depthcrawl | Tim Schoendorf</title>
     <style>
-        :root{--panel:rgba(34,22,17,.88);--line:rgba(255,227,198,.12);--text:#fff3e5;--muted:#d5bfa6;--gold:#f7bf52;--ruby:#ff7d62;--emerald:#85efb1;--shadow:0 24px 50px rgba(0,0,0,.4)}
-        *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:Georgia,"Times New Roman",serif;color:var(--text);background:radial-gradient(circle at top left,rgba(247,191,82,.15),transparent 25%),radial-gradient(circle at bottom right,rgba(255,125,98,.13),transparent 22%),linear-gradient(160deg,#110c09 0%,#1d130f 52%,#2f1f16 100%)}
-        .page{width:min(1180px,calc(100% - 32px));margin:0 auto;padding:28px 0 40px}a{color:inherit;text-decoration:none}.back-link{display:inline-flex;padding:10px 16px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
-        .hero,.main-grid,.class-grid,.actions{display:grid;gap:22px}.hero{grid-template-columns:1.2fr .8fr;margin-top:20px}.panel{background:var(--panel);border:1px solid var(--line);border-radius:28px;box-shadow:var(--shadow);padding:24px;backdrop-filter:blur(16px)}
-        .eyebrow{color:var(--gold);font-weight:700;text-transform:uppercase;letter-spacing:.16em;font-size:.8rem}h1{margin:10px 0 12px;font-size:clamp(2.4rem,5vw,4.2rem);line-height:.95}.lead{color:var(--muted);font-size:1.06rem;max-width:58ch}.meta{display:flex;flex-wrap:wrap;gap:12px;margin-top:18px}.chip{padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.08)}
-        .class-grid{grid-template-columns:repeat(3,1fr)}.class-card{padding:18px;border-radius:22px;border:1px solid rgba(255,255,255,.1);background:rgba(55,34,23,.82);color:inherit;text-align:left;cursor:pointer}.class-card.active,.class-card:hover{border-color:rgba(247,191,82,.55)}.class-role{color:var(--gold);text-transform:uppercase;letter-spacing:.08em;font-size:.84rem}.class-card h3{margin:8px 0 10px;font-size:1.25rem}.class-card p{min-height:72px;color:var(--muted)}.class-stats{display:flex;justify-content:space-between;color:#ffe3bb}
-        .main-grid{grid-template-columns:1.4fr .9fr;margin-top:24px}.room-stage{min-height:520px;overflow:hidden;border-radius:24px;background:radial-gradient(circle at top,rgba(247,191,82,.12),transparent 35%),linear-gradient(180deg,#3b2618 0%,#28180f 46%,#19100c 100%);padding:24px}.encounter-card{background:rgba(9,4,2,.38);border:1px solid rgba(255,255,255,.08);border-radius:24px;padding:22px}.encounter-header{display:flex;justify-content:space-between;gap:16px;align-items:start}.encounter-title{font-size:1.8rem;margin:0}.encounter-meta{color:var(--gold);font-size:.92rem;letter-spacing:.08em;text-transform:uppercase}.encounter-text{color:var(--muted);font-size:1.02rem;line-height:1.7;margin:16px 0 18px}
-        .dice-row{display:flex;gap:14px;flex-wrap:wrap}.die,.stat-box,.log-entry{border-radius:18px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}.die{padding:14px 16px;min-width:102px;text-align:center}.die strong{display:block;font-size:1.8rem;color:var(--gold)}
-        .actions{grid-template-columns:repeat(3,1fr);margin-top:18px}button{font:inherit;border:none;cursor:pointer}.action-btn,.reset-btn{border-radius:18px;padding:14px 14px;color:#2b170c;font-weight:700;background:linear-gradient(135deg,#f7bf52,#ffe1a1)}.action-btn.alt{background:linear-gradient(135deg,#ff9a79,#ffd0ba)}.action-btn.support{background:linear-gradient(135deg,#a8f0c0,#e0fff1)}.action-btn:disabled{opacity:.42;cursor:default}
-        .sidebar,.stats-grid,.log{display:grid;gap:22px}.stats-grid{gap:12px}.stat-box{padding:14px 16px;display:flex;justify-content:space-between}.progress{width:100%;height:12px;border-radius:999px;overflow:hidden;background:rgba(255,255,255,.08)}.fill{height:100%;border-radius:inherit;transition:width .25s ease}.fill.hp{background:linear-gradient(90deg,var(--ruby),#ffb092)}.fill.focus{background:linear-gradient(90deg,var(--emerald),#d8ffe9)}.log{gap:10px;max-height:390px;overflow:auto}.log-entry{padding:12px 14px;color:#ffe9cf}.log-entry.system{border-left:3px solid rgba(247,191,82,.55)}.log-entry.bad{border-left:3px solid rgba(255,125,98,.55)}.log-entry.good{border-left:3px solid rgba(133,239,177,.55)}.ending{margin-top:18px;padding:16px;border-radius:18px;display:none;border:1px solid rgba(255,255,255,.12)}.ending.show{display:block}
-        @media (max-width:980px){.hero,.main-grid,.class-grid,.actions{grid-template-columns:1fr}}
+        :root { --paper:#e7d7b1; --ink:#2e2015; --accent:#8d4e24; --good:#3f7a48; --bad:#9a4339; --fog:#4a3728; --line:rgba(0,0,0,.14); }
+        * { box-sizing:border-box; }
+        body { margin:0; min-height:100vh; font-family:Georgia,serif; color:var(--ink); background:radial-gradient(circle at top,rgba(255,234,190,.3),transparent 35%),linear-gradient(180deg,#2b1d16,#4b3425 50%,#24170f); padding:26px; }
+        a { color:inherit; }
+        .page { width:min(1240px,100%); margin:0 auto; display:grid; grid-template-columns:300px 1fr 320px; gap:20px; }
+        .column { background:var(--paper); border-radius:28px; padding:18px; box-shadow:0 26px 60px rgba(0,0,0,.28); }
+        .left { display:grid; align-content:start; gap:16px; }
+        .back { text-decoration:none; padding:10px 14px; border-radius:999px; background:rgba(255,255,255,.6); }
+        h1 { margin:4px 0 10px; font-size:2.5rem; line-height:.92; }
+        .lead { color:#604835; }
+        .class-grid { display:grid; gap:10px; }
+        .class-card, .panel, .tile, .log-entry, .action { border:1px solid var(--line); border-radius:18px; }
+        .class-card { padding:14px; background:rgba(255,255,255,.45); cursor:pointer; }
+        .class-card.active { border-color:rgba(141,78,36,.65); background:rgba(255,248,236,.92); }
+        .class-card strong { display:block; margin-bottom:4px; }
+        .center { display:grid; gap:16px; }
+        .map-head { display:flex; justify-content:space-between; gap:12px; align-items:end; }
+        .map-head h2 { margin:0; font-size:1.7rem; }
+        .board { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; }
+        .tile { aspect-ratio:1; background:#cfba8d; display:grid; place-items:center; font-size:1.5rem; position:relative; }
+        .tile.hidden { background:var(--fog); color:transparent; }
+        .tile.player { outline:4px solid rgba(63,122,72,.55); }
+        .tile.exit { background:#d2f0c6; }
+        .tile.monster { background:#f1c9b8; }
+        .tile.loot { background:#f8edb2; }
+        .tile.shrine { background:#d6d6ff; }
+        .tile.trap { background:#e3b5b5; }
+        .tile.camp { background:#badfc2; }
+        .tile.key { background:#ffd98f; }
+        .legend { display:flex; flex-wrap:wrap; gap:8px; color:#6b5039; font-size:.92rem; }
+        .control-pad { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+        button { border:none; font:inherit; cursor:pointer; }
+        .action { padding:14px; background:linear-gradient(180deg,#fff3de,#ecd8ac); font-weight:700; }
+        .ghost { opacity:0; pointer-events:none; }
+        .right { display:grid; gap:16px; align-content:start; }
+        .panel { padding:16px; background:rgba(255,255,255,.45); }
+        .stats { display:grid; gap:10px; }
+        .row { display:flex; justify-content:space-between; gap:10px; }
+        .bar { width:100%; height:12px; border-radius:999px; background:rgba(0,0,0,.08); overflow:hidden; }
+        .fill { height:100%; border-radius:inherit; }
+        .hp { background:linear-gradient(90deg,#c66e60,#efc0a9); }
+        .focus { background:linear-gradient(90deg,#6487ca,#cadbff); }
+        .log { display:grid; gap:10px; max-height:300px; overflow:auto; }
+        .log-entry { padding:12px 14px; background:rgba(255,255,255,.5); }
+        .summary { padding:16px; border-radius:20px; background:rgba(255,255,255,.58); min-height:74px; }
+        @media (max-width:1100px) { .page { grid-template-columns:1fr; } }
     </style>
 </head>
 <body>
     <div class="page">
-        <a class="back-link" href="../index.html#games">Zurück zur Startseite</a>
-        <section class="hero">
-            <div class="panel"><div class="eyebrow">One-Shot Browser Adventure</div><h1>D&amp;D Delve</h1><p class="lead">Ein kompakter Dungeon-Run mit D20-Würfen, Klassenwahl, Fokus-Management und fünf einzigartigen Begegnungen.</p><div class="meta"><div class="chip">3 Klassen</div><div class="chip">5 Räume</div><div class="chip">D20-System und Ressourcen</div></div></div>
-            <div class="panel"><h2>Abenteurer wählen</h2><div class="class-grid" id="classGrid"></div></div>
-        </section>
-        <section class="main-grid">
-            <div class="panel">
-                <div class="room-stage"><div class="encounter-card"><div class="encounter-header"><div><div class="encounter-meta" id="roomMeta"></div><h2 class="encounter-title" id="roomTitle"></h2></div><div class="die">Wurf<strong id="lastRoll">-</strong><span id="lastCheck">Noch kein Check</span></div></div><p class="encounter-text" id="roomText"></p><div class="dice-row"><div class="die">Leben<strong id="hpValue"></strong></div><div class="die">Fokus<strong id="focusValue"></strong></div><div class="die">Relikte<strong id="relicValue"></strong></div></div><div class="actions"><button class="action-btn" id="actionOne"></button><button class="action-btn alt" id="actionTwo"></button><button class="action-btn support" id="actionThree"></button></div><div class="ending" id="ending"></div></div></div>
+        <aside class="column left">
+            <a class="back" href="../index.html#games">Zurueck zur Startseite</a>
+            <div>
+                <div style="text-transform:uppercase;letter-spacing:.16em;color:#7a5b42;font-size:.8rem;">Procedural mini dungeon</div>
+                <h1>D&amp;D Depthcrawl</h1>
+                <p class="lead">Jeder Run erzeugt ein neues Gewoelbe. Finde den Schluessel, plundere Schatzraeume, ueberlebe Monster und bringe das Relikt zum Ausgang.</p>
             </div>
-            <aside class="sidebar">
-                <div class="panel"><h2>Charakterbogen</h2><div class="stats-grid"><div class="stat-box"><span>Klasse</span><strong id="className"></strong></div><div class="stat-box"><span>Stärke</span><strong id="statMight"></strong></div><div class="stat-box"><span>Gewandtheit</span><strong id="statAgility"></strong></div><div class="stat-box"><span>Arkana</span><strong id="statArcana"></strong></div></div><p style="color:var(--muted);margin:16px 0 8px;">Lebenspunkte</p><div class="progress"><div class="fill hp" id="hpBar"></div></div><p style="color:var(--muted);margin:16px 0 8px;">Fokus</p><div class="progress"><div class="fill focus" id="focusBar"></div></div><div style="margin-top:18px;"><button class="reset-btn" id="resetBtn">Neustart des One-Shots</button></div></div>
-                <div class="panel"><h2>Chronik</h2><div class="log" id="log"></div></div>
-            </aside>
-        </section>
+            <div class="panel">
+                <strong>Klasse waehlen</strong>
+                <div class="class-grid" id="classGrid"></div>
+            </div>
+            <div class="panel">
+                <strong>Klassenfaehigkeit</strong>
+                <p id="abilityText"></p>
+                <button class="action" id="abilityBtn">Faehigkeit einsetzen</button>
+            </div>
+        </aside>
+
+        <main class="column center">
+            <div class="map-head">
+                <div>
+                    <h2>Dungeon Map</h2>
+                    <div class="legend">Entdecke den Schluessel, sammle ein Relikt und erreiche den Ausgang.</div>
+                </div>
+                <div class="summary" id="summary"></div>
+            </div>
+            <div class="board" id="board"></div>
+            <div class="control-pad">
+                <button class="action ghost"></button>
+                <button class="action" data-dir="up">Nach oben</button>
+                <button class="action ghost"></button>
+                <button class="action" data-dir="left">Nach links</button>
+                <button class="action" id="restBtn">Rasten</button>
+                <button class="action" data-dir="right">Nach rechts</button>
+                <button class="action ghost"></button>
+                <button class="action" data-dir="down">Nach unten</button>
+                <button class="action" id="resetBtn">Neuer Run</button>
+            </div>
+        </main>
+
+        <aside class="column right">
+            <div class="panel">
+                <strong>Abenteurer</strong>
+                <div class="stats">
+                    <div class="row"><span>Klasse</span><strong id="classStat"></strong></div>
+                    <div class="row"><span>Gold</span><strong id="goldStat"></strong></div>
+                    <div class="row"><span>Schluessel</span><strong id="keyStat"></strong></div>
+                    <div class="row"><span>Relikt</span><strong id="relicStat"></strong></div>
+                    <div>
+                        <div class="row"><span>Leben</span><strong id="hpStat"></strong></div>
+                        <div class="bar"><div class="fill hp" id="hpBar"></div></div>
+                    </div>
+                    <div>
+                        <div class="row"><span>Focus</span><strong id="focusStat"></strong></div>
+                        <div class="bar"><div class="fill focus" id="focusBar"></div></div>
+                    </div>
+                </div>
+            </div>
+            <div class="panel">
+                <strong>Chronik</strong>
+                <div class="log" id="log"></div>
+            </div>
+        </aside>
     </div>
+
     <script>
-        const classes=[{id:"fighter",name:"Kämpfer",role:"Vanguard",description:"Frontkämpfer mit hoher Zähigkeit und starkem Druck im Nahkampf.",hp:18,focus:5,stats:{might:5,agility:2,arcana:1}},{id:"rogue",name:"Schurke",role:"Skirmisher",description:"Reagiert flexibel, entschärft Fallen und nutzt jeden schwachen Moment.",hp:14,focus:6,stats:{might:2,agility:5,arcana:2}},{id:"wizard",name:"Magier",role:"Arcanist",description:"Verändert den Dungeon mit Zaubern, bezahlt aber mit knapperen Reserven.",hp:12,focus:8,stats:{might:1,agility:2,arcana:6}}];
-        const rooms=[{title:"Tor der gefallenen Helden",text:"Vor dir liegt ein bronzenes Portal. Runen glimmen, eine Druckplatte summt im Boden und geisterhafte Wächter sammeln sich im Dunst.",actions:[{label:"Mit Kraft aufbrechen",stat:"might",dc:12,success:{hp:-1,relics:1,text:"Das Portal gibt unter deiner Wucht nach. Dahinter findest du ein altes Relikt."},fail:{hp:-3,text:"Die Geister schlagen zurück, als das Tor klemmt."}},{label:"Fallen elegant umgehen",stat:"agility",dc:11,success:{relics:1,focus:1,text:"Du umgehst die Platte und gewinnst einen taktischen Vorteil."},fail:{hp:-2,text:"Eine Klinge schrammt an dir vorbei."}},{label:"Runen entschlüsseln",stat:"arcana",dc:10,success:{relics:1,text:"Die Runen gehorchen und öffnen einen sicheren Pfad."},fail:{focus:-2,text:"Die Magie entlädt sich chaotisch in deinen Geist."}}]},{title:"Pilzforst der Flüsterer",text:"Biolumineszente Pilze füllen die Höhle. Sporen machen benommen, irgendwo lauert etwas zwischen den Stämmen.",actions:[{label:"Pfad freischlagen",stat:"might",dc:13,success:{hp:2,text:"Ein entschlossener Vorstoß bringt dich durch und du findest heilende Kräuter."},fail:{hp:-3,text:"Giftige Sporen treffen deine Lunge."}},{label:"Unsichtbar hindurch",stat:"agility",dc:12,success:{relics:1,text:"Zwischen den Pilzen liegt ein vergessenes Emblem."},fail:{hp:-2,focus:-1,text:"Ein Schatten streift dich und verschwindet wieder."}},{label:"Sporen bannen",stat:"arcana",dc:12,success:{focus:1,relics:1,text:"Du wandelst das Feld in klare Luft und sicherst eine Rune."},fail:{focus:-2,text:"Die Sporen fransen deine Konzentration aus."}}]},{title:"Die Würfelkammer",text:"Vier obsidianene Würfel schweben über einem bodenlosen Schacht. Ein einziger Fehltritt lässt den Raum kippen.",actions:[{label:"Absprung wagen",stat:"agility",dc:14,success:{relics:2,text:"Perfekte Balance. In der Mitte greifst du gleich zwei Relikte."},fail:{hp:-4,text:"Du stößt hart gegen die Kante der Plattform."}},{label:"Mechanik blockieren",stat:"might",dc:13,success:{focus:1,text:"Die Würfel stoppen kurz und der Weg wird berechenbar."},fail:{hp:-3,text:"Die Plattform dreht zurück und trifft dich."}},{label:"Schwerkraft biegen",stat:"arcana",dc:14,success:{relics:1,focus:1,text:"Ein leuchtender Pfad bildet sich durch den Raum."},fail:{focus:-3,text:"Der Zauber frisst mehr Kraft als geplant."}}]},{title:"Der Hort des Mimics",text:"Eine Schatzkiste mit goldenen Beschlägen steht verlassen im Raum. Zu verlassen wirkt sie allerdings nicht.",actions:[{label:"Direkt angreifen",stat:"might",dc:12,success:{relics:2,text:"Der Mimic wird überwältigt und spuckt gestohlene Schätze aus."},fail:{hp:-4,text:"Der Biss der Kreatur hinterlässt tiefe Spuren."}},{label:"Von hinten täuschen",stat:"agility",dc:12,success:{relics:2,focus:1,text:"Du lenkst den Mimic aus und sicherst seinen Hort."},fail:{hp:-3,text:"Die Zunge der Bestie packt dich am Arm."}},{label:"Bannspruch sprechen",stat:"arcana",dc:13,success:{relics:1,hp:2,text:"Der Bann bindet das Monster und es verliert seine Beute."},fail:{focus:-2,hp:-2,text:"Der Mimic widersetzt sich dem Zauber."}}]},{title:"Kristallherz des Dungeons",text:"Im Kern des Gewölbes schwebt ein pulsendes Kristallherz. Seine Wächterstimme verlangt Tribut, sonst bricht die Halle über dir zusammen.",actions:[{label:"Wille gegen Wille",stat:"might",dc:15,success:{relics:3,hp:3,text:"Du zwingst das Herz in die Knie und ziehst Kraft daraus."},fail:{hp:-5,text:"Die Rückkopplung erschüttert deinen Körper."}},{label:"Im Sturm tanzen",stat:"agility",dc:15,success:{relics:2,focus:1,text:"Du weichst jedem Splitter aus und greifst im richtigen Moment zu."},fail:{hp:-4,text:"Splitter schneiden dir den Weg ab."}},{label:"Ritual der Bindung",stat:"arcana",dc:15,success:{relics:3,focus:2,text:"Das Ritual schließt sich perfekt. Das Herz gehört dir."},fail:{focus:-3,hp:-2,text:"Die Arkana zerrt an Körper und Geist."}}]}];
-        const classGrid=document.getElementById("classGrid"),logNode=document.getElementById("log"),endingNode=document.getElementById("ending");
-        const ui={roomMeta:document.getElementById("roomMeta"),roomTitle:document.getElementById("roomTitle"),roomText:document.getElementById("roomText"),lastRoll:document.getElementById("lastRoll"),lastCheck:document.getElementById("lastCheck"),hpValue:document.getElementById("hpValue"),focusValue:document.getElementById("focusValue"),relicValue:document.getElementById("relicValue"),className:document.getElementById("className"),statMight:document.getElementById("statMight"),statAgility:document.getElementById("statAgility"),statArcana:document.getElementById("statArcana"),hpBar:document.getElementById("hpBar"),focusBar:document.getElementById("focusBar"),actionOne:document.getElementById("actionOne"),actionTwo:document.getElementById("actionTwo"),actionThree:document.getElementById("actionThree")};let state={};
-        const log=(text,kind="system")=>{const item=document.createElement("div");item.className=`log-entry ${kind}`;item.textContent=text;logNode.prepend(item)};
-        function renderClasses(){classGrid.innerHTML="";classes.forEach((cls)=>{const card=document.createElement("button");card.className=`class-card ${state.hero?.id===cls.id?"active":""}`;card.innerHTML=`<div class="class-role">${cls.role}</div><h3>${cls.name}</h3><p>${cls.description}</p><div class="class-stats"><span>HP ${cls.hp}</span><span>Fokus ${cls.focus}</span></div>`;card.addEventListener("click",()=>startGame(cls.id));classGrid.appendChild(card)})}
-        function startGame(classId){const cls=classes.find((e)=>e.id===classId);state.hero=JSON.parse(JSON.stringify(cls));state.maxHp=cls.hp;state.maxFocus=cls.focus;state.roomIndex=0;state.relics=0;state.finished=false;logNode.innerHTML="";endingNode.className="ending";endingNode.textContent="";ui.lastRoll.textContent="-";ui.lastCheck.textContent="Noch kein Check";log(`${cls.name} steigt in das Gewölbe hinab.`);renderClasses();render()}
-        const currentRoom=()=>rooms[state.roomIndex];
-        const updateBars=()=>{ui.hpBar.style.width=`${state.hero.hp/state.maxHp*100}%`;ui.focusBar.style.width=`${state.hero.focus/state.maxFocus*100}%`};
-        function render(){const room=currentRoom();ui.roomMeta.textContent=`Raum ${Math.min(state.roomIndex+1,rooms.length)} von ${rooms.length}`;ui.roomTitle.textContent=room?.title||"Abenteuer beendet";ui.roomText.textContent=room?.text||"Der Dungeon ist bezwungen.";ui.hpValue.textContent=state.hero.hp;ui.focusValue.textContent=state.hero.focus;ui.relicValue.textContent=state.relics;ui.className.textContent=state.hero.name;ui.statMight.textContent=`+${state.hero.stats.might}`;ui.statAgility.textContent=`+${state.hero.stats.agility}`;ui.statArcana.textContent=`+${state.hero.stats.arcana}`;updateBars();[ui.actionOne,ui.actionTwo,ui.actionThree].forEach((btn,index)=>{const action=room.actions[index];btn.textContent=action.label;btn.disabled=state.finished})}
-        function finish(win){state.finished=true;[ui.actionOne,ui.actionTwo,ui.actionThree].forEach((btn)=>btn.disabled=true);const score=state.relics+state.hero.hp+state.hero.focus;endingNode.className="ending show";if(win){endingNode.style.background="rgba(133,239,177,.12)";endingNode.style.borderColor="rgba(133,239,177,.35)";endingNode.textContent=`Das Kristallherz ist gesichert. Endwertung ${score}. Relikte ${state.relics}, Leben ${state.hero.hp}, Fokus ${state.hero.focus}.`;log("Der One-Shot endet mit einem Triumph.","good")}else{endingNode.style.background="rgba(255,125,98,.12)";endingNode.style.borderColor="rgba(255,125,98,.35)";endingNode.textContent=`Der Dungeon beansprucht dich. Endwertung ${score}. Starte den One-Shot neu und probiere eine andere Klasse oder Taktik.`;log("Das Gewölbe verschlingt den letzten Funken Hoffnung.","bad")}}
-        function applyOutcome(result,success){if(result.hp)state.hero.hp=Math.max(0,Math.min(state.maxHp,state.hero.hp+result.hp));if(result.focus)state.hero.focus=Math.max(0,Math.min(state.maxFocus,state.hero.focus+result.focus));if(result.relics)state.relics+=result.relics;log(result.text,success?"good":"bad")}
-        function resolveAction(idx){if(state.finished)return;const room=currentRoom(),action=room.actions[idx],statBonus=state.hero.stats[action.stat],focusBoost=action.stat==="arcana"&&state.hero.focus>0?1:0,roll=Math.floor(Math.random()*20)+1,total=roll+statBonus+focusBoost;ui.lastRoll.textContent=total;ui.lastCheck.textContent=`d20 ${roll} + Bonus ${statBonus}${focusBoost?" + Fokus 1":""}`;if(focusBoost)state.hero.focus=Math.max(0,state.hero.focus-1);if(total>=action.dc)applyOutcome(action.success,true);else applyOutcome(action.fail,false);if(state.hero.hp<=0){render();finish(false);return}state.roomIndex+=1;if(state.roomIndex>=rooms.length){render();finish(true);return}render();log(`Du erreichst ${rooms[state.roomIndex].title}.`)}
-        ui.actionOne.addEventListener("click",()=>resolveAction(0));ui.actionTwo.addEventListener("click",()=>resolveAction(1));ui.actionThree.addEventListener("click",()=>resolveAction(2));document.getElementById("resetBtn").addEventListener("click",()=>startGame(state.hero?.id||"fighter"));renderClasses();startGame("fighter");
+        const classes = [
+            { id: "fighter", name: "Krieger", hp: 18, focus: 4, attack: 6, cunning: 2, magic: 1, ability: "Kampfrausch heilt 4 HP und gibt +2 auf den naechsten Kampf.", use: (s) => { s.hp = Math.min(s.maxHp, s.hp + 4); s.buff = 2; return "Kampfrausch aktiviert."; } },
+            { id: "rogue", name: "Schurke", hp: 14, focus: 6, attack: 3, cunning: 6, magic: 1, ability: "Schattenpfad entschärft die naechste Falle oder umgeht ein Monster.", use: (s) => { s.shadow = true; return "Schattenpfad bereit."; } },
+            { id: "mage", name: "Magier", hp: 12, focus: 8, attack: 2, cunning: 2, magic: 7, ability: "Arkane Sicht zeigt benachbarte Felder und heilt 2 Focus.", use: (s) => { s.focus = Math.min(s.maxFocus, s.focus + 2); revealNeighbors(s.player); return "Arkane Sicht offenbart den Nebel."; } }
+        ];
+
+        const kinds = ["monster","monster","loot","trap","shrine","camp","empty","empty","empty"];
+        const ui = {
+            classGrid: document.getElementById("classGrid"),
+            abilityText: document.getElementById("abilityText"),
+            board: document.getElementById("board"),
+            summary: document.getElementById("summary"),
+            classStat: document.getElementById("classStat"),
+            gold: document.getElementById("goldStat"),
+            key: document.getElementById("keyStat"),
+            relic: document.getElementById("relicStat"),
+            hp: document.getElementById("hpStat"),
+            focus: document.getElementById("focusStat"),
+            hpBar: document.getElementById("hpBar"),
+            focusBar: document.getElementById("focusBar"),
+            log: document.getElementById("log")
+        };
+
+        let state = {};
+
+        function posKey(x, y) { return `${x},${y}`; }
+        function log(text) { const item = document.createElement("div"); item.className = "log-entry"; item.textContent = text; ui.log.prepend(item); }
+        function rand(max) { return Math.floor(Math.random() * max); }
+
+        function renderClassCards() {
+            ui.classGrid.innerHTML = "";
+            classes.forEach((cls) => {
+                const card = document.createElement("button");
+                card.className = `class-card ${state.hero?.id === cls.id ? "active" : ""}`;
+                card.innerHTML = `<strong>${cls.name}</strong><span>HP ${cls.hp} | Focus ${cls.focus}</span>`;
+                card.addEventListener("click", () => startRun(cls.id));
+                ui.classGrid.appendChild(card);
+            });
+        }
+
+        function revealNeighbors(player) {
+            [[1,0],[-1,0],[0,1],[0,-1]].forEach(([dx, dy]) => {
+                const x = player.x + dx;
+                const y = player.y + dy;
+                if (x >= 0 && y >= 0 && x < 6 && y < 6) state.revealed.add(posKey(x, y));
+            });
+        }
+
+        function generateMap() {
+            const map = [];
+            const used = new Set(["0,0", "5,5"]);
+            for (let y = 0; y < 6; y += 1) {
+                for (let x = 0; x < 6; x += 1) {
+                    map.push({ x, y, kind: "empty", value: 0, opened: false });
+                }
+            }
+            function place(kind, count, valueRange) {
+                for (let i = 0; i < count; i += 1) {
+                    let x, y;
+                    do { x = rand(6); y = rand(6); } while (used.has(posKey(x, y)));
+                    used.add(posKey(x, y));
+                    const cell = map.find((item) => item.x === x && item.y === y);
+                    cell.kind = kind;
+                    cell.value = valueRange ? valueRange[0] + rand(valueRange[1] - valueRange[0] + 1) : 0;
+                }
+            }
+            place("monster", 9, [8, 15]);
+            place("loot", 6, [4, 12]);
+            place("trap", 5, [2, 6]);
+            place("camp", 3, [3, 5]);
+            place("shrine", 3, [2, 4]);
+            place("key", 1, [0, 0]);
+            place("relic", 1, [0, 0]);
+            const exit = map.find((item) => item.x === 5 && item.y === 5);
+            exit.kind = "exit";
+            return map;
+        }
+
+        function icon(kind) {
+            return { empty: ".", monster: "M", loot: "G", trap: "T", shrine: "S", camp: "C", key: "K", relic: "R", exit: "X" }[kind];
+        }
+
+        function cellAt(x, y) { return state.map.find((item) => item.x === x && item.y === y); }
+
+        function renderBoard() {
+            ui.board.innerHTML = "";
+            state.map.forEach((cell) => {
+                const button = document.createElement("div");
+                const visible = state.revealed.has(posKey(cell.x, cell.y));
+                button.className = `tile ${visible ? cell.kind : "hidden"} ${state.player.x === cell.x && state.player.y === cell.y ? "player" : ""}`;
+                button.textContent = visible ? icon(cell.kind) : "?";
+                ui.board.appendChild(button);
+            });
+        }
+
+        function renderStats() {
+            ui.classStat.textContent = state.hero.name;
+            ui.gold.textContent = state.gold;
+            ui.key.textContent = state.hasKey ? "ja" : "nein";
+            ui.relic.textContent = state.hasRelic ? "ja" : "nein";
+            ui.hp.textContent = `${state.hp} / ${state.maxHp}`;
+            ui.focus.textContent = `${state.focus} / ${state.maxFocus}`;
+            ui.hpBar.style.width = `${(state.hp / state.maxHp) * 100}%`;
+            ui.focusBar.style.width = `${(state.focus / state.maxFocus) * 100}%`;
+            ui.summary.textContent = state.message;
+            ui.abilityText.textContent = state.hero.ability;
+        }
+
+        function render() { renderClassCards(); renderBoard(); renderStats(); }
+
+        function endRun(win) {
+            state.locked = true;
+            state.message = win ? `Sieg. Gold ${state.gold}. Das Relikt entkommt dem Gewoelbe.` : `Niederlage. Der Depthcrawl endet hier.`;
+            render();
+        }
+
+        function fight(power) {
+            const enemy = 7 + rand(11);
+            const total = rand(10) + 1 + power + (state.buff || 0);
+            state.buff = 0;
+            if (total >= enemy) {
+                state.gold += 5 + rand(7);
+                state.message = `Monster besiegt. Wurf ${total} gegen ${enemy}.`;
+                log(state.message);
+                return true;
+            }
+            const damage = 2 + rand(4);
+            state.hp = Math.max(0, state.hp - damage);
+            state.message = `Monster trifft hart. Wurf ${total} gegen ${enemy}. -${damage} HP.`;
+            log(state.message);
+            return false;
+        }
+
+        function resolve(cell) {
+            if (cell.opened) { state.message = "Hier warst du bereits."; return; }
+            cell.opened = true;
+            switch (cell.kind) {
+                case "monster":
+                    if (state.shadow) { state.shadow = false; state.message = "Schattenpfad umgeht das Monster."; log(state.message); break; }
+                    fight(Math.max(state.hero.attack, state.hero.cunning, state.hero.magic));
+                    break;
+                case "loot":
+                    state.gold += cell.value;
+                    state.message = `Schatzkammer. +${cell.value} Gold.`;
+                    log(state.message);
+                    break;
+                case "trap":
+                    if (state.shadow) { state.shadow = false; state.message = "Die Falle schnappt ins Leere."; log(state.message); break; }
+                    state.hp = Math.max(0, state.hp - cell.value);
+                    state.message = `Falle. -${cell.value} HP.`;
+                    log(state.message);
+                    break;
+                case "shrine":
+                    state.focus = Math.min(state.maxFocus, state.focus + cell.value);
+                    state.message = `Schrein. +${cell.value} Focus.`;
+                    log(state.message);
+                    break;
+                case "camp":
+                    state.hp = Math.min(state.maxHp, state.hp + cell.value);
+                    state.message = `Lagerfeuer. +${cell.value} HP.`;
+                    log(state.message);
+                    break;
+                case "key":
+                    state.hasKey = true;
+                    state.message = "Du hast den Schluessel gefunden.";
+                    log(state.message);
+                    break;
+                case "relic":
+                    state.hasRelic = true;
+                    state.message = "Das Relikt ist nun in deinem Besitz.";
+                    log(state.message);
+                    break;
+                case "exit":
+                    if (state.hasKey && state.hasRelic) {
+                        endRun(true);
+                        return;
+                    }
+                    state.message = "Der Ausgang ist da, aber Schluessel und Relikt fehlen.";
+                    log(state.message);
+                    break;
+                default:
+                    state.message = "Nur Staub, Knochen und Echo.";
+            }
+            if (state.hp <= 0) endRun(false);
+        }
+
+        function move(dir) {
+            if (state.locked) return;
+            const delta = { up:[0,-1], down:[0,1], left:[-1,0], right:[1,0] }[dir];
+            const next = { x: state.player.x + delta[0], y: state.player.y + delta[1] };
+            if (next.x < 0 || next.y < 0 || next.x > 5 || next.y > 5) { state.message = "Dort ist nur Stein."; render(); return; }
+            state.player = next;
+            state.revealed.add(posKey(next.x, next.y));
+            revealNeighbors(next);
+            resolve(cellAt(next.x, next.y));
+            render();
+        }
+
+        function rest() {
+            if (state.locked) return;
+            if (state.focus <= 0) { state.message = "Kein Focus mehr fuer eine Rast."; render(); return; }
+            state.focus -= 1;
+            state.hp = Math.min(state.maxHp, state.hp + 2);
+            state.message = "Kurze Rast. +2 HP.";
+            log(state.message);
+            render();
+        }
+
+        function useAbility() {
+            if (state.locked) return;
+            if (state.focus < 2) { state.message = "Nicht genug Focus."; render(); return; }
+            state.focus -= 2;
+            state.message = state.hero.use(state);
+            log(state.message);
+            render();
+        }
+
+        function startRun(classId) {
+            const hero = classes.find((item) => item.id === classId);
+            state = {
+                hero,
+                map: generateMap(),
+                player: { x: 0, y: 0 },
+                revealed: new Set(["0,0"]),
+                hp: hero.hp,
+                maxHp: hero.hp,
+                focus: hero.focus,
+                maxFocus: hero.focus,
+                gold: 0,
+                hasKey: false,
+                hasRelic: false,
+                shadow: false,
+                buff: 0,
+                locked: false,
+                message: "Ein neuer Dungeon entsteht."
+            };
+            ui.log.innerHTML = "";
+            revealNeighbors(state.player);
+            log(state.message);
+            render();
+        }
+
+        document.querySelectorAll("[data-dir]").forEach((button) => button.addEventListener("click", () => move(button.dataset.dir)));
+        document.getElementById("restBtn").addEventListener("click", rest);
+        document.getElementById("abilityBtn").addEventListener("click", useAbility);
+        document.getElementById("resetBtn").addEventListener("click", () => startRun(state.hero?.id || "fighter"));
+        window.addEventListener("keydown", (event) => {
+            const keyMap = { ArrowUp:"up", ArrowDown:"down", ArrowLeft:"left", ArrowRight:"right" };
+            if (keyMap[event.key]) { event.preventDefault(); move(keyMap[event.key]); }
+        });
+        renderClassCards();
+        startRun("fighter");
     </script>
 </body>
 </html>
