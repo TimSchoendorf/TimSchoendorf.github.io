@@ -318,6 +318,10 @@ function handbookSection(sectionName) {
   return state.handbook.find((entry) => entry.section === sectionName);
 }
 
+function meaningfulPages(sectionName) {
+  return (handbookSection(sectionName)?.pages || []).filter((page) => sanitizePageText(page));
+}
+
 function handbookPage(sectionName, title) {
   const section = handbookSection(sectionName);
   return section?.pages.find((page) => normalizeTitle(page.title) === normalizeTitle(title)) || null;
@@ -367,7 +371,10 @@ function sanitizePageText(page) {
   const cleaned = cleanedLines.join('\n');
   const marker = cleaned.slice(0, Math.floor(cleaned.length / 2));
   const repeatedAt = cleaned.indexOf(marker, Math.floor(cleaned.length / 3));
-  const result = repeatedAt > 120 ? cleaned.slice(0, repeatedAt).trim() : cleaned.trim();
+  let result = repeatedAt > 120 ? cleaned.slice(0, repeatedAt).trim() : cleaned.trim();
+  const resultLines = result.split('\n').filter(Boolean);
+  while (resultLines.length > 4 && resultLines.slice(-4).every((line) => line.length < 28)) resultLines.pop();
+  result = resultLines.join('\n').trim();
   return pageIsMostlyChrome(page) ? '' : result;
 }
 
@@ -793,7 +800,7 @@ function renderBuilder() {
           <div class="guide-card">
             <div class="eyebrow">Selected Detail</div>
             <div class="mini-list">
-              ${selectedSkillSet().map((skill) => `<div class="summary-chip">${skill}: ${SKILL_DESCRIPTIONS[skill] || 'No description mapped yet.'}</div>`).join('')}
+              ${selectedSkillSet().length ? selectedSkillSet().map((skill) => `<div class="summary-chip">${skill}: ${SKILL_DESCRIPTIONS[skill] || 'No description mapped yet.'}</div>`).join('') : '<div class="empty-state compact">Waehle Skills oder Feats, um hier direkt ihren Nutzen zu sehen.</div>'}
             </div>
           </div>
         </div>
@@ -827,8 +834,23 @@ function renderBuilder() {
         </div>
       `, 'Loadout kommt jetzt aus Listen statt aus freiem Tippen.')}
       <div class="split-shell">
-        ${referencePanel('Weapons', handbookPage('Equipment', 'Weapons'), 'Equipment')}
-        ${referencePanel('Gear Rules', handbookPage('Equipment', 'Basic Gear') || handbookPage('Equipment', 'Tools'), 'Equipment')}
+        ${panel('Package Breakdown', `
+          <div class="guide-card">
+            <div class="eyebrow">Included Items</div>
+            <div class="mini-list">${(selectedPackage()?.items || []).map((item) => `<div class="summary-chip">${item}</div>`).join('')}</div>
+            <div class="eyebrow">Relevant Chapters</div>
+            <div class="mini-list">${EQUIPMENT_REFERENCES.map((title) => `<button class="mini-link" data-open-section="Equipment" data-open-page="${title}">${title}</button>`).join('')}</div>
+          </div>
+        `)}
+        ${panel('Loadout Notes', `
+          <div class="guide-card">
+            <p class="muted">Die Share-Ansicht der Equipment-Unterseiten ist ungleichmaessig. Statt leerer Reader werden hier die Paketinhalte und direkte Kapitel-Links gezeigt.</p>
+            <div class="stat-table">
+              <div><span>Package Weight</span><strong>${selectedPackage()?.weight || 0}</strong></div>
+              <div><span>Armor Added</span><strong>+${selectedPackage()?.armorBase || 0}</strong></div>
+            </div>
+          </div>
+        `)}
       </div>
     `;
   } else if (step === 'magic') {
@@ -849,7 +871,7 @@ function renderBuilder() {
         ` : '<div class="empty-state compact">Diese Klasse/Subclass hat auf diesem Level keine waehlbare Magie oder Maneuvers.</div>'}
       `, 'Spells und Maneuvers sind jetzt nach Tier und Level gefiltert und haben Pick-Limits.')}
       <div class="split-shell">
-        ${referencePanel('Spellcasting Rules', handbookPage('Magic', 'Chapter 10: The Rules of Spellcasting') || handbookPage('Magic', 'Casting Spells'), 'Magic')}
+        ${referencePanel('Spellcasting Rules', handbookPage('Magic', 'Casting Spells') || handbookPage('Magic', 'What Is A Spell?'), 'Magic')}
         ${selectedMagic[0] ? referencePanel(`${selectedMagic[0].label}: ${selectedMagic[0].title}`, handbookPage(selectedMagic[0].label, selectedMagic[0].title), selectedMagic[0].label) : panel('Selected Spell', '<div class="empty-state compact">Waehle einen Spell oder Maneuver, um Effekt und Beschreibung zu sehen.</div>')}
       </div>
     `;
@@ -892,8 +914,7 @@ function renderBuilder() {
 function renderCompendium() {
   const page = selectedPageRecord();
   const sections = handbookSections();
-  const currentPages = (state.handbook.find((entry) => entry.section === state.selectedSection)?.pages || [])
-    .filter((item) => sanitizePageText(item));
+  const currentPages = meaningfulPages(state.selectedSection);
   return `
     <section class="panel compendium-shell">
       <div class="compendium-sidebar">
@@ -906,7 +927,7 @@ function renderCompendium() {
         </div>
       </div>
       <div class="compendium-reader">
-        ${page ? `
+        ${page && sanitizePageText(page) ? `
           <div class="reader-head">
             <div>
               <div class="eyebrow">${state.selectedSection}</div>
@@ -914,7 +935,7 @@ function renderCompendium() {
             </div>
           </div>
           <pre class="reader-text">${sanitizePageText(page) || 'Diese OneNote-Seite enthaelt in der Freigabe kaum lesbaren Text. Der Titel bleibt aber als Referenz im Compendium vorhanden.'}</pre>
-        ` : '<div class="empty-state">Waehle links einen Abschnitt oder suche direkt nach Regeln.</div>'}
+        ` : '<div class="empty-state">Waehle links einen sinnvollen Regel-Eintrag oder suche direkt nach einem Begriff.</div>'}
       </div>
     </section>
   `;
@@ -1223,7 +1244,7 @@ function bindEvents() {
   }));
   document.querySelectorAll('[data-section]').forEach((button) => button.addEventListener('click', () => {
     state.selectedSection = button.dataset.section;
-    const firstPage = state.handbook.find((entry) => entry.section === state.selectedSection)?.pages[0];
+    const firstPage = meaningfulPages(state.selectedSection)[0];
     state.selectedPage = firstPage?.title || '';
     state.search = '';
     state.filteredPages = [];
@@ -1273,7 +1294,7 @@ function injectStyles() {
     .pill-grid{display:flex;flex-wrap:wrap;gap:8px}.pill,.filter-btn,.page-btn,.wizard-step,.ghost-btn,.mini-link{padding:10px 12px;color:var(--text);cursor:pointer}.pill.active,.filter-btn.active,.page-btn.active,.wizard-step.active,.choice-card.active{background:linear-gradient(135deg,#7fd1ff,#b4e7ff);color:var(--ink)}
     .wizard-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.wizard-step{display:flex;align-items:center;gap:12px;text-align:left;border-radius:22px;background:rgba(255,255,255,.04)}.wizard-step.done{box-shadow:inset 0 0 0 1px rgba(240,195,108,.35)}.wizard-step span{display:grid;place-items:center;min-width:30px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.08)}.wizard-step small{display:block;color:inherit;opacity:.72}.wizard-nav{display:flex;justify-content:space-between;gap:12px}.reader-text.compact{max-height:360px}
     .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}
-    .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto}
+    .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto}
     .export-actions{display:flex;gap:12px;flex-wrap:wrap}.primary-btn,.upload-btn{padding:14px 18px;font-weight:700;cursor:pointer}.upload-btn input{display:none}.notes{margin:0;padding-left:18px;display:grid;gap:8px}.empty-state{padding:28px;border-radius:22px;background:rgba(255,255,255,.04);color:var(--muted)}
     @media (max-width:1180px){.studio-shell,.compendium-shell,.form-grid.two,.form-grid.three,.ability-grid,.split-shell,.choice-grid,.wizard-strip{grid-template-columns:1fr}.left-rail{order:2}.main-column{order:1}.summary-card.sticky{position:static}.hero,.wizard-nav{flex-direction:column;align-items:flex-start}}
     @media (max-width:720px){body{padding:16px}.summary-stats,.ability-summary{grid-template-columns:1fr}.panel,.summary-card.sticky,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn{border-radius:18px}}
@@ -1286,7 +1307,7 @@ async function init() {
   const response = await fetch('soanw-handbook.json');
   state.handbook = await response.json();
   state.selectedSection = state.handbook[0]?.section || 'Introduction';
-  state.selectedPage = state.handbook[0]?.pages[0]?.title || '';
+  state.selectedPage = meaningfulPages(state.selectedSection)[0]?.title || '';
   refreshSearch();
   render();
 }
