@@ -390,6 +390,7 @@ const state = {
   magicPreview: null,
   magicMobilePanel: 'choices',
   compendiumAnchor: '',
+  speciesDetailSelection: '',
 };
 
 function defaultCharacter() {
@@ -1324,7 +1325,7 @@ function cleanPreviewText(text, maxLines = 10) {
     .join('\n');
 }
 
-function renderInfoPreviewCard({eyebrow = 'Preview', title = '', text = '', chips = []}) {
+function renderInfoPreviewCard({eyebrow = 'Preview', title = '', text = '', chips = [], bodyHtml = ''}) {
   const cleaned = cleanPreviewText(text, 12) || 'No clean description available.';
   return `
     <div class="preview-window">
@@ -1335,7 +1336,7 @@ function renderInfoPreviewCard({eyebrow = 'Preview', title = '', text = '', chip
         <div class="eyebrow">${escapeHtml(eyebrow)}</div>
         <h3>${escapeHtml(title || 'Preview')}</h3>
         ${chips.length ? `<div class="summary-row">${chips.map((chip) => `<div class="summary-chip">${escapeHtml(chip)}</div>`).join('')}</div>` : ''}
-        <pre class="reader-text compact inline">${escapeHtml(cleaned)}</pre>
+        ${bodyHtml || `<pre class="reader-text compact inline">${escapeHtml(cleaned)}</pre>`}
       </div>
     </div>
   `;
@@ -1463,6 +1464,118 @@ function speciesFeatureDetails() {
     chips: [acquired?.name || 'Acquired Species'],
   }));
   return [...baseFeatures, ...acquiredFeatures];
+}
+
+function speciesOverviewEntry() {
+  const species = selectedBaseSpeciesData();
+  const basePage = handbookPage('Species', state.character.profile.speciesSubtype) || speciesHandbookEntry();
+  if (!species) return null;
+  return {
+    id: 'species-overview',
+    name: species.name || state.character.profile.speciesSubtype || 'Species',
+    eyebrow: 'Lineage Overview',
+    chips: [
+      `Base AC ${species.baseAc || 10}`,
+      `Speed ${species.speed || 10}m`,
+      `HP ${species.hpBase || 0}/${species.hpPer || 0}`,
+      `Vitality ${species.vitalityBase || 0}/${species.vitalityPer || 0}`,
+    ],
+    bodyHtml: `
+      <p>${escapeHtml(species.summary || 'No lineage summary available.')}</p>
+      <div class="compendium-meta">
+        <div><span>Ability Bonuses</span><strong>${ABILITIES.map((key) => species.abilities?.[key] ? `${ABILITY_LABELS[key].slice(0, 3).toUpperCase()} ${species.abilities[key] >= 0 ? '+' : ''}${species.abilities[key]}` : '').filter(Boolean).join(', ') || '-'}</strong></div>
+        <div><span>Automatic Skills</span><strong>${(species.autoSkills || []).join(', ') || 'None'}</strong></div>
+      </div>
+    `,
+    section: 'Species',
+    page: basePage?.title || species.name || '',
+  };
+}
+
+function acquiredSpeciesOverviewEntry() {
+  const acquired = selectedAcquiredSpeciesData();
+  const rule = acquiredSpeciesRule();
+  const acquiredPage = acquiredSpeciesEntry();
+  if (!acquired || !rule) return null;
+  return {
+    id: 'species-acquired-overview',
+    name: acquired.name || state.character.profile.acquiredSpecies,
+    eyebrow: 'Acquired Species',
+    chips: [
+      rule.inheritsCoreStats ? 'Keeps base core stats' : 'Overrides base stats',
+      rule.addsAbilityBonuses ? 'Adds ability bonuses' : 'No extra ability bonuses',
+      rule.addsAutomaticSkills ? 'Adds automatic skills' : 'No extra auto skills',
+    ],
+    bodyHtml: `
+      <p>${escapeHtml(acquired.summary || 'No acquired species summary available.')}</p>
+      <div class="compendium-meta">
+        <div><span>Ability Bonuses</span><strong>${ABILITIES.map((key) => acquired.abilities?.[key] ? `${ABILITY_LABELS[key].slice(0, 3).toUpperCase()} ${acquired.abilities[key] >= 0 ? '+' : ''}${acquired.abilities[key]}` : '').filter(Boolean).join(', ') || '-'}</strong></div>
+        <div><span>Automatic Skills</span><strong>${(acquired.autoSkills || []).join(', ') || 'None'}</strong></div>
+      </div>
+    `,
+    section: 'Species',
+    page: acquiredPage?.title || acquired.name || '',
+  };
+}
+
+function speciesFeatureReferenceEntry(feature, sourcePage, sourceLabel) {
+  const directPage = handbookPage('Customization', feature) || handbookPage('Species', feature);
+  const sourceText = directPage
+    ? (sanitizePageText(directPage) || manualCompendiumText(pageSectionName(directPage), directPage.title))
+    : extractFeatureSnippet(sourcePage, feature);
+  const bodyHtml = sourceText
+    ? renderCompendiumBlockBody(sourceText)
+    : `<p>${escapeHtml(`No clean rules text for ${feature} is currently available from the source export.`)}</p>`;
+  return {
+    id: `species-feature-${normalizeTitle(feature).replace(/[^a-z0-9]+/g, '-')}`,
+    name: feature,
+    eyebrow: sourceLabel,
+    chips: [directPage ? pageSectionName(directPage) : 'Species', sourcePage?.title || sourceLabel].filter(Boolean),
+    bodyHtml,
+    text: sourceText || feature,
+    section: directPage ? pageSectionName(directPage) : 'Species',
+    page: directPage?.title || sourcePage?.title || '',
+  };
+}
+
+function speciesReferenceEntries() {
+  const entries = [];
+  const baseOverview = speciesOverviewEntry();
+  const acquiredOverview = acquiredSpeciesOverviewEntry();
+  const species = selectedBaseSpeciesData();
+  const acquired = selectedAcquiredSpeciesData();
+  const rule = acquiredSpeciesRule();
+  const basePage = handbookPage('Species', state.character.profile.speciesSubtype) || speciesHandbookEntry();
+  const acquiredPage = acquiredSpeciesEntry();
+  if (baseOverview) entries.push(baseOverview);
+  if (acquiredOverview) entries.push(acquiredOverview);
+  if (rule?.keepsBaseTraits !== false) {
+    for (const feature of species?.feats || []) {
+      entries.push(speciesFeatureReferenceEntry(feature, basePage, species?.name || 'Species Feature'));
+    }
+  }
+  for (const feature of acquired?.feats || []) {
+    entries.push(speciesFeatureReferenceEntry(feature, acquiredPage, acquired?.name || 'Acquired Species'));
+  }
+  return [...new Map(entries.map((entry) => [entry.id, entry])).values()];
+}
+
+function currentSpeciesReferenceEntry(entries = speciesReferenceEntries()) {
+  return entries.find((entry) => entry.id === state.speciesDetailSelection)
+    || entries[0]
+    || null;
+}
+
+function renderSpeciesReferenceButtons(entries) {
+  const activeId = currentSpeciesReferenceEntry(entries)?.id || '';
+  return entries.map((entry) => `
+    <button
+      class="summary-chip interactive ${entry.id === activeId ? 'active' : ''}"
+      type="button"
+      data-species-entry="${escapeHtml(entry.id)}"
+      title="${escapeHtml(entry.name)}"
+    >${escapeHtml(entry.name)}</button>
+  `).join('');
 }
 
 function renderHoverChips(items, targetId) {
@@ -1742,30 +1855,53 @@ function renderBuilder() {
       </div>
     `);
   } else if (step === 'species') {
-    const featureDetails = speciesFeatureDetails();
-    const speciesPreviewMap = Object.fromEntries(SPECIES.map((name) => [name, handbookPreview(handbookPage('Species', name), name)]));
-    const acquiredPreviewMap = Object.fromEntries(ACQUIRED_SPECIES.filter((name) => name !== 'None').map((name) => [name, handbookPreview(handbookPage('Species', name), name)]));
+    const speciesEntries = speciesReferenceEntries();
+    const selectedSpeciesEntry = currentSpeciesReferenceEntry(speciesEntries);
     body = `
       ${panel('Step 2 - Species', `
-        <div class="stack">
-          <div>
-            <div class="eyebrow">Base Species</div>
-            ${renderChoiceCards(SPECIES, c.profile.species, 'profile.species', Object.fromEntries(SPECIES.map((name) => [name, cleanLabel(name)])), '', 'speciesFeaturePanel', speciesPreviewMap)}
+        <div class="split-shell">
+          <div class="stack">
+            <div>
+              <div class="eyebrow">Base Species</div>
+              ${renderChoiceCards(SPECIES, c.profile.species, 'profile.species', Object.fromEntries(SPECIES.map((name) => [name, cleanLabel(name)])))}
+            </div>
+            <div>
+              <div class="eyebrow">Subspecies / Lineage</div>
+              ${renderChoiceCards(selectedSpeciesOptions().map((item) => item.name), c.profile.speciesSubtype, 'profile.speciesSubtype', Object.fromEntries(selectedSpeciesOptions().map((item) => [item.name, item.summary])))}
+            </div>
+            <div>
+              <div class="eyebrow">Acquired Species</div>
+              ${renderChoiceCards(ACQUIRED_SPECIES, c.profile.acquiredSpecies, 'profile.acquiredSpecies', {None: 'No acquired species on top of the base profile.'})}
+            </div>
+            <div class="summary-row">
+              ${speciesFeatureText().map((feature) => `<div class="summary-chip">${feature}</div>`).join('')}
+            </div>
           </div>
-          <div>
-            <div class="eyebrow">Subspecies / Lineage</div>
-            ${renderChoiceCards(selectedSpeciesOptions().map((item) => item.name), c.profile.speciesSubtype, 'profile.speciesSubtype', Object.fromEntries(selectedSpeciesOptions().map((item) => [item.name, item.summary])), '', 'speciesFeaturePanel', Object.fromEntries(selectedSpeciesOptions().map((item) => [item.name, handbookPreview(handbookPage('Species', item.name) || speciesPage, item.summary)])))}
-          </div>
-          <div>
-            <div class="eyebrow">Acquired Species</div>
-            ${renderChoiceCards(ACQUIRED_SPECIES, c.profile.acquiredSpecies, 'profile.acquiredSpecies', {None: 'No acquired species on top of the base profile.'}, '', 'speciesFeaturePanel', {...acquiredPreviewMap, None: 'No additional acquired species active.'})}
-          </div>
-          <div class="summary-row">
-            ${speciesFeatureText().map((feature) => `<div class="summary-chip">${feature}</div>`).join('')}
+          <div class="stack">
+            ${panel('Species Reference', `
+              <div class="guide-card sticky-card">
+                <div class="eyebrow">Selected Reference</div>
+                <div class="mini-list species-entry-list">
+                  ${speciesEntries.length ? renderSpeciesReferenceButtons(speciesEntries) : '<div class="summary-chip">No references available</div>'}
+                </div>
+                <div id="speciesFeaturePanel">${selectedSpeciesEntry ? renderInfoPreviewCard({
+                  eyebrow: selectedSpeciesEntry.eyebrow || 'Species Reference',
+                  title: selectedSpeciesEntry.name,
+                  chips: selectedSpeciesEntry.chips || [],
+                  bodyHtml: selectedSpeciesEntry.bodyHtml || '',
+                  text: selectedSpeciesEntry.text || '',
+                }) : renderInfoPreviewCard({
+                  eyebrow: 'Species Reference',
+                  title: species?.name || 'Species',
+                  text: species?.summary || 'No species reference available.',
+                })}</div>
+                <div class="inline-actions" id="speciesFeatureActions">${selectedSpeciesEntry ? openCompendiumButton(selectedSpeciesEntry.section, selectedSpeciesEntry.page) : ''}</div>
+              </div>
+            `)}
           </div>
         </div>
       `)}
-      <div class="split-shell">
+      <div class="split-shell species-benefits-shell">
         ${panel('Species Benefits', `
           <div class="guide-card">
             <h3>${species?.name || 'Species'}</h3>
@@ -1778,20 +1914,18 @@ function renderBuilder() {
             <div>
               <div class="eyebrow">Species Features</div>
               <div class="summary-row">
-                ${featureDetails.length ? renderHoverChips(featureDetails, 'speciesFeaturePanel') : '<div class="summary-chip">No features found</div>'}
+                ${speciesEntries.length ? renderSpeciesReferenceButtons(speciesEntries.filter((entry) => entry.id.startsWith('species-feature-'))) : '<div class="summary-chip">No features found</div>'}
               </div>
             </div>
           </div>
         `)}
-        ${panel('Feature Details', `
+        ${panel('Feature Access', `
           <div class="guide-card">
-            <div id="speciesFeaturePanel">${renderInfoPreviewCard({
-              eyebrow: 'Species Detail',
-              title: featureDetails[0]?.name || species?.name || 'Species',
-              text: featureDetails[0]?.description || handbookPreview(speciesPage, species?.name || 'Species'),
-              chips: speciesFeatureText().slice(0, 4),
-            })}</div>
-            <div class="inline-actions">${openCompendiumButton('Species', speciesPage?.title)}</div>
+            <p class="muted">Click a feature or overview chip to pin it. Hovering a chip previews it temporarily; the panel returns to the last clicked entry when the hover ends.</p>
+            <div class="stat-table">
+              <div><span>Available References</span><strong>${speciesEntries.length}</strong></div>
+              <div><span>Feature Entries</span><strong>${speciesEntries.filter((entry) => entry.id.startsWith('species-feature-')).length}</strong></div>
+            </div>
           </div>
         `)}
       </div>
@@ -2311,14 +2445,17 @@ function applyFieldChange(path, value) {
     state.character.profile.speciesSubtype = (SPECIES_OPTIONS[value] || [])[0]?.name || '';
     state.character.proficiencies.skills = [];
     state.character.build.feats = state.character.build.feats.filter((feat) => availableFeats().includes(feat));
+    state.speciesDetailSelection = '';
   }
   if (path === 'profile.speciesSubtype') {
     state.character.proficiencies.skills = state.character.proficiencies.skills.filter((skill) => !automaticSkills().includes(skill));
     state.character.build.feats = state.character.build.feats.filter((feat) => availableFeats().includes(feat));
+    state.speciesDetailSelection = '';
   }
   if (path === 'profile.acquiredSpecies') {
     state.character.proficiencies.skills = state.character.proficiencies.skills.filter((skill) => !automaticSkills().includes(skill));
     state.character.build.feats = state.character.build.feats.filter((feat) => availableFeats().includes(feat));
+    state.speciesDetailSelection = '';
   }
   if (path === 'profile.className') {
     state.character.profile.subclass = SUBCLASS_MAP[value]?.[0] || '';
@@ -2865,6 +3002,32 @@ async function importPdf(file) {
 }
 
 function bindEvents() {
+  const renderSpeciesReference = (entryId = state.speciesDetailSelection) => {
+    const entries = speciesReferenceEntries();
+    const entry = entries.find((item) => item.id === entryId) || currentSpeciesReferenceEntry(entries);
+    const panel = document.getElementById('speciesFeaturePanel');
+    const actions = document.getElementById('speciesFeatureActions');
+    if (!panel || !entry) return;
+    panel.innerHTML = renderInfoPreviewCard({
+      eyebrow: entry.eyebrow || 'Species Reference',
+      title: entry.name,
+      chips: entry.chips || [],
+      bodyHtml: entry.bodyHtml || '',
+      text: entry.text || '',
+    });
+    if (actions) actions.innerHTML = entry ? openCompendiumButton(entry.section, entry.page) : '';
+    actions?.querySelector('[data-open-page]')?.addEventListener('click', (event) => {
+      const current = event.currentTarget;
+      if (!current.dataset.openPage) return;
+      state.tab = 'compendium';
+      state.selectedSection = current.dataset.openSection;
+      state.selectedPage = current.dataset.openPage;
+      state.search = '';
+      state.filteredPages = [];
+      state.compendiumAnchor = '';
+      render();
+    });
+  };
   document.querySelectorAll('[data-field]').forEach((input) => {
     input.addEventListener('input', handleFieldInput);
     input.addEventListener('change', handleFieldCommit);
@@ -2975,6 +3138,17 @@ function bindEvents() {
     saveState();
     render();
   }));
+  document.querySelectorAll('[data-species-entry]').forEach((button) => {
+    const entryId = button.dataset.speciesEntry || '';
+    button.addEventListener('mouseenter', () => renderSpeciesReference(entryId));
+    button.addEventListener('focus', () => renderSpeciesReference(entryId));
+    button.addEventListener('mouseleave', () => renderSpeciesReference(state.speciesDetailSelection));
+    button.addEventListener('blur', () => renderSpeciesReference(state.speciesDetailSelection));
+    button.addEventListener('click', () => {
+      state.speciesDetailSelection = entryId;
+      render();
+    });
+  });
   document.getElementById('importPdfInput')?.addEventListener('change', async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -3043,13 +3217,13 @@ function injectStyles() {
     .main-column{display:grid;gap:18px}.hero{padding:18px;display:flex;justify-content:space-between;gap:18px;align-items:end}.hero-chips{margin-top:12px}.tab-row{display:flex;gap:10px;flex-wrap:wrap}.tab-btn{padding:12px 16px;color:var(--text);cursor:pointer}.tab-btn.active,.primary-btn,.upload-btn{background:linear-gradient(135deg,#f0c36c,#ffdd96);color:var(--ink)}.tab-btn.disabled{opacity:.45;cursor:default}
     .panel{padding:18px;display:grid;gap:16px}.panel.soft{background:rgba(255,255,255,.04)}.panel-head{display:flex;justify-content:space-between;gap:12px}.form-grid{display:grid;gap:14px}.form-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}label{display:grid;gap:8px}label.full{grid-column:1/-1}input,select,textarea{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text)}textarea{min-height:112px;resize:vertical}
     .ability-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}.ability-card{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.ability-card strong{font-size:1.4rem}.summary-row{display:flex;gap:10px;flex-wrap:wrap}.summary-chip{color:var(--text)}
-    .pill-grid{display:flex;flex-wrap:wrap;gap:8px}.pill,.filter-btn,.page-btn,.wizard-step,.ghost-btn,.mini-link,.summary-chip.interactive{padding:10px 12px;color:var(--text);cursor:pointer}.pill.active,.filter-btn.active,.page-btn.active,.wizard-step.active,.choice-card.active{background:linear-gradient(135deg,#7fd1ff,#b4e7ff);color:var(--ink)}.summary-chip.interactive{text-align:left;border:1px solid var(--line)}.summary-chip.interactive:hover,.summary-chip.interactive:focus{background:rgba(127,209,255,.16)}
+    .pill-grid{display:flex;flex-wrap:wrap;gap:8px}.pill,.filter-btn,.page-btn,.wizard-step,.ghost-btn,.mini-link,.summary-chip.interactive{padding:10px 12px;color:var(--text);cursor:pointer}.pill.active,.filter-btn.active,.page-btn.active,.wizard-step.active,.choice-card.active,.summary-chip.interactive.active{background:linear-gradient(135deg,#7fd1ff,#b4e7ff);color:var(--ink)}.summary-chip.interactive{text-align:left;border:1px solid var(--line)}.summary-chip.interactive:hover,.summary-chip.interactive:focus{background:rgba(127,209,255,.16)}
     .wizard-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;position:sticky;top:24px;z-index:4}.wizard-step{display:flex;align-items:center;gap:12px;text-align:left;border-radius:22px;background:rgba(255,255,255,.04)}.wizard-step.done{box-shadow:inset 0 0 0 1px rgba(240,195,108,.35)}.wizard-step span{display:grid;place-items:center;min-width:30px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.08)}.wizard-step small{display:block;color:inherit;opacity:.72}.wizard-nav{display:flex;justify-content:space-between;gap:12px}.reader-text.compact{max-height:360px}
-    .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}.spell-preview-card{display:grid;gap:12px}.reader-text.inline{max-height:320px;margin-top:0;padding:14px}.preview-window{border:1px solid rgba(127,209,255,.18);border-radius:22px;background:linear-gradient(180deg,rgba(26,23,38,.98),rgba(18,16,28,.95));box-shadow:0 18px 50px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.04)}.preview-window-bar{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.preview-window-bar span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.16)}.preview-window-bar span:nth-child(1){background:#f08b6c}.preview-window-bar span:nth-child(2){background:#f0c36c}.preview-window-bar span:nth-child(3){background:#7fd1ff}.preview-window-body{padding:16px;display:grid;gap:12px}.loadout-add-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.removable-chip{display:inline-flex;align-items:center;gap:8px}
+    .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}.spell-preview-card{display:grid;gap:12px}.reader-text.inline{max-height:320px;margin-top:0;padding:14px}.preview-window{border:1px solid rgba(127,209,255,.18);border-radius:22px;background:linear-gradient(180deg,rgba(26,23,38,.98),rgba(18,16,28,.95));box-shadow:0 18px 50px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.04)}.preview-window-bar{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.preview-window-bar span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.16)}.preview-window-bar span:nth-child(1){background:#f08b6c}.preview-window-bar span:nth-child(2){background:#f0c36c}.preview-window-bar span:nth-child(3){background:#7fd1ff}.preview-window-body{padding:16px;display:grid;gap:12px}.loadout-add-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.removable-chip{display:inline-flex;align-items:center;gap:8px}.sticky-card{position:sticky;top:24px}.species-entry-list{max-height:168px;overflow:auto}.species-benefits-shell{align-items:start}
     .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.compendium-sidebar{position:sticky;top:24px}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.page-btn{display:grid;gap:4px;text-align:left}.page-btn small{color:inherit;opacity:.72;line-height:1.35}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-column{display:grid;gap:12px;align-content:start}.compendium-anchor-bar{position:sticky;top:24px;z-index:3}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto;max-height:72vh;scroll-behavior:smooth}.reader-text.structured{display:grid;gap:18px;white-space:normal}.reader-block{display:grid;gap:12px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.08)}.reader-block:last-child{border-bottom:none;padding-bottom:0}.reader-block h3{font-size:1rem;color:var(--accent)}.reader-block p{margin:0;line-height:1.65}.compendium-meta{display:grid;gap:8px;margin-bottom:4px}.compendium-meta div{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.04)}.compendium-meta span{color:var(--muted);font-size:.82rem}.compendium-meta strong{text-align:right}.compendium-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}.compendium-aside{display:grid;gap:12px}
     .export-actions{display:flex;gap:12px;flex-wrap:wrap}.primary-btn,.upload-btn{padding:14px 18px;font-weight:700;cursor:pointer}.upload-btn input{display:none}.notes{margin:0;padding-left:18px;display:grid;gap:8px}.empty-state{padding:28px;border-radius:22px;background:rgba(255,255,255,.04);color:var(--muted)}.hidden{display:none!important}
     .mobile-panel-switch{display:none}.mobile-panel{display:block}.desktop-only{display:block}
-    @media (max-width:1180px){.studio-shell,.compendium-shell,.form-grid.two,.form-grid.three,.ability-grid,.split-shell,.choice-grid,.wizard-strip,.compendium-layout,.loadout-add-row{grid-template-columns:1fr}.main-column{order:1}.left-rail{order:2}.summary-card.sticky,.wizard-strip,.compendium-sidebar,.compendium-anchor-bar{position:static}.hero,.wizard-nav{flex-direction:column;align-items:flex-start}.reader-text{max-height:none}}
+    @media (max-width:1180px){.studio-shell,.compendium-shell,.form-grid.two,.form-grid.three,.ability-grid,.split-shell,.choice-grid,.wizard-strip,.compendium-layout,.loadout-add-row{grid-template-columns:1fr}.main-column{order:1}.left-rail{order:2}.summary-card.sticky,.wizard-strip,.compendium-sidebar,.compendium-anchor-bar,.sticky-card{position:static}.hero,.wizard-nav{flex-direction:column;align-items:flex-start}.reader-text{max-height:none}}
     @media (max-width:720px){body{padding:16px}.summary-stats,.ability-summary,.skill-columns{grid-template-columns:1fr}.panel,.summary-card.sticky,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn{border-radius:18px}.mobile-panel-switch{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.mobile-panel{display:none}.mobile-panel.active{display:block}.desktop-only{display:none}.magic-preview-shell{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
