@@ -388,6 +388,8 @@ const state = {
   character: loadState(),
   filteredPages: [],
   magicPreview: null,
+  magicMobilePanel: 'choices',
+  compendiumAnchor: '',
 };
 
 function defaultCharacter() {
@@ -1642,6 +1644,17 @@ function searchItems() {
   return state.search ? state.filteredPages : meaningfulPages(state.selectedSection);
 }
 
+function compendiumSectionsFromText(text) {
+  return String(text || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => line.length >= 4)
+    .filter((line) => /^([A-Z][A-Z\s:'()/-]+|Chapter\s+\d+[:.-].+|The Lore of .+|Tier\s+\d+.+)$/i.test(line))
+    .filter((line, index, arr) => arr.indexOf(line) === index)
+    .slice(0, 12);
+}
+
 function renderBuilder() {
   const c = state.character;
   const step = state.builderStep;
@@ -1926,35 +1939,33 @@ function renderBuilder() {
       .map(([key, label]) => ({key, label, items: availableSpellChoices(key)}))
       .filter(({items}) => items.length);
     const preview = currentMagicPreview();
-    body = `
-      ${panel('Step 7 - Magic & Maneuvers', `
-        ${activeMagicLists.length ? `
-          <div class="stack">
-            <div class="guide-card compact">
-              <div class="eyebrow">Was du hier waehlen sollst</div>
-              <p class="muted">Waehle aus jeder freigeschalteten Liste die Spells oder Maneuvers, die dein Charakter auf dieser Stufe wirklich kennt. Das Studio zeigt nur Eintraege, die fuer Klasse, Subclass, Tier, Lore und Level legal sind.</p>
+    const choicesPane = activeMagicLists.length ? `
+      <div class="stack">
+        <div class="guide-card compact">
+          <div class="eyebrow">Was du hier waehlen sollst</div>
+          <p class="muted">Waehle aus jeder freigeschalteten Liste die Spells oder Maneuvers, die dein Charakter auf dieser Stufe wirklich kennt. Das Studio zeigt nur Eintraege, die fuer Klasse, Subclass, Tier, Lore und Level legal sind.</p>
+        </div>
+        ${magicAccess().elemental ? `
+          <div class="guide-card">
+            <div class="eyebrow">Elemental Access</div>
+            <div class="summary-row">
+              <div class="summary-chip">${elementalAccessSummary()}</div>
+              ${autoChannelSpellNames().map((spell) => `<div class="summary-chip">${spell}</div>`).join('')}
             </div>
-            ${magicAccess().elemental ? `
-              <div class="guide-card">
-                <div class="eyebrow">Elemental Access</div>
-                <div class="summary-row">
-                  <div class="summary-chip">${elementalAccessSummary()}</div>
-                  ${autoChannelSpellNames().map((spell) => `<div class="summary-chip">${spell}</div>`).join('')}
-                </div>
-                ${elementalLoreChoices().length ? `<div class="inline-actions">${fixedElementalLore() ? `<div class="summary-chip">Feste Lore durch Subclass</div>` : renderChoiceCards(elementalLoreChoices(), chosenElementalLore(), 'profile.elementalLore')}</div>` : ''}
-              </div>
-            ` : ''}
-            ${activeMagicLists.map(({key, label, items}) => `
-              <label>
-                <span>${label} (${state.character.magic[key].length}/${spellPickLimit(key)})</span>
-                <small class="muted">${items.length} verfuegbar auf diesem Level${key === 'elemental' ? ` | ${elementalAccessSummary()}` : ''}.</small>
-                <div class="spell-picker">${renderOptionList(items, state.character.magic[key], `magic.${key}`, Object.fromEntries(items.map((title) => [title, previewTextFor(key, title)])), key)}</div>
-              </label>
-            `).join('')}
+            ${elementalLoreChoices().length ? `<div class="inline-actions">${fixedElementalLore() ? `<div class="summary-chip">Feste Lore durch Subclass</div>` : renderChoiceCards(elementalLoreChoices(), chosenElementalLore(), 'profile.elementalLore')}</div>` : ''}
           </div>
-        ` : '<div class="empty-state compact">Diese Klasse/Subclass hat auf diesem Level keine waehlbare Magie oder Maneuvers.</div>'}
-      `, 'Waehle hier die legalen Spells und Maneuvers fuer den aktuellen Charakterstand.')}
-      <div class="split-shell">
+        ` : ''}
+        ${activeMagicLists.map(({key, label, items}) => `
+          <label>
+            <span>${label} (${state.character.magic[key].length}/${spellPickLimit(key)})</span>
+            <small class="muted">${items.length} verfuegbar auf diesem Level${key === 'elemental' ? ` | ${elementalAccessSummary()}` : ''}.</small>
+            <div class="spell-picker">${renderOptionList(items, state.character.magic[key], `magic.${key}`, Object.fromEntries(items.map((title) => [title, previewTextFor(key, title)])), key)}</div>
+          </label>
+        `).join('')}
+      </div>
+    ` : '<div class="empty-state compact">Diese Klasse/Subclass hat auf diesem Level keine waehlbare Magie oder Maneuvers.</div>';
+    const previewPane = (variant = 'desktop') => `
+      <div class="split-shell magic-preview-shell">
         ${panel('Spellcasting Rules', `
           <pre class="reader-text compact">${handbookPreview(handbookPage('Magic', 'Casting Spells') || handbookPage('Magic', 'What Is A Spell?'))}</pre>
           <div class="summary-row">
@@ -1963,10 +1974,21 @@ function renderBuilder() {
           </div>
         `)}
         ${panel('Spell Preview', `
-          <div id="hoverPreviewPanel">${preview ? renderSpellPreview(preview.key, preview.title) : '<div class="empty-state compact">Fahre ueber einen Spell oder Maneuver oder waehle ihn aus, um Effekt, Freischaltung und Beschreibung zu sehen.</div>'}</div>
-          <div class="inline-actions"><button class="ghost-btn ${preview ? '' : 'hidden'}" id="hoverPreviewOpen" ${preview ? `data-open-section="${preview.label}" data-open-page="${preview.title}"` : ''}>Im Compendium oeffnen</button></div>
+          <div ${variant === 'desktop' ? 'id="hoverPreviewPanel"' : ''} data-hover-preview-panel="${variant}">${preview ? renderSpellPreview(preview.key, preview.title) : '<div class="empty-state compact">Fahre ueber einen Spell oder Maneuver oder waehle ihn aus, um Effekt, Freischaltung und Beschreibung zu sehen.</div>'}</div>
+          <div class="inline-actions"><button class="ghost-btn ${preview ? '' : 'hidden'}" ${variant === 'desktop' ? 'id="hoverPreviewOpen"' : ''} data-hover-preview-open="${variant}" ${preview ? `data-open-section="${preview.label}" data-open-page="${preview.title}"` : ''}>Im Compendium oeffnen</button></div>
         `)}
       </div>
+    `;
+    body = `
+      ${panel('Step 7 - Magic & Maneuvers', `
+        <div class="mobile-panel-switch">
+          <button class="filter-btn ${state.magicMobilePanel === 'choices' ? 'active' : ''}" type="button" data-magic-panel="choices">Auswahl</button>
+          <button class="filter-btn ${state.magicMobilePanel === 'preview' ? 'active' : ''}" type="button" data-magic-panel="preview">Preview</button>
+        </div>
+        <div class="mobile-panel ${state.magicMobilePanel === 'choices' ? 'active' : ''}">${choicesPane}</div>
+        <div class="mobile-panel ${state.magicMobilePanel === 'preview' ? 'active' : ''}">${previewPane('mobile')}</div>
+      `, 'Waehle hier die legalen Spells und Maneuvers fuer den aktuellen Charakterstand.')}
+      <div class="desktop-only">${previewPane('desktop')}</div>
     `;
   } else if (step === 'notes') {
     body = panel('Step 8 - Finish', `
@@ -2013,6 +2035,8 @@ function renderCompendium() {
   const currentPages = meaningfulPages(state.selectedSection);
   const visibleItems = searchItems();
   const cleaned = sanitizePageText(page);
+  const pageText = cleaned || compendiumFallbackText(page);
+  const contentAnchors = compendiumSectionsFromText(pageText);
   return `
     <section class="panel compendium-shell">
       <div class="compendium-sidebar">
@@ -2038,11 +2062,17 @@ function renderCompendium() {
             </div>
           </div>
           <div class="compendium-layout">
-            <pre class="reader-text">${cleaned || compendiumFallbackText(page)}</pre>
+            <div class="reader-column">
+              <div class="guide-card compact compendium-anchor-bar ${contentAnchors.length ? '' : 'hidden'}">
+                <div class="eyebrow">Inhalt</div>
+                <div class="mini-list">${contentAnchors.map((anchor) => `<button class="mini-link" type="button" data-compendium-anchor="${escapeHtml(anchor)}">${escapeHtml(anchor)}</button>`).join('')}</div>
+              </div>
+              <pre class="reader-text" id="compendiumReader">${pageText}</pre>
+            </div>
             <div class="compendium-aside">
               <div class="guide-card compact">
                 <div class="eyebrow">Kurzfassung</div>
-                <p class="muted">${summarySnippet(cleaned || compendiumFallbackText(page), 260)}</p>
+                <p class="muted">${summarySnippet(pageText, 260)}</p>
               </div>
               <div class="guide-card compact">
                 <div class="eyebrow">Verwandte Eintraege</div>
@@ -2084,8 +2114,6 @@ function renderSummary() {
   const spellCount = c.magic.arias.length + c.magic.divine.length + c.magic.elemental.length + c.magic.wild.length + c.magic.witchcraft.length;
   const maneuverCount = c.magic.maneuvers.length;
   const selectedSkills = selectedSkillSet();
-  const saveSummary = saveThrowProficiencies().map((key) => ABILITY_LABELS[key]).join(', ') || 'None';
-  const loadoutItems = selectedLoadoutItems();
   return `
     <div class="summary-card sticky">
       <a class="back-link" href="../index.html#games">Zurueck zur Startseite</a>
@@ -2109,12 +2137,11 @@ function renderSummary() {
           ? selectedSkills.map((skill) => `<div class="summary-chip">${skill} ${skillBonus(skill)}</div>`).join('')
           : '<div class="summary-chip">Noch keine Skills gewaehlt</div>'}
       </div>
-      <div class="summary-section-label">Rules Snapshot</div>
-      <div class="stat-table compact">
-        <div><span>Saving Throws</span><strong>${saveSummary}</strong></div>
-        <div><span>Loadout Items</span><strong>${loadoutItems.length}</strong></div>
-        <div><span>Encumbrance</span><strong>${encumbrance()} / ${carryLimit()}</strong></div>
-        <div><span>Scrap</span><strong>${c.loadout.money || 0}</strong></div>
+      <div class="summary-section-label">Skill Proficiencies</div>
+      <div class="summary-row">
+        ${selectedSkills.length
+          ? selectedSkills.map((skill) => `<div class="summary-chip">${skill}</div>`).join('')
+          : '<div class="summary-chip">Noch keine Skill-Proficiencies</div>'}
       </div>
       <div class="summary-foot">
         <span>${skillCount} Skills</span>
@@ -2811,6 +2838,7 @@ function bindEvents() {
   }));
   document.querySelectorAll('[data-step]').forEach((button) => button.addEventListener('click', () => {
     state.builderStep = button.dataset.step;
+    if (state.builderStep !== 'magic') state.magicMobilePanel = 'choices';
     render();
   }));
   document.querySelectorAll('[data-step-nav]').forEach((button) => button.addEventListener('click', () => {
@@ -2830,12 +2858,14 @@ function bindEvents() {
     state.selectedPage = firstPage?.title || '';
     state.search = '';
     state.filteredPages = [];
+    state.compendiumAnchor = '';
     render();
   }));
   document.querySelectorAll('[data-page]').forEach((button) => button.addEventListener('click', () => {
     state.selectedPage = button.dataset.page;
     const found = state.filteredPages.find((page) => page.title === button.dataset.page);
     if (found?.section) state.selectedSection = found.section;
+    state.compendiumAnchor = '';
     render();
   }));
   document.querySelectorAll('[data-open-page]').forEach((button) => button.addEventListener('click', () => {
@@ -2844,18 +2874,35 @@ function bindEvents() {
     state.selectedPage = button.dataset.openPage;
     state.search = '';
     state.filteredPages = [];
+    state.compendiumAnchor = '';
     render();
   }));
-  document.getElementById('hoverPreviewOpen')?.addEventListener('click', (event) => {
-    const button = event.currentTarget;
-    if (!button.dataset.openPage) return;
+  document.querySelectorAll('[data-magic-panel]').forEach((button) => button.addEventListener('click', () => {
+    state.magicMobilePanel = button.dataset.magicPanel || 'choices';
+    render();
+  }));
+  document.querySelectorAll('[data-compendium-anchor]').forEach((button) => button.addEventListener('click', () => {
+    const anchor = button.dataset.compendiumAnchor || '';
+    state.compendiumAnchor = anchor;
+    const reader = document.getElementById('compendiumReader');
+    if (!reader || !anchor) return;
+    const text = reader.textContent || '';
+    const index = text.indexOf(anchor);
+    if (index < 0) return;
+    const ratio = index / Math.max(1, text.length);
+    reader.scrollTop = Math.max(0, (reader.scrollHeight - reader.clientHeight) * ratio);
+  }));
+  document.querySelectorAll('[data-hover-preview-open]').forEach((button) => button.addEventListener('click', (event) => {
+    const current = event.currentTarget;
+    if (!current.dataset.openPage) return;
     state.tab = 'compendium';
-    state.selectedSection = button.dataset.openSection;
-    state.selectedPage = button.dataset.openPage;
+    state.selectedSection = current.dataset.openSection;
+    state.selectedPage = current.dataset.openPage;
     state.search = '';
     state.filteredPages = [];
+    state.compendiumAnchor = '';
     render();
-  });
+  }));
   document.getElementById('searchInput')?.addEventListener('input', (event) => {
     state.search = event.target.value;
     refreshSearch();
@@ -2887,7 +2934,7 @@ function bindEvents() {
       const group = button.dataset.previewGroup;
       const title = button.dataset.previewTitle;
       const skillsPanel = document.getElementById('skillsHoverPanel');
-      const spellPanel = document.getElementById('hoverPreviewPanel');
+      const spellPanels = document.querySelectorAll('[data-hover-preview-panel]');
       if ((group === 'skills' || group === 'feats') && skillsPanel) {
         const text = group === 'skills' ? (SKILL_DESCRIPTIONS[title] || title) : handbookPreview(handbookPage('Customization', title), title);
         const chips = group === 'skills' ? [ABILITY_LABELS[skillAbility(title)], `Bonus ${skillBonus(title)}`] : ['Feat'];
@@ -2900,15 +2947,14 @@ function bindEvents() {
           page: group === 'feats' ? title : '',
         });
       }
-      if (spellPanel && SPELL_SECTION_LABELS[group]) {
+      if (spellPanels.length && SPELL_SECTION_LABELS[group]) {
         state.magicPreview = {key: group, label: SPELL_SECTION_LABELS[group], title};
-        spellPanel.innerHTML = renderSpellPreview(group, title);
-        const previewOpen = document.getElementById('hoverPreviewOpen');
-        if (previewOpen) {
+        spellPanels.forEach((panel) => { panel.innerHTML = renderSpellPreview(group, title); });
+        document.querySelectorAll('[data-hover-preview-open]').forEach((previewOpen) => {
           previewOpen.dataset.openSection = SPELL_SECTION_LABELS[group];
           previewOpen.dataset.openPage = title;
           previewOpen.classList.remove('hidden');
-        }
+        });
       }
     };
     button.addEventListener('mouseenter', updatePreview);
@@ -2945,10 +2991,11 @@ function injectStyles() {
     .pill-grid{display:flex;flex-wrap:wrap;gap:8px}.pill,.filter-btn,.page-btn,.wizard-step,.ghost-btn,.mini-link,.summary-chip.interactive{padding:10px 12px;color:var(--text);cursor:pointer}.pill.active,.filter-btn.active,.page-btn.active,.wizard-step.active,.choice-card.active{background:linear-gradient(135deg,#7fd1ff,#b4e7ff);color:var(--ink)}.summary-chip.interactive{text-align:left;border:1px solid var(--line)}.summary-chip.interactive:hover,.summary-chip.interactive:focus{background:rgba(127,209,255,.16)}
     .wizard-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;position:sticky;top:24px;z-index:4}.wizard-step{display:flex;align-items:center;gap:12px;text-align:left;border-radius:22px;background:rgba(255,255,255,.04)}.wizard-step.done{box-shadow:inset 0 0 0 1px rgba(240,195,108,.35)}.wizard-step span{display:grid;place-items:center;min-width:30px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.08)}.wizard-step small{display:block;color:inherit;opacity:.72}.wizard-nav{display:flex;justify-content:space-between;gap:12px}.reader-text.compact{max-height:360px}
     .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}.spell-preview-card{display:grid;gap:12px}.reader-text.inline{max-height:320px;margin-top:0;padding:14px}.preview-window{border:1px solid rgba(127,209,255,.18);border-radius:22px;background:linear-gradient(180deg,rgba(26,23,38,.98),rgba(18,16,28,.95));box-shadow:0 18px 50px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.04)}.preview-window-bar{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.preview-window-bar span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.16)}.preview-window-bar span:nth-child(1){background:#f08b6c}.preview-window-bar span:nth-child(2){background:#f0c36c}.preview-window-bar span:nth-child(3){background:#7fd1ff}.preview-window-body{padding:16px;display:grid;gap:12px}.loadout-add-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.removable-chip{display:inline-flex;align-items:center;gap:8px}
-    .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.compendium-sidebar{position:sticky;top:24px}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.page-btn{display:grid;gap:4px;text-align:left}.page-btn small{color:inherit;opacity:.72;line-height:1.35}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto}.compendium-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}.compendium-aside{display:grid;gap:12px}
+    .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.compendium-sidebar{position:sticky;top:24px}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.page-btn{display:grid;gap:4px;text-align:left}.page-btn small{color:inherit;opacity:.72;line-height:1.35}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-column{display:grid;gap:12px;align-content:start}.compendium-anchor-bar{position:sticky;top:24px;z-index:3}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto;max-height:72vh;scroll-behavior:smooth}.compendium-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}.compendium-aside{display:grid;gap:12px}
     .export-actions{display:flex;gap:12px;flex-wrap:wrap}.primary-btn,.upload-btn{padding:14px 18px;font-weight:700;cursor:pointer}.upload-btn input{display:none}.notes{margin:0;padding-left:18px;display:grid;gap:8px}.empty-state{padding:28px;border-radius:22px;background:rgba(255,255,255,.04);color:var(--muted)}.hidden{display:none!important}
-    @media (max-width:1180px){.studio-shell,.compendium-shell,.form-grid.two,.form-grid.three,.ability-grid,.split-shell,.choice-grid,.wizard-strip,.compendium-layout,.loadout-add-row{grid-template-columns:1fr}.main-column{order:1}.left-rail{order:2}.summary-card.sticky,.wizard-strip,.compendium-sidebar{position:static}.hero,.wizard-nav{flex-direction:column;align-items:flex-start}}
-    @media (max-width:720px){body{padding:16px}.summary-stats,.ability-summary,.skill-columns{grid-template-columns:1fr}.panel,.summary-card.sticky,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn{border-radius:18px}}
+    .mobile-panel-switch{display:none}.mobile-panel{display:block}.desktop-only{display:block}
+    @media (max-width:1180px){.studio-shell,.compendium-shell,.form-grid.two,.form-grid.three,.ability-grid,.split-shell,.choice-grid,.wizard-strip,.compendium-layout,.loadout-add-row{grid-template-columns:1fr}.main-column{order:1}.left-rail{order:2}.summary-card.sticky,.wizard-strip,.compendium-sidebar,.compendium-anchor-bar{position:static}.hero,.wizard-nav{flex-direction:column;align-items:flex-start}.reader-text{max-height:none}}
+    @media (max-width:720px){body{padding:16px}.summary-stats,.ability-summary{grid-template-columns:1fr}.panel,.summary-card.sticky,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn{border-radius:18px}.mobile-panel-switch{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}.mobile-panel{display:none}.mobile-panel.active{display:block}.desktop-only{display:none}.magic-preview-shell{grid-template-columns:1fr}}
   `;
   document.head.appendChild(style);
 }
