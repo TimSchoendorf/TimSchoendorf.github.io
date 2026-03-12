@@ -41,24 +41,26 @@ const PDF_SKILL_SLOTS = [
   {fieldName: 'SK19', checkField: 'Check Box8112', skill: 'History'},
 ];
 const WEAPON_PROFILES = {
+  // Explicit handbook references confirmed from the parsed Equipment pages:
+  // Compound Bow = 1d10 piercing, firearms = attack uses DEX but no DEX/STR on damage,
+  // firearm ammo classes include Pistol (d4) and Rifle (d6).
   greataxe: {label: 'Greataxe', ability: 'str', damage: '1d12', type: 'slashing'},
-  javelins: {label: 'Javelin', ability: 'str', damage: '1d6', type: 'piercing', effect: 'thrown'},
-  hatchet: {label: 'Hatchet', ability: 'str', damage: '1d6', type: 'slashing'},
-  'light sidearm': {label: 'Light Sidearm', ability: 'dex', damage: '1d4', type: 'piercing', effect: 'ranged', noDamageMod: true},
-  'light weapon': {label: 'Light Weapon', ability: 'dex', damage: '1d6', type: 'slashing', finesse: true},
+  javelins: {label: 'Javelin', ability: 'str', damage: '1d6', type: 'piercing', effect: ['thrown']},
+  hatchet: {label: 'Hatchet', ability: 'str', damage: '1d6', type: 'slashing', effect: ['thrown']},
+  'light sidearm': {label: 'Light Sidearm', ability: 'dex', damage: '1d4', type: 'piercing', effect: ['ranged'], noDamageMod: true},
+  'light weapon': {label: 'Light Weapon', ability: 'dex', damage: '1d4', type: 'piercing', finesse: true, effect: ['light', 'thrown']},
   staff: {label: 'Staff', ability: 'str', damage: '1d6', type: 'bludgeoning'},
-  spear: {label: 'Spear', ability: 'str', damage: '1d6', type: 'piercing', effect: 'thrown'},
-  rifle: {label: 'Rifle', ability: 'dex', damage: '1d6', type: 'piercing', effect: 'ranged', noDamageMod: true},
-  sidearm: {label: 'Sidearm', ability: 'dex', damage: '1d4', type: 'piercing', effect: 'ranged', noDamageMod: true},
-  carbine: {label: 'Carbine', ability: 'dex', damage: '1d6', type: 'piercing', effect: 'ranged', noDamageMod: true},
-  knife: {label: 'Knife', ability: 'dex', damage: '1d4', type: 'piercing', finesse: true, effect: 'light'},
+  spear: {label: 'Spear', ability: 'str', damage: '1d6', type: 'piercing', effect: ['thrown']},
+  rifle: {label: 'Rifle', ability: 'dex', damage: '1d6', type: 'piercing', effect: ['ranged'], noDamageMod: true},
+  sidearm: {label: 'Sidearm', ability: 'dex', damage: '1d4', type: 'piercing', effect: ['ranged'], noDamageMod: true},
+  carbine: {label: 'Carbine', ability: 'dex', damage: '1d6', type: 'piercing', effect: ['ranged'], noDamageMod: true},
+  knife: {label: 'Knife', ability: 'dex', damage: '1d4', type: 'piercing', finesse: true, effect: ['light', 'thrown']},
   'focus blade': {label: 'Focus Blade', ability: 'dex', damage: '1d8', type: 'slashing', finesse: true},
-  polearm: {label: 'Polearm', ability: 'str', damage: '1d10', type: 'slashing', effect: 'reach'},
+  polearm: {label: 'Polearm', ability: 'str', damage: '1d10', type: 'slashing', effect: ['reach']},
   sword: {label: 'Sword', ability: 'str', damage: '1d8', type: 'slashing'},
   mace: {label: 'Mace', ability: 'str', damage: '1d6', type: 'bludgeoning'},
-  bow: {label: 'Bow', ability: 'dex', damage: '1d10', type: 'piercing', effect: 'ranged'},
-  pistol: {label: 'Pistol', ability: 'dex', damage: '1d4', type: 'piercing', effect: 'ranged', noDamageMod: true},
-  crowbar: {label: 'Crowbar', ability: 'str', damage: '1d4', type: 'bludgeoning'},
+  bow: {label: 'Bow', ability: 'dex', damage: '1d10', type: 'piercing', effect: ['ranged']},
+  pistol: {label: 'Pistol', ability: 'dex', damage: '1d4', type: 'piercing', effect: ['ranged'], noDamageMod: true},
 };
 const SKILL_DESCRIPTIONS = {
   Acrobatics: 'Balance, tumbling, agile movement and keeping your footing.',
@@ -780,6 +782,11 @@ function compactTag(tag) {
   })[String(tag || '').toLowerCase()] || String(tag || '');
 }
 
+function compactEffectTags(effect) {
+  const tags = Array.isArray(effect) ? effect : effect ? [effect] : [];
+  return tags.map(compactTag).join(' | ');
+}
+
 function spellcastingAbilityMod(groupKey, title = '') {
   if (groupKey === 'arias') return mod(finalAbilityScore('cha'));
   if (groupKey === 'divine') {
@@ -866,7 +873,8 @@ function weaponRows(items) {
     const abilityMod = weaponAbilityMod(profile);
     const bonus = signedNumber(proficiencyBonus() + abilityMod);
     const damageMod = profile.noDamageMod ? '' : `${abilityMod >= 0 ? '+' : ''}${abilityMod}`;
-    const damage = `${profile.damage}${damageMod} ${compactDamageType(profile.type)}${profile.effect ? ` | ${compactTag(profile.effect)}` : ''}`;
+    const effectText = compactEffectTags(profile.effect);
+    const damage = `${profile.damage}${damageMod} ${compactDamageType(profile.type)}${effectText ? ` | ${effectText}` : ''}`;
     return [[profile.label, bonus, damage]];
   });
 }
