@@ -17,6 +17,49 @@ const SKILLS = [
   'Investigation', 'Mechanics', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Science',
   'Sleight of Hand', 'Stealth', 'Survival', 'Driving', 'Explosives',
 ];
+const PDF_SKILL_SLOTS = [
+  {fieldName: 'SK20', checkField: 'Check Box20', skill: 'Crafting'},
+  {fieldName: 'SK0', checkField: 'Check Box81', skill: 'Animal Handling'},
+  {fieldName: 'SK1', checkField: 'Check Box82', skill: 'Arcana'},
+  {fieldName: 'SK2', checkField: 'Check Box83', skill: 'Deception'},
+  {fieldName: 'SK3', checkField: 'Check Box84', skill: 'Athletics'},
+  {fieldName: 'SK4', checkField: 'Check Box85', skill: 'Intimidation'},
+  {fieldName: 'SK5', checkField: 'Check Box86', skill: 'Investigation'},
+  {fieldName: 'SK6', checkField: 'Check Box87', skill: 'Insight'},
+  {fieldName: 'SK7', checkField: 'Check Box88', skill: 'Mechanics'},
+  {fieldName: 'SK8', checkField: 'Check Box89', skill: 'Medicine'},
+  {fieldName: 'SK9', checkField: 'Check Box811', skill: 'Nature'},
+  {fieldName: 'SK10', checkField: 'Check Box812', skill: 'Perception'},
+  {fieldName: 'SK11', checkField: 'Check Box813', skill: 'Performance'},
+  {fieldName: 'SK12', checkField: 'Check Box814', skill: 'Persuasion'},
+  {fieldName: 'SK13', checkField: 'Check Box815', skill: 'Religion'},
+  {fieldName: 'SK14', checkField: 'Check Box816', skill: 'Science'},
+  {fieldName: 'SK15', checkField: 'Check Box817', skill: 'Sleight of Hand'},
+  {fieldName: 'SK16', checkField: 'Check Box818', skill: 'Stealth'},
+  {fieldName: 'SK17', checkField: 'Check Box819', skill: 'Survival'},
+  {fieldName: 'SK18', checkField: 'Check Box8111', skill: 'Acrobatics'},
+  {fieldName: 'SK19', checkField: 'Check Box8112', skill: 'History'},
+];
+const WEAPON_PROFILES = {
+  greataxe: {label: 'Greataxe', ability: 'str', damage: '1d12', type: 'slashing'},
+  javelins: {label: 'Javelin', ability: 'str', damage: '1d6', type: 'piercing', effect: 'thrown'},
+  hatchet: {label: 'Hatchet', ability: 'str', damage: '1d6', type: 'slashing'},
+  'light sidearm': {label: 'Light Sidearm', ability: 'dex', damage: '1d4', type: 'piercing', effect: 'ranged', noDamageMod: true},
+  'light weapon': {label: 'Light Weapon', ability: 'dex', damage: '1d6', type: 'slashing', finesse: true},
+  staff: {label: 'Staff', ability: 'str', damage: '1d6', type: 'bludgeoning'},
+  spear: {label: 'Spear', ability: 'str', damage: '1d6', type: 'piercing', effect: 'thrown'},
+  rifle: {label: 'Rifle', ability: 'dex', damage: '1d6', type: 'piercing', effect: 'ranged', noDamageMod: true},
+  sidearm: {label: 'Sidearm', ability: 'dex', damage: '1d4', type: 'piercing', effect: 'ranged', noDamageMod: true},
+  carbine: {label: 'Carbine', ability: 'dex', damage: '1d6', type: 'piercing', effect: 'ranged', noDamageMod: true},
+  knife: {label: 'Knife', ability: 'dex', damage: '1d4', type: 'piercing', finesse: true, effect: 'light'},
+  'focus blade': {label: 'Focus Blade', ability: 'dex', damage: '1d8', type: 'slashing', finesse: true},
+  polearm: {label: 'Polearm', ability: 'str', damage: '1d10', type: 'slashing', effect: 'reach'},
+  sword: {label: 'Sword', ability: 'str', damage: '1d8', type: 'slashing'},
+  mace: {label: 'Mace', ability: 'str', damage: '1d6', type: 'bludgeoning'},
+  bow: {label: 'Bow', ability: 'dex', damage: '1d10', type: 'piercing', effect: 'ranged'},
+  pistol: {label: 'Pistol', ability: 'dex', damage: '1d4', type: 'piercing', effect: 'ranged', noDamageMod: true},
+  crowbar: {label: 'Crowbar', ability: 'str', damage: '1d4', type: 'bludgeoning'},
+};
 const SKILL_DESCRIPTIONS = {
   Acrobatics: 'Balance, tumbling, agile movement and keeping your footing.',
   'Animal Handling': 'Calming, guiding and understanding beasts.',
@@ -707,6 +750,137 @@ function skillBonus(skill) {
   const abilityKey = skillAbility(skill);
   const total = mod(finalAbilityScore(abilityKey)) + (selectedSkillSet().includes(skill) ? proficiencyBonus() : 0);
   return `${total >= 0 ? '+' : ''}${total}`;
+}
+
+function skillModifierText(skill) {
+  return `${selectedSkillSet().includes(skill) ? skillBonus(skill) : mod(finalAbilityScore(skillAbility(skill)))}`;
+}
+
+function signedNumber(value) {
+  const numeric = Number(value || 0);
+  return `${numeric >= 0 ? '+' : ''}${numeric}`;
+}
+
+function compactDamageType(type) {
+  return ({
+    bludgeoning: 'bludg',
+    piercing: 'pierce',
+    slashing: 'slash',
+    lightning: 'ltng',
+    thunder: 'thndr',
+  })[String(type || '').toLowerCase()] || String(type || '');
+}
+
+function compactTag(tag) {
+  return ({
+    ranged: 'rng',
+    thrown: 'thr',
+    reach: 'reach',
+    light: 'light',
+  })[String(tag || '').toLowerCase()] || String(tag || '');
+}
+
+function spellcastingAbilityMod(groupKey, title = '') {
+  if (groupKey === 'arias') return mod(finalAbilityScore('cha'));
+  if (groupKey === 'divine') {
+    const ability = state.character.profile.className === 'Paladin' ? 'cha' : prophetSpellcastingAbilityKey();
+    return mod(finalAbilityScore(ability));
+  }
+  if (groupKey === 'wild') return mod(finalAbilityScore('wis'));
+  if (groupKey === 'witchcraft') return mod(finalAbilityScore('int'));
+  if (groupKey === 'elemental') {
+    const context = spellContextForTitle(groupKey, title);
+    const lore = context.lore || chosenElementalLore() || primaryElementalLore();
+    return mod(finalAbilityScore(elementalLoreAbilityKey(lore)));
+  }
+  if (groupKey === 'maneuvers') return rogueManeuverAbilityMod();
+  return mod(finalAbilityScore('int'));
+}
+
+function spellAttackBonusText(groupKey, title = '') {
+  return signedNumber(proficiencyBonus() + spellcastingAbilityMod(groupKey, title));
+}
+
+function spellSaveDc(groupKey, title = '') {
+  return 8 + proficiencyBonus() + spellcastingAbilityMod(groupKey, title);
+}
+
+function extractSpellDamageText(text) {
+  const cleaned = String(text || '').replace(/\s+/g, ' ');
+  const exact = cleaned.match(/\b(\d+d\d+(?:\s*\+\s*\d+)?)\s+([A-Za-z-]+)\s+damage\b/i);
+  if (exact) return `${exact[1].replace(/\s+/g, '')} ${exact[2]}`;
+  const split = cleaned.match(/\b(\d+d\d+(?:\s*\+\s*\d+)?)\b/i);
+  return split ? split[1].replace(/\s+/g, '') : '';
+}
+
+function extractAoeTag(text) {
+  const cleaned = String(text || '').replace(/\s+/g, ' ');
+  const patterns = [
+    {regex: /(\d+)-meter radius sphere/i, format: (m) => `sphere ${m}m`},
+    {regex: /(\d+)-meter cone/i, format: (m) => `cone ${m}m`},
+    {regex: /(\d+)-meter line/i, format: (m) => `line ${m}m`},
+    {regex: /(\d+)-meter cube/i, format: (m) => `cube ${m}m`},
+    {regex: /(\d+)-meter radius/i, format: (m) => `radius ${m}m`},
+    {regex: /(\d+)\s*meter wide/i, format: (m) => `width ${m}m`},
+  ];
+  for (const pattern of patterns) {
+    const match = cleaned.match(pattern.regex);
+    if (match) return pattern.format(match[1]);
+  }
+  return '';
+}
+
+function spellEffectSummary(groupKey, title) {
+  const preview = spellPreviewData(groupKey, title);
+  const text = preview.hasExactEffect ? preview.effectText : preview.fallbackText;
+  const damage = extractSpellDamageText(text);
+  const aoe = extractAoeTag(text);
+  const usesAttackRoll = /make (?:a|one|two)\s+(?:melee|ranged)\s+spell attack/i.test(text);
+  const saveMatch = text.match(/\b(Strength|Dexterity|Constitution|Intelligence|Wisdom|Charisma) saving throw\b/i);
+  const parts = [];
+  if (damage) parts.push(damage.replace(/\b(lightning|thunder|bludgeoning|piercing|slashing)\b/i, (match) => compactDamageType(match)));
+  if (saveMatch) parts.push(`DC ${spellSaveDc(groupKey, title)} ${saveMatch[1].slice(0, 3).toUpperCase()}`);
+  if (aoe) parts.push(aoe);
+  if (!parts.length) {
+    const fallback = compactRuleSnippet(text, 24);
+    if (fallback) parts.push(fallback);
+  }
+  return {
+    text: parts.join(' | ').slice(0, 32),
+    usesAttackRoll,
+    isOffensive: Boolean(damage || saveMatch || usesAttackRoll),
+  };
+}
+
+function weaponAbilityMod(profile) {
+  if (profile.finesse) return Math.max(mod(finalAbilityScore('str')), mod(finalAbilityScore('dex')));
+  return mod(finalAbilityScore(profile.ability));
+}
+
+function weaponRows(items) {
+  const seen = new Set();
+  return items.flatMap((item) => {
+    const profile = WEAPON_PROFILES[item];
+    if (!profile || seen.has(item)) return [];
+    seen.add(item);
+    const abilityMod = weaponAbilityMod(profile);
+    const bonus = signedNumber(proficiencyBonus() + abilityMod);
+    const damageMod = profile.noDamageMod ? '' : `${abilityMod >= 0 ? '+' : ''}${abilityMod}`;
+    const damage = `${profile.damage}${damageMod} ${compactDamageType(profile.type)}${profile.effect ? ` | ${compactTag(profile.effect)}` : ''}`;
+    return [[profile.label, bonus, damage]];
+  });
+}
+
+function offensiveMagicRows() {
+  return knownMagicEntries().flatMap((entry) => {
+    const summary = spellEffectSummary(entry.key, entry.title);
+    if (!summary.isOffensive) return [];
+    return [[
+      cleanLabel(entry.title),
+      summary.usesAttackRoll ? spellAttackBonusText(entry.key, entry.title) : `DC ${spellSaveDc(entry.key, entry.title)}`,
+      summary.text,
+    ]];
+  });
 }
 
 function encumbrance() {
@@ -2200,7 +2374,8 @@ async function exportPdf() {
   const pages = pdfDoc.getPages();
   const cachedFieldMeta = new Map(form.getFields().map((field) => {
     const widgets = field.acroField?.getWidgets?.() || [];
-    const rect = widgets[0]?.getRectangle?.();
+    const widget = field.getName() === 'Name' ? widgets[widgets.length - 1] : widgets[0];
+    const rect = widget?.getRectangle?.();
     return [field.getName(), rect ? {
       page: PDF_PAGE_TWO_FIELDS.has(field.getName()) ? pages[1] : pages[0],
       x: Number(rect.x || 0),
@@ -2211,7 +2386,6 @@ async function exportPdf() {
   }));
   form.flatten();
   const payload = btoa(unescape(encodeURIComponent(JSON.stringify(state.character))));
-  const skillValues = SKILLS.map((skill) => `${selectedSkillSet().includes(skill) ? skillBonus(skill) : mod(finalAbilityScore(skillAbility(skill)))}`);
   const selectedSkills = selectedSkillSet();
   const speciesData = selectedSpeciesData();
   const packageItems = selectedPackage()?.items || [];
@@ -2222,6 +2396,7 @@ async function exportPdf() {
     const context = spellContextForTitle('maneuvers', title);
     return [cleanLabel(title), compactTierLabel(context.tier), compactRuleSnippet(sanitizePageText(page || {}), 30)];
   });
+  const attackRows = [...weaponRows(packageItems), ...offensiveMagicRows()];
   const magicRows = knownMagicEntries().map((entry) => {
     const context = spellContextForTitle(entry.key, entry.title);
     const page = spellPageRecord(entry.key, entry.title);
@@ -2388,13 +2563,10 @@ async function exportPdf() {
   drawTextField('Unarmored AC', selectedSpeciesData()?.baseAc || '');
   drawTextField('HIT DICE', dieLabel);
   drawTextField('HD TOTAL', totalHitDice);
-  ['SK0', 'SK1', 'SK2', 'SK3', 'SK4', 'SK5', 'SK6', 'SK7', 'SK8', 'SK9', 'SK10', 'SK11', 'SK12', 'SK13', 'SK14', 'SK15', 'SK16', 'SK17', 'SK18', 'SK19', 'SK20']
-    .forEach((fieldName, index) => drawTextField(fieldName, skillValues[index] ?? ''));
-  [
-    'Check Box81', 'Check Box82', 'Check Box83', 'Check Box84', 'Check Box85', 'Check Box86', 'Check Box87',
-    'Check Box88', 'Check Box89', 'Check Box811', 'Check Box812', 'Check Box813', 'Check Box814', 'Check Box815',
-    'Check Box816', 'Check Box817', 'Check Box818', 'Check Box819', 'Check Box8111', 'Check Box8112', 'Check Box20',
-  ].forEach((fieldName, index) => drawCheckMark(fieldName, selectedSkills.includes(SKILLS[index])));
+  PDF_SKILL_SLOTS.forEach(({fieldName, checkField, skill}) => {
+    drawTextField(fieldName, skillModifierText(skill));
+    drawCheckMark(checkField, selectedSkills.includes(skill));
+  });
   drawTextField('OTHER PROFICIENCIES', [
     `Skills: ${selectedSkills.join(', ') || '-'}`,
     `Auto: ${automaticSkills().join(', ') || '-'}`,
@@ -2418,7 +2590,7 @@ async function exportPdf() {
   drawTextField('Current Encumberment', encumbrance());
   drawTextField('Maximum Encumberment', carryLimit());
   Object.entries(loadoutSlots).forEach(([fieldName, value]) => drawTextField(fieldName, value));
-  setRows(attackFields, maneuverRows.slice(0, attackFields.length));
+  setRows(attackFields, attackRows.slice(0, attackFields.length));
   setRows(spellFields, magicRows.slice(0, spellFields.length));
   setRows([
     ['SI Name 1', 'SI Quantity 1'],
