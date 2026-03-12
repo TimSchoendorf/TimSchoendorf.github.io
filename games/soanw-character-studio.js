@@ -40,6 +40,30 @@ const PDF_SKILL_SLOTS = [
   {fieldName: 'SK18', checkField: 'Check Box8111', skill: 'Acrobatics'},
   {fieldName: 'SK19', checkField: 'Check Box8112', skill: 'History'},
 ];
+const SAVE_THROW_FIELDS = [
+  {fieldName: 'ST1', checkField: 'Check Box1', ability: 'str'},
+  {fieldName: 'ST2', checkField: 'Check Box5', ability: 'dex'},
+  {fieldName: 'ST3', checkField: 'Check Box7', ability: 'con'},
+  {fieldName: 'ST4', checkField: 'Check Box8', ability: 'int'},
+  {fieldName: 'ST5', checkField: 'Check Box9', ability: 'wis'},
+  {fieldName: 'ST6', checkField: 'Check Box10', ability: 'cha'},
+];
+// The OneNote export exposes only part of the class header data consistently.
+// Where the source text is incomplete, these save proficiencies follow the class role used elsewhere in the studio.
+const CLASS_SAVE_PROFICIENCIES = {
+  Barbarian: ['str', 'con'],
+  Bard: ['con', 'cha'],
+  Druid: ['wis', 'int'],
+  Fighter: ['str', 'dex'],
+  Mage: ['int', 'wis'],
+  Monk: ['str', 'dex'],
+  Paladin: ['wis', 'cha'],
+  Prophet: ['wis', 'cha'],
+  Ranger: ['str', 'dex'],
+  Rogue: ['dex', 'int'],
+  Sorcerer: ['con', 'cha'],
+  Witch: ['int', 'cha'],
+};
 const WEAPON_PROFILES = {
   // Explicit handbook references confirmed from the parsed Equipment pages:
   // Compound Bow = 1d10 piercing, firearms = attack uses DEX but no DEX/STR on damage,
@@ -756,6 +780,25 @@ function skillBonus(skill) {
 
 function skillModifierText(skill) {
   return `${selectedSkillSet().includes(skill) ? skillBonus(skill) : mod(finalAbilityScore(skillAbility(skill)))}`;
+}
+
+function saveThrowProficiencies() {
+  return CLASS_SAVE_PROFICIENCIES[state.character.profile.className] || [];
+}
+
+function saveThrowBonusText(abilityKey) {
+  const base = mod(finalAbilityScore(abilityKey));
+  const total = base + (saveThrowProficiencies().includes(abilityKey) ? proficiencyBonus() : 0);
+  return signedNumber(total);
+}
+
+function rationCount(items, notes = '') {
+  const base = items.filter((item) => /\brations?\b/i.test(item)).length;
+  const extra = String(notes || '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => /\brations?\b/i.test(entry)).length;
+  return base + extra;
 }
 
 function signedNumber(value) {
@@ -2571,6 +2614,10 @@ async function exportPdf() {
   drawTextField('Unarmored AC', selectedSpeciesData()?.baseAc || '');
   drawTextField('HIT DICE', dieLabel);
   drawTextField('HD TOTAL', totalHitDice);
+  SAVE_THROW_FIELDS.forEach(({fieldName, checkField, ability}) => {
+    drawTextField(fieldName, saveThrowBonusText(ability));
+    drawCheckMark(checkField, saveThrowProficiencies().includes(ability));
+  });
   PDF_SKILL_SLOTS.forEach(({fieldName, checkField, skill}) => {
     drawTextField(fieldName, skillModifierText(skill));
     drawCheckMark(checkField, selectedSkills.includes(skill));
@@ -2578,6 +2625,7 @@ async function exportPdf() {
   drawTextField('OTHER PROFICIENCIES', [
     `Skills: ${selectedSkills.join(', ') || '-'}`,
     `Auto: ${automaticSkills().join(', ') || '-'}`,
+    `Saving Throws: ${saveThrowProficiencies().map((key) => ABILITY_LABELS[key]).join(', ') || '-'}`,
     `Feats: ${c.build.feats.join(', ') || '-'}`,
   ].join('\n\n'));
   drawTextField('RACE FEAT', [
@@ -2597,6 +2645,8 @@ async function exportPdf() {
   drawTextField('Inventory', [`Package: ${c.loadout.package || '-'}`, ...packageItems, c.loadout.notes ? `Extra: ${c.loadout.notes}` : ''].filter(Boolean).join('\n'));
   drawTextField('Current Encumberment', encumbrance());
   drawTextField('Maximum Encumberment', carryLimit());
+  drawTextField('Rations', rationCount(packageItems, c.loadout.notes) || '');
+  drawTextField('Scrap', c.loadout.money || '');
   Object.entries(loadoutSlots).forEach(([fieldName, value]) => drawTextField(fieldName, value));
   setRows(attackFields, attackRows.slice(0, attackFields.length));
   setRows(spellFields, magicRows.slice(0, spellFields.length));
@@ -2610,6 +2660,7 @@ async function exportPdf() {
     c.notes.backstory ? `Backstory: ${c.notes.backstory}` : '',
     c.notes.goals ? `Goals: ${c.notes.goals}` : '',
     c.notes.allies ? `Allies: ${c.notes.allies}` : '',
+    c.magic.notes ? `Magic Notes: ${c.magic.notes}` : '',
     c.notes.misc ? `Misc: ${c.notes.misc}` : '',
   ].filter(Boolean).join('\n\n'));
   drawTextField('C Name', c.notes.allies ? c.notes.allies.split(',')[0].trim().slice(0, 24) : '');
