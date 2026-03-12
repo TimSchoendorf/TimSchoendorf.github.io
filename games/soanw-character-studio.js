@@ -1384,7 +1384,7 @@ function witchcraftCategoryAccess() {
 
 function elementalAccessSummary() {
   const unlocked = [...unlockedElementalLores()];
-  if (state.character.profile.className === 'Mage') return `Primary Lore: ${primaryElementalLore()} | Freigeschaltet: ${unlocked.join(', ')}`;
+  if (state.character.profile.className === 'Mage') return `Primary Lore: ${primaryElementalLore()} | Unlocked: ${unlocked.join(', ')}`;
   return `Lore: ${chosenElementalLore()}`;
 }
 
@@ -3066,5 +3066,5 @@ async function init() {
 }
 
 init().catch((error) => {
-  app.innerHTML = `<div style="color:white;padding:24px">Fehler beim Laden des Character Studios: ${error.message}</div>`;
+  app.innerHTML = `<div style="color:white;padding:24px">Failed to load the character studio: ${error.message}</div>`;
 });
