@@ -1219,8 +1219,8 @@ function spellPreviewData(groupKey, title) {
   const elementalRequirement = `Channel ${context.lore || chosenElementalLore()} ${CHANNEL_ROMAN[Math.max(0, SPELL_TIERS.indexOf(context.tier))]}`;
   const channelLine = groupKey === 'elemental'
     ? state.character.profile.className === 'Mage' && context.lore && context.lore !== primaryElementalLore()
-      ? `Voraussetzung: ${elementalRequirement}. Mage koennen fremde Lores erst nutzen, nachdem sie den passenden Channel Spell gelernt haben.`
-      : `Voraussetzung: ${elementalRequirement}, das im Studio automatisch mit der Tier-Freischaltung gelernt wird.`
+      ? `Prerequisite: ${elementalRequirement}. Mages can only use off-lore spells after learning the matching channel spell.`
+      : `Prerequisite: ${elementalRequirement}, which is learned automatically in the studio when the tier unlocks.`
     : '';
   return {
     title: cleanLabel(title),
@@ -1230,12 +1230,12 @@ function spellPreviewData(groupKey, title) {
     channelLine,
     hasExactEffect: Boolean(cleaned),
     sourceNote: cleaned
-      ? 'Direkter Effekttext aus dem OneNote-Export.'
-      : 'Im Share-Export ist fuer diesen Eintrag nur eine Index-/Tier-Seite verfuegbar.',
+      ? 'Direct effect text from the OneNote export.'
+      : 'Only an index or tier page is available for this entry in the shared export.',
     effectText: cleaned ? cleaned.split('\n').slice(0, 20).join('\n') : '',
     fallbackText: tierIntro
       ? tierIntro.split('\n').slice(0, 14).join('\n')
-      : 'Die OneDrive-Share-Ansicht liefert fuer diese konkrete Unterseite keinen sauberen Effekttext.',
+      : 'The OneDrive shared view does not provide clean effect text for this specific subpage.',
   };
 }
 
@@ -1243,7 +1243,7 @@ function spellPreviewText(groupKey, title) {
   const data = spellPreviewData(groupKey, title);
   return [
     data.title,
-    `Freischaltung: ${data.requirementLine}.`,
+    `Unlock: ${data.requirementLine}.`,
     data.lore ? `Lore: ${data.lore}.` : '',
     data.channelLine,
     '',
@@ -1285,10 +1285,10 @@ function renderSpellPreview(groupKey, title) {
         <div class="summary-chip">${data.tier}</div>
         <div class="summary-chip">${data.requirementLine}</div>
         ${data.lore ? `<div class="summary-chip">Lore ${data.lore}</div>` : ''}
-        <div class="summary-chip ${data.hasExactEffect ? 'success' : 'warning'}">${data.hasExactEffect ? 'Einzeleffekt aus Quelle' : 'Nur Tier-/Channel-Regeln verfuegbar'}</div>
+        <div class="summary-chip ${data.hasExactEffect ? 'success' : 'warning'}">${data.hasExactEffect ? 'Exact effect from source' : 'Only tier or channel rules available'}</div>
       </div>
       <div class="summary-chip wide">${data.sourceNote}</div>
-      ${data.channelLine ? `<div class="guide-card compact"><strong>Voraussetzung</strong><p class="muted">${data.channelLine}</p></div>` : ''}
+      ${data.channelLine ? `<div class="guide-card compact"><strong>Prerequisite</strong><p class="muted">${data.channelLine}</p></div>` : ''}
       <div class="guide-card compact">
         <strong>Effekt</strong>
         <pre class="reader-text compact inline">${data.hasExactEffect ? data.effectText : data.fallbackText}</pre>
@@ -1325,7 +1325,7 @@ function cleanPreviewText(text, maxLines = 10) {
 }
 
 function renderInfoPreviewCard({eyebrow = 'Preview', title = '', text = '', chips = []}) {
-  const cleaned = cleanPreviewText(text, 12) || 'Keine saubere Beschreibung verfuegbar.';
+  const cleaned = cleanPreviewText(text, 12) || 'No clean description available.';
   return `
     <div class="preview-window">
       <div class="preview-window-bar">
@@ -1522,7 +1522,7 @@ function renderOptionList(options, selected, field, descriptions = {}, previewGr
 }
 
 function renderChoiceCards(options, selected, field, detailMap = {}, emptyText = '', previewTarget = '', previewMap = null) {
-  if (!options.length) return `<div class="empty-state compact">${emptyText || 'Keine Optionen verfuegbar.'}</div>`;
+  if (!options.length) return `<div class="empty-state compact">${emptyText || 'No options available.'}</div>`;
   return `
     <div class="choice-grid">
       ${options.map((option) => `
@@ -1537,11 +1537,11 @@ function renderChoiceCards(options, selected, field, detailMap = {}, emptyText =
 
 function handbookPreview(page, fallback) {
   const cleaned = sanitizePageText(page) || manualCompendiumText(pageSectionName(page), page?.title);
-  if (!cleaned) return fallback || 'Diese Unterseite wurde gefunden, liefert in der Share-Ansicht aber keinen sauberen Fliesstext.';
+  if (!cleaned) return fallback || 'This subpage was found, but the shared view does not provide clean running text.';
   return cleaned.split('\n').slice(0, 16).join('\n');
 }
 
-function openCompendiumButton(section, title, label = 'Im Compendium oeffnen') {
+function openCompendiumButton(section, title, label = 'Open in Compendium') {
   if (!section || !title) return '';
   return `<button class="ghost-btn" data-open-section="${section}" data-open-page="${title}">${label}</button>`;
 }
@@ -1563,14 +1563,14 @@ function stepIsComplete(stepId) {
 }
 
 function stepDescription(stepId) {
-  if (stepId === 'profile') return 'Beginne mit Identitaet und Ziel-Level des Charakters.';
-  if (stepId === 'species') return 'Waehle Herkunft und Linie, damit Grundwerte und Traits feststehen.';
-  if (stepId === 'class') return 'Bestimme Rolle, Subclass und dadurch freigeschaltete Systeme.';
-  if (stepId === 'abilities') return 'Verteile Attribute und kontrolliere die automatisch berechneten Werte.';
-  if (stepId === 'proficiencies') return 'Fuelle den Build mit Skills und Feats innerhalb der Limits.';
-  if (stepId === 'loadout') return 'Lege das Startpaket fest und pruefe Gewicht sowie Ruestung.';
-  if (stepId === 'magic') return 'Waehle jetzt nur die auf diesem Level erlaubten Spells und Maneuvers.';
-  return 'Ergaenze am Ende Notizen, Auftreten und Kampagnenhaken.';
+  if (stepId === 'profile') return 'Start with identity and target level.';
+  if (stepId === 'species') return 'Choose ancestry and lineage to lock in base stats and traits.';
+  if (stepId === 'class') return 'Set role, subclass, and unlocked systems.';
+  if (stepId === 'abilities') return 'Assign abilities and review the derived values.';
+  if (stepId === 'proficiencies') return 'Fill out the build with skills and feats within the limits.';
+  if (stepId === 'loadout') return 'Choose the starting package and review weight and armor.';
+  if (stepId === 'magic') return 'Select only the spells and maneuvers allowed at this level.';
+  return 'Add notes, appearance, and campaign hooks at the end.';
 }
 
 function referencePanel(title, page, section) {
@@ -1611,13 +1611,13 @@ function panel(title, body, subtitle = '') {
 }
 
 function compendiumFallbackText(page) {
-  if (!page) return 'Waehle links einen sinnvollen Regel-Eintrag oder suche direkt nach einem Begriff.';
+  if (!page) return 'Choose a rules entry on the left or search for a term.';
   const manual = manualCompendiumText(state.selectedSection, page.title);
   if (manual) return manual;
   if (['Arias', 'Divine Magic', 'Elemental Magic', 'Wild Magic', 'Witchcraft', 'Maneuvers'].includes(state.selectedSection)) {
-    return `Fuer "${page.title}" enthaelt der OneNote-Share-Export hier nur eine Index- oder Navigationsseite. Nutze im Builder die Hover-Preview fuer Tier, Voraussetzung und den bestmoeglichen Effekttext aus der Quelle.`;
+    return `For "${page.title}", the OneNote shared export only contains an index or navigation page here. Use the builder hover preview for tier, prerequisite, and the best available effect text from the source.`;
   }
-  return `Diese OneNote-Seite ist im Share-Export fuer "${page.title}" nicht sauber lesbar. Der Titel bleibt als Referenz erhalten.`;
+  return `This OneNote page is not cleanly readable in the shared export for "${page.title}". The title is preserved as a reference.`;
 }
 
 function compendiumStats(page) {
@@ -1758,7 +1758,7 @@ function renderBuilder() {
           </div>
           <div>
             <div class="eyebrow">Acquired Species</div>
-            ${renderChoiceCards(ACQUIRED_SPECIES, c.profile.acquiredSpecies, 'profile.acquiredSpecies', {None: 'Keine erworbene Species auf dem Basisprofil.'}, '', 'speciesFeaturePanel', {...acquiredPreviewMap, None: 'Keine zusaetzliche Acquired Species aktiv.'})}
+            ${renderChoiceCards(ACQUIRED_SPECIES, c.profile.acquiredSpecies, 'profile.acquiredSpecies', {None: 'No acquired species on top of the base profile.'}, '', 'speciesFeaturePanel', {...acquiredPreviewMap, None: 'No additional acquired species active.'})}
           </div>
           <div class="summary-row">
             ${speciesFeatureText().map((feature) => `<div class="summary-chip">${feature}</div>`).join('')}
@@ -1778,7 +1778,7 @@ function renderBuilder() {
             <div>
               <div class="eyebrow">Species Features</div>
               <div class="summary-row">
-                ${featureDetails.length ? renderHoverChips(featureDetails, 'speciesFeaturePanel') : '<div class="summary-chip">Keine Features gefunden</div>'}
+                ${featureDetails.length ? renderHoverChips(featureDetails, 'speciesFeaturePanel') : '<div class="summary-chip">No features found</div>'}
               </div>
             </div>
           </div>
@@ -1844,12 +1844,12 @@ function renderBuilder() {
         ${panel('Subclass Features', `
           <div class="guide-card">
             <div class="summary-row">
-              ${subclassFeatures.length ? renderHoverChips(subclassFeatures, 'subclassFeaturePanel') : '<div class="summary-chip">Keine sauberen Feature-Bloecke im Export gefunden</div>'}
+              ${subclassFeatures.length ? renderHoverChips(subclassFeatures, 'subclassFeaturePanel') : '<div class="summary-chip">No clean feature blocks found in the export</div>'}
             </div>
             <div id="subclassFeaturePanel">${renderInfoPreviewCard({
               eyebrow: 'Feature Detail',
               title: subclassFeatures[0]?.name || c.profile.subclass,
-              text: subclassFeatures[0]?.description || handbookPreview(subclassPage, SUBCLASS_SUMMARIES[c.profile.subclass] || 'Keine weitere Beschreibung verfuegbar.'),
+              text: subclassFeatures[0]?.description || handbookPreview(subclassPage, SUBCLASS_SUMMARIES[c.profile.subclass] || 'No further description available.'),
               chips: [c.profile.className, c.profile.subclass].filter(Boolean),
             })}</div>
             <div class="inline-actions">${openCompendiumButton('Classes', c.profile.subclass)}</div>
@@ -1912,13 +1912,13 @@ function renderBuilder() {
                 title: selectedSkillSet()[0],
                 text: SKILL_DESCRIPTIONS[selectedSkillSet()[0]] || 'No description mapped yet.',
                 chips: [ABILITY_LABELS[skillAbility(selectedSkillSet()[0])], `Bonus ${skillBonus(selectedSkillSet()[0])}`],
-              }) : '<div class="empty-state compact">Waehle Skills oder Feats, um hier direkt ihren Nutzen zu sehen.</div>'}
+              }) : '<div class="empty-state compact">Choose skills or feats to inspect their details here.</div>'}
             </div>
           </div>
         </div>
       `)}
       <div class="split-shell">
-        ${panel('Skills Reference', `<div class="guide-card">${selectedSkillSet().slice(0, 6).map((skill) => `<div class="summary-chip">${skill}: ${SKILL_DESCRIPTIONS[skill] || 'No description mapped yet.'}</div>`).join('') || '<div class="empty-state compact">Waehle Skills, um ihre Funktion zu sehen.</div>'}</div>`)}
+        ${panel('Skills Reference', `<div class="guide-card">${selectedSkillSet().slice(0, 6).map((skill) => `<div class="summary-chip">${skill}: ${SKILL_DESCRIPTIONS[skill] || 'No description mapped yet.'}</div>`).join('') || '<div class="empty-state compact">Choose skills to inspect what they do.</div>'}</div>`)}
         ${featPreview ? referencePanel(`Feat Reference: ${c.build.feats[0]}`, featPreview, 'Customization') : referencePanel('Feat Rules', handbookPage('Customization', 'Feats'), 'Customization')}
       </div>
     `;
@@ -1959,7 +1959,7 @@ function renderBuilder() {
                 <div class="mini-list">
                   ${customItems.length
                     ? customItems.map((item) => `<button class="summary-chip interactive removable-chip" type="button" data-loadout-remove="${escapeHtml(item)}">${escapeHtml(item)} <span aria-hidden="true">x</span></button>`).join('')
-                    : '<div class="empty-state compact">Noch keine individuellen Items hinzugefuegt.</div>'}
+                    : '<div class="empty-state compact">No individual items added yet.</div>'}
                 </div>
               </div>
               <label><span>Additions / Notes</span><textarea data-field="loadout.notes">${c.loadout.notes}</textarea></label>
@@ -1971,14 +1971,14 @@ function renderBuilder() {
         ${panel('Package Breakdown', `
           <div class="guide-card">
             <div class="eyebrow">Included Items</div>
-            <div class="mini-list">${loadoutItems.map((item) => `<div class="summary-chip">${escapeHtml(item)}</div>`).join('') || '<div class="empty-state compact">Keine Items im aktuellen Loadout.</div>'}</div>
+            <div class="mini-list">${loadoutItems.map((item) => `<div class="summary-chip">${escapeHtml(item)}</div>`).join('') || '<div class="empty-state compact">No items in the current loadout.</div>'}</div>
             <div class="eyebrow">Relevant Chapters</div>
             <div class="mini-list">${EQUIPMENT_REFERENCES.map((title) => `<button class="mini-link" data-open-section="Equipment" data-open-page="${title}">${title}</button>`).join('')}</div>
           </div>
         `)}
         ${panel('Loadout Notes', `
           <div class="guide-card">
-            <p class="muted">Die Share-Ansicht der Equipment-Unterseiten ist ungleichmaessig. Statt leerer Reader werden hier die Paketinhalte, individuelle Zusaetze und direkte Kapitel-Links gezeigt.</p>
+            <p class="muted">The shared view of the equipment subpages is inconsistent. Instead of empty readers, this panel shows package contents, custom additions, and direct chapter links.</p>
             <div class="stat-table">
               <div><span>Package Weight</span><strong>${selectedPackage()?.weight || 0}</strong></div>
               <div><span>Armor Added</span><strong>+${selectedPackage()?.armorBase || 0}</strong></div>
@@ -2003,37 +2003,37 @@ function renderBuilder() {
               <div class="summary-chip">${elementalAccessSummary()}</div>
               ${autoChannelSpellNames().map((spell) => `<div class="summary-chip">${spell}</div>`).join('')}
             </div>
-            ${elementalLoreChoices().length ? `<div class="inline-actions">${fixedElementalLore() ? `<div class="summary-chip">Feste Lore durch Subclass</div>` : renderChoiceCards(elementalLoreChoices(), chosenElementalLore(), 'profile.elementalLore')}</div>` : ''}
+            ${elementalLoreChoices().length ? `<div class="inline-actions">${fixedElementalLore() ? `<div class="summary-chip">Fixed lore from subclass</div>` : renderChoiceCards(elementalLoreChoices(), chosenElementalLore(), 'profile.elementalLore')}</div>` : ''}
           </div>
         ` : ''}
         ${activeMagicLists.map(({key, label, items}) => `
           <label>
             <span>${label} (${state.character.magic[key].length}/${spellPickLimit(key)})</span>
-            <small class="muted">${items.length} verfuegbar auf diesem Level${key === 'elemental' ? ` | ${elementalAccessSummary()}` : ''}.</small>
+            <small class="muted">${items.length} available at this level${key === 'elemental' ? ` | ${elementalAccessSummary()}` : ''}.</small>
             <div class="spell-picker">${renderOptionList(items, state.character.magic[key], `magic.${key}`, Object.fromEntries(items.map((title) => [title, previewTextFor(key, title)])), key)}</div>
           </label>
         `).join('')}
       </div>
-    ` : '<div class="empty-state compact">Diese Klasse/Subclass hat auf diesem Level keine waehlbare Magie oder Maneuvers.</div>';
+    ` : '<div class="empty-state compact">This class or subclass has no selectable magic or maneuvers at this level.</div>';
     const previewPane = (variant = 'desktop') => `
       <div class="split-shell magic-preview-shell">
         ${panel('Spellcasting Rules', `
           <pre class="reader-text compact">${handbookPreview(handbookPage('Magic', 'Casting Spells') || handbookPage('Magic', 'What Is A Spell?'))}</pre>
           <div class="summary-row">
             ${magicAccess().elemental ? `<div class="summary-chip">${elementalAccessSummary()}</div>` : ''}
-            ${autoChannelSpellNames().length ? `<div class="summary-chip">${autoChannelSpellNames().length} Auto-Channel freigeschaltet</div>` : ''}
+            ${autoChannelSpellNames().length ? `<div class="summary-chip">${autoChannelSpellNames().length} auto channels unlocked</div>` : ''}
           </div>
         `)}
         ${panel('Spell Preview', `
-          <div ${variant === 'desktop' ? 'id="hoverPreviewPanel"' : ''} data-hover-preview-panel="${variant}">${preview ? renderSpellPreview(preview.key, preview.title) : '<div class="empty-state compact">Fahre ueber einen Spell oder Maneuver oder waehle ihn aus, um Effekt, Freischaltung und Beschreibung zu sehen.</div>'}</div>
-          <div class="inline-actions"><button class="ghost-btn ${preview ? '' : 'hidden'}" ${variant === 'desktop' ? 'id="hoverPreviewOpen"' : ''} data-hover-preview-open="${variant}" ${preview ? `data-open-section="${preview.label}" data-open-page="${preview.title}"` : ''}>Im Compendium oeffnen</button></div>
+          <div ${variant === 'desktop' ? 'id="hoverPreviewPanel"' : ''} data-hover-preview-panel="${variant}">${preview ? renderSpellPreview(preview.key, preview.title) : '<div class="empty-state compact">Hover a spell or maneuver, or select one, to inspect its effect, unlock requirement, and description.</div>'}</div>
+          <div class="inline-actions"><button class="ghost-btn ${preview ? '' : 'hidden'}" ${variant === 'desktop' ? 'id="hoverPreviewOpen"' : ''} data-hover-preview-open="${variant}" ${preview ? `data-open-section="${preview.label}" data-open-page="${preview.title}"` : ''}>Open in Compendium</button></div>
         `)}
       </div>
     `;
     body = `
       ${panel('Step 7 - Magic & Maneuvers', `
         <div class="mobile-panel-switch">
-          <button class="filter-btn ${state.magicMobilePanel === 'choices' ? 'active' : ''}" type="button" data-magic-panel="choices">Auswahl</button>
+          <button class="filter-btn ${state.magicMobilePanel === 'choices' ? 'active' : ''}" type="button" data-magic-panel="choices">Choices</button>
           <button class="filter-btn ${state.magicMobilePanel === 'preview' ? 'active' : ''}" type="button" data-magic-panel="preview">Preview</button>
         </div>
         <div class="mobile-panel ${state.magicMobilePanel === 'choices' ? 'active' : ''}">${choicesPane}</div>
@@ -2051,7 +2051,7 @@ function renderBuilder() {
         <label class="full"><span>Misc</span><textarea data-field="notes.misc">${c.notes.misc}</textarea></label>
       </div>
       <div class="export-actions">
-        <button class="primary-btn" id="finishExportBtn">Fertig & PDF exportieren</button>
+        <button class="primary-btn" id="finishExportBtn">Finish & Export PDF</button>
       </div>
     `);
   }
@@ -2067,15 +2067,15 @@ function renderBuilder() {
           <h3>${BUILDER_STEPS[currentStepIndex()]?.label || 'Builder'}</h3>
         </div>
         <div class="summary-row">
-          <div class="summary-chip">${stepIsComplete(step) ? 'Schritt komplett' : 'Schritt unvollstaendig'}</div>
+          <div class="summary-chip">${stepIsComplete(step) ? 'Step complete' : 'Step incomplete'}</div>
           <div class="summary-chip">Progress ${BUILDER_STEPS.filter((item) => stepIsComplete(item.id)).length}/${BUILDER_STEPS.length}</div>
         </div>
       </div>
     </section>
     ${body}
     <section class="wizard-nav">
-      <button class="tab-btn ${currentStepIndex() === 0 ? 'disabled' : ''}" data-step-nav="-1" ${currentStepIndex() === 0 ? 'disabled' : ''}>Zurueck</button>
-      <button class="primary-btn" data-step-nav="1">${currentStepIndex() === BUILDER_STEPS.length - 1 ? 'Fertig & PDF' : 'Weiter'}</button>
+      <button class="tab-btn ${currentStepIndex() === 0 ? 'disabled' : ''}" data-step-nav="-1" ${currentStepIndex() === 0 ? 'disabled' : ''}>Back</button>
+      <button class="primary-btn" data-step-nav="1">${currentStepIndex() === BUILDER_STEPS.length - 1 ? 'Finish & PDF' : 'Continue'}</button>
     </section>
   `;
 }
@@ -2092,10 +2092,10 @@ function renderCompendium() {
   return `
     <section class="panel compendium-shell">
       <div class="compendium-sidebar">
-        <label class="search-box"><span>Suchen</span><input id="searchInput" value="${state.search}" placeholder="Spell, class, condition ..."></label>
+        <label class="search-box"><span>Search</span><input id="searchInput" value="${state.search}" placeholder="Spell, class, condition ..."></label>
         <div class="guide-card compact">
           <div class="eyebrow">Navigation</div>
-          <p class="muted">${state.search ? `Suche aktiv: ${visibleItems.length} Treffer ueber alle Sektionen.` : `${currentPages.length} Eintraege in ${state.selectedSection}.`}</p>
+          <p class="muted">${state.search ? `Search active: ${visibleItems.length} results across all sections.` : `${currentPages.length} entries in ${state.selectedSection}.`}</p>
         </div>
         <div class="filter-list">
           ${sections.map((section) => `<button class="filter-btn ${section === state.selectedSection ? 'active' : ''}" data-section="${section}">${section}</button>`).join('')}
@@ -2116,7 +2116,7 @@ function renderCompendium() {
           <div class="compendium-layout">
             <div class="reader-column">
               <div class="guide-card compact compendium-anchor-bar ${contentAnchors.length ? '' : 'hidden'}">
-                <div class="eyebrow">Inhalt</div>
+                <div class="eyebrow">Contents</div>
                 <div class="mini-list">${contentAnchors.map((anchor) => `<button class="mini-link" type="button" data-compendium-anchor="${escapeHtml(anchor.id)}">${escapeHtml(anchor.label)}</button>`).join('')}</div>
               </div>
               <div class="reader-text structured" id="compendiumReader">
@@ -2130,16 +2130,16 @@ function renderCompendium() {
             </div>
             <div class="compendium-aside">
               <div class="guide-card compact">
-                <div class="eyebrow">Kurzfassung</div>
+                <div class="eyebrow">Summary</div>
                 <p class="muted">${summarySnippet(pageText, 260)}</p>
               </div>
               <div class="guide-card compact">
-                <div class="eyebrow">Verwandte Eintraege</div>
-                <div class="mini-list">${relatedPages(state.selectedSection, page.title, 8).map((item) => `<button class="mini-link" data-page="${item.title}">${item.title}</button>`).join('') || '<div class="summary-chip">Keine weiteren Eintraege in dieser Sektion</div>'}</div>
+                <div class="eyebrow">Related Entries</div>
+                <div class="mini-list">${relatedPages(state.selectedSection, page.title, 8).map((item) => `<button class="mini-link" data-page="${item.title}">${item.title}</button>`).join('') || '<div class="summary-chip">No more entries in this section</div>'}</div>
               </div>
             </div>
           </div>
-        ` : '<div class="empty-state">Waehle links einen sinnvollen Regel-Eintrag oder suche direkt nach einem Begriff.</div>'}
+        ` : '<div class="empty-state">Choose a rules entry on the left or search for a term.</div>'}
       </div>
     </section>
   `;
@@ -2150,17 +2150,17 @@ function renderExport() {
     <section class="panel">
       <div class="eyebrow">PDF Pipeline</div>
       <h2>Export & Import</h2>
-      <p class="muted">Der Export erzeugt ein lesbares Charakterblatt plus eingebettete JSON-Daten im PDF. Ein importiertes PDF aus diesem Studio stellt den Charakterstand wieder her.</p>
+      <p class="muted">Export creates a readable character sheet plus embedded JSON data inside the PDF. Importing a PDF from this studio restores the saved character state.</p>
       <div class="export-actions">
-        <button class="primary-btn" id="exportPdfBtn">PDF exportieren</button>
-        <label class="upload-btn">PDF importieren<input type="file" id="importPdfInput" accept="application/pdf"></label>
+        <button class="primary-btn" id="exportPdfBtn">Export PDF</button>
+        <label class="upload-btn">Import PDF<input type="file" id="importPdfInput" accept="application/pdf"></label>
       </div>
       <div class="panel soft">
-        <div class="eyebrow">Was drin ist</div>
+        <div class="eyebrow">Included</div>
         <ul class="notes">
-          <li>Charakter-Basisdaten, Build, Zauber, Maneuvers, Ausruestung und Notizen</li>
-          <li>Eingebetteter Wiederherstellungspayload fuer PDF-Reimport</li>
-          <li>Kompatibel mit lokal gespeicherten PDFs aus diesem Character Studio</li>
+          <li>Character basics, build, spells, maneuvers, loadout, and notes</li>
+          <li>Embedded restore payload for PDF re-import</li>
+          <li>Compatible with PDFs saved from this character studio</li>
         </ul>
       </div>
     </section>
@@ -2178,9 +2178,9 @@ function renderSummary() {
   }, [[], []]);
   return `
     <div class="summary-card sticky">
-      <a class="back-link" href="../index.html#games">Zurueck zur Startseite</a>
+      <a class="back-link" href="../index.html#games">Back to Home</a>
       <div class="eyebrow">SoaNW Character Studio</div>
-      <h1>${c.profile.name || 'Unbenannter Charakter'}</h1>
+      <h1>${c.profile.name || 'Unnamed Character'}</h1>
       <p class="muted">${[c.profile.speciesSubtype || c.profile.species, c.profile.acquiredSpecies !== 'None' ? c.profile.acquiredSpecies : '', c.profile.className, c.profile.subclass ? `- ${c.profile.subclass}` : ''].filter(Boolean).join(' ')}</p>
       <div class="summary-stats">
         <div><span>Level</span><strong>${c.profile.level}</strong></div>
@@ -2220,7 +2220,7 @@ function render() {
           <div>
             <div class="eyebrow">D&D-inspired P&P Builder</div>
             <h2>SoaNW Character Studio</h2>
-            <p class="muted">Character Builder, Compendium und PDF-Export fuer Saga of a New World.</p>
+            <p class="muted">Character builder, compendium, and PDF export for Saga of a New World.</p>
             <div class="summary-row hero-chips">
               <div class="summary-chip">Level ${c.profile.level}</div>
               <div class="summary-chip">${c.profile.className}${c.profile.subclass ? ` / ${c.profile.subclass}` : ''}</div>
@@ -2552,7 +2552,7 @@ async function exportPdf() {
   const { PDFDocument, StandardFonts, rgb } = window.PDFLib;
   const c = state.character;
   const templateBytes = await fetch(PDF_TEMPLATE_URL).then((response) => {
-    if (!response.ok) throw new Error('Das SoaNW-Basisblatt konnte nicht geladen werden.');
+    if (!response.ok) throw new Error('The SoaNW base sheet could not be loaded.');
     return response.arrayBuffer();
   });
   const pdfDoc = await PDFDocument.load(templateBytes);
@@ -2828,14 +2828,14 @@ async function exportPdf() {
 
 async function runPdfExport() {
   if (!window.PDFLib?.PDFDocument) {
-    window.alert('PDF-Export ist derzeit nicht verfuegbar, weil pdf-lib nicht geladen wurde.');
+    window.alert('PDF export is currently unavailable because pdf-lib did not load.');
     return;
   }
   try {
     await exportPdf();
   } catch (error) {
     console.error(error);
-    window.alert(`PDF-Export fehlgeschlagen: ${error.message || error}`);
+    window.alert(`PDF export failed: ${error.message || error}`);
   }
 }
 
