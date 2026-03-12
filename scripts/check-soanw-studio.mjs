@@ -373,7 +373,7 @@ async function assertFinishExport(browser) {
   await fillWizard(page);
   await openStep(page, 'notes');
   const downloadPromise = page.waitForEvent('download');
-  await page.getByRole('button', {name: 'Finish & Export PDF', exact: true}).click();
+  await page.getByRole('button', {name: 'Export PDF', exact: true}).click();
   const download = await downloadPromise;
   if (!/\.pdf$/i.test(download.suggestedFilename())) {
     throw new Error(`Finish button did not trigger a PDF download: ${download.suggestedFilename()}`);

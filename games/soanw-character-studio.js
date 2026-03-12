@@ -242,6 +242,14 @@ const MANUAL_COMPENDIUM_TEXT = {
   'Species:Wildling': `Wildlings are an acquired species layered on top of a valid base species. The OneNote sections describe them as humanoids shaped by wild magic whose anatomy usually follows their mother while adding visibly fey or beast-like traits such as horns, tails, unusual ears, fur, smooth skin, fins, wings, darkvision or infravision. Their hallmark trait is Wild Speech, an innate attunement that lets them communicate meaningfully even with animals. Each wildling is further defined by individual wild blessings, so the exact package varies from character to character.`,
   'Species:Lizardfolk-': `Lizardfolk are kept in this studio as a complete, usable acquired-species option. The current OneNote export only exposes the section stub instead of the full prose page, so this compendium entry preserves the slot with a verified gameplay-facing fallback: a hardy reptilian transformation with a Strength and Constitution leaning profile, natural weapons, and survival-oriented physical adaptations that sit on top of the character's broader build.`,
 };
+const MANUAL_SPECIES_REFERENCE_TEXT = {
+  'Halfling:overview': `Halflings are the most nimble, charismatic, and bravest of the dwarves. They stand around 1 meter tall and have slender figures, which makes them quick and nimble despite their fragility. Halflings rely on their small form to hide, are famous for alchemy and elaborate parties, and many lean toward bardic or alchemical traditions.`,
+  Brave: `Brave. You have advantage on saving throws against being frightened.`,
+  'Alchemy Ancestry': `Alchemy Ancestry. At 1st level, you learn the Infuse Formula I alchemy formula. If your class gives you access to formulas, you instead learn an additional formula.`,
+  'Dwarven Armor Training': `Dwarven Armor Training. You have proficiency with light and medium armor.`,
+  Stout: `Stout. Your bulk increases the amount of rations you need to consume every day to survive by 1. You require 3 rations to complete a night's rest and 21 to complete a long rest.`,
+  'Halfling Nimbleness': `Halfling Nimbleness. You can move through the space of any creature larger than you and share a space with it. While sharing that space and not wearing medium or heavy armor, that creature has disadvantage on attack rolls against you. You may make opportunity attacks against creatures leaving your space.`,
+};
 const SPECIES_OPTIONS = {
   Dwarf: [
     {name: 'Halfling', abilities: {dex: 2, cha: 1}, baseAc: 12, speed: 8, hpBase: 7, hpPer: 4, vitalityBase: 7, vitalityPer: 4, carryMultiplier: 2, autoSkills: [], feats: ['Brave', 'Alchemy Ancestry'], summary: 'Agile dwarf-kin with alchemical roots and strong morale.'},
@@ -1470,6 +1478,7 @@ function speciesOverviewEntry() {
   const species = selectedBaseSpeciesData();
   const basePage = handbookPage('Species', state.character.profile.speciesSubtype) || speciesHandbookEntry();
   if (!species) return null;
+  const overviewText = MANUAL_SPECIES_REFERENCE_TEXT[`${species.name}:overview`] || species.summary || 'No lineage summary available.';
   return {
     id: 'species-overview',
     name: species.name || state.character.profile.speciesSubtype || 'Species',
@@ -1481,7 +1490,7 @@ function speciesOverviewEntry() {
       `Vitality ${species.vitalityBase || 0}/${species.vitalityPer || 0}`,
     ],
     bodyHtml: `
-      <p>${escapeHtml(species.summary || 'No lineage summary available.')}</p>
+      <p>${escapeHtml(overviewText)}</p>
       <div class="compendium-meta">
         <div><span>Ability Bonuses</span><strong>${ABILITIES.map((key) => species.abilities?.[key] ? `${ABILITY_LABELS[key].slice(0, 3).toUpperCase()} ${species.abilities[key] >= 0 ? '+' : ''}${species.abilities[key]}` : '').filter(Boolean).join(', ') || '-'}</strong></div>
         <div><span>Automatic Skills</span><strong>${(species.autoSkills || []).join(', ') || 'None'}</strong></div>
@@ -1520,9 +1529,9 @@ function acquiredSpeciesOverviewEntry() {
 
 function speciesFeatureReferenceEntry(feature, sourcePage, sourceLabel) {
   const directPage = handbookPage('Customization', feature) || handbookPage('Species', feature);
-  const sourceText = directPage
+  const sourceText = MANUAL_SPECIES_REFERENCE_TEXT[feature] || (directPage
     ? (sanitizePageText(directPage) || manualCompendiumText(pageSectionName(directPage), directPage.title))
-    : extractFeatureSnippet(sourcePage, feature);
+    : extractFeatureSnippet(sourcePage, feature));
   const bodyHtml = sourceText
     ? renderCompendiumBlockBody(sourceText)
     : `<p>${escapeHtml(`No clean rules text for ${feature} is currently available from the source export.`)}</p>`;
@@ -1846,12 +1855,10 @@ function renderBuilder() {
 
   if (step === 'profile') {
     body = panel('Step 1 - Profile', `
-      <div class="split-shell">
-        <div class="form-grid three">
-          <label><span>Name</span><input data-field="profile.name" value="${c.profile.name}"></label>
-          <label><span>Player</span><input data-field="profile.player" value="${c.profile.player}"></label>
-          <label><span>Level</span><input type="number" min="1" max="10" data-field="profile.level" value="${c.profile.level}"></label>
-        </div>
+      <div class="form-grid three">
+        <label><span>Name</span><input data-field="profile.name" value="${c.profile.name}"></label>
+        <label><span>Player</span><input data-field="profile.player" value="${c.profile.player}"></label>
+        <label><span>Level</span><input type="number" min="1" max="10" data-field="profile.level" value="${c.profile.level}"></label>
       </div>
     `);
   } else if (step === 'species') {
@@ -1872,9 +1879,6 @@ function renderBuilder() {
             <div>
               <div class="eyebrow">Acquired Species</div>
               ${renderChoiceCards(ACQUIRED_SPECIES, c.profile.acquiredSpecies, 'profile.acquiredSpecies', {None: 'No acquired species on top of the base profile.'})}
-            </div>
-            <div class="summary-row">
-              ${speciesFeatureText().map((feature) => `<div class="summary-chip">${feature}</div>`).join('')}
             </div>
           </div>
           <div class="stack">
@@ -1905,27 +1909,21 @@ function renderBuilder() {
         ${panel('Species Benefits', `
           <div class="guide-card">
             <h3>${species?.name || 'Species'}</h3>
-            <p class="muted">${species?.summary || ''}</p>
+            <p class="muted">${(MANUAL_SPECIES_REFERENCE_TEXT[`${species?.name}:overview`] || species?.summary || '').slice(0, 220)}</p>
             <div class="stat-table">
               <div><span>HP Formula</span><strong>${hitPointFormulaText()}</strong></div>
               <div><span>Vitality Formula</span><strong>${vitalityFormulaText()}</strong></div>
               <div><span>Carry Limit</span><strong>STR x 3</strong></div>
             </div>
-            <div>
-              <div class="eyebrow">Species Features</div>
-              <div class="summary-row">
-                ${speciesEntries.length ? renderSpeciesReferenceButtons(speciesEntries.filter((entry) => entry.id.startsWith('species-feature-'))) : '<div class="summary-chip">No features found</div>'}
-              </div>
-            </div>
           </div>
         `)}
-        ${panel('Feature Access', `
+        ${panel('Reference Use', `
           <div class="guide-card">
-            <p class="muted">Click a feature or overview chip to pin it. Hovering a chip previews it temporarily; the panel returns to the last clicked entry when the hover ends.</p>
-            <div class="stat-table">
+            <div class="compendium-meta">
               <div><span>Available References</span><strong>${speciesEntries.length}</strong></div>
               <div><span>Feature Entries</span><strong>${speciesEntries.filter((entry) => entry.id.startsWith('species-feature-')).length}</strong></div>
             </div>
+            <p class="muted">Click to pin an entry. Hover only previews it temporarily.</p>
           </div>
         `)}
       </div>
@@ -2177,15 +2175,24 @@ function renderBuilder() {
     `;
   } else if (step === 'notes') {
     body = panel('Step 8 - Finish', `
-      <div class="form-grid two">
-        <label><span>Appearance</span><textarea data-field="notes.appearance">${c.notes.appearance}</textarea></label>
-        <label><span>Backstory</span><textarea data-field="notes.backstory">${c.notes.backstory}</textarea></label>
-        <label><span>Allies & Companions</span><textarea data-field="notes.allies">${c.notes.allies}</textarea></label>
-        <label><span>Goals</span><textarea data-field="notes.goals">${c.notes.goals}</textarea></label>
-        <label class="full"><span>Misc</span><textarea data-field="notes.misc">${c.notes.misc}</textarea></label>
-      </div>
-      <div class="export-actions">
-        <button class="primary-btn" id="finishExportBtn">Finish & Export PDF</button>
+      <div class="split-shell finish-shell">
+        <div class="form-grid two">
+          <label><span>Appearance</span><textarea data-field="notes.appearance">${c.notes.appearance}</textarea></label>
+          <label><span>Backstory</span><textarea data-field="notes.backstory">${c.notes.backstory}</textarea></label>
+          <label><span>Allies & Companions</span><textarea data-field="notes.allies">${c.notes.allies}</textarea></label>
+          <label><span>Goals</span><textarea data-field="notes.goals">${c.notes.goals}</textarea></label>
+          <label class="full"><span>Misc</span><textarea data-field="notes.misc">${c.notes.misc}</textarea></label>
+        </div>
+        <div class="guide-card">
+          <div class="eyebrow">Export Readiness</div>
+          <div class="stat-table">
+            <div><span>Profile</span><strong>${stepIsComplete('profile') ? 'Ready' : 'Missing'}</strong></div>
+            <div><span>Species</span><strong>${stepIsComplete('species') ? 'Ready' : 'Missing'}</strong></div>
+            <div><span>Class</span><strong>${stepIsComplete('class') ? 'Ready' : 'Missing'}</strong></div>
+            <div><span>Loadout</span><strong>${stepIsComplete('loadout') ? 'Ready' : 'Missing'}</strong></div>
+          </div>
+          <p class="muted">Use the main footer action below to export the finished sheet.</p>
+        </div>
       </div>
     `);
   }
@@ -2209,7 +2216,7 @@ function renderBuilder() {
     ${body}
     <section class="wizard-nav">
       <button class="tab-btn ${currentStepIndex() === 0 ? 'disabled' : ''}" data-step-nav="-1" ${currentStepIndex() === 0 ? 'disabled' : ''}>Back</button>
-      <button class="primary-btn" data-step-nav="1">${currentStepIndex() === BUILDER_STEPS.length - 1 ? 'Finish & PDF' : 'Continue'}</button>
+      <button class="primary-btn" data-step-nav="1">${currentStepIndex() === BUILDER_STEPS.length - 1 ? 'Export PDF' : 'Continue'}</button>
     </section>
   `;
 }
@@ -3219,7 +3226,7 @@ function injectStyles() {
     .ability-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}.ability-card{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.ability-card strong{font-size:1.4rem}.summary-row{display:flex;gap:10px;flex-wrap:wrap}.summary-chip{color:var(--text)}
     .pill-grid{display:flex;flex-wrap:wrap;gap:8px}.pill,.filter-btn,.page-btn,.wizard-step,.ghost-btn,.mini-link,.summary-chip.interactive{padding:10px 12px;color:var(--text);cursor:pointer}.pill.active,.filter-btn.active,.page-btn.active,.wizard-step.active,.choice-card.active,.summary-chip.interactive.active{background:linear-gradient(135deg,#7fd1ff,#b4e7ff);color:var(--ink)}.summary-chip.interactive{text-align:left;border:1px solid var(--line)}.summary-chip.interactive:hover,.summary-chip.interactive:focus{background:rgba(127,209,255,.16)}
     .wizard-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;position:sticky;top:24px;z-index:4}.wizard-step{display:flex;align-items:center;gap:12px;text-align:left;border-radius:22px;background:rgba(255,255,255,.04)}.wizard-step.done{box-shadow:inset 0 0 0 1px rgba(240,195,108,.35)}.wizard-step span{display:grid;place-items:center;min-width:30px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.08)}.wizard-step small{display:block;color:inherit;opacity:.72}.wizard-nav{display:flex;justify-content:space-between;gap:12px}.reader-text.compact{max-height:360px}
-    .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}.spell-preview-card{display:grid;gap:12px}.reader-text.inline{max-height:320px;margin-top:0;padding:14px}.preview-window{border:1px solid rgba(127,209,255,.18);border-radius:22px;background:linear-gradient(180deg,rgba(26,23,38,.98),rgba(18,16,28,.95));box-shadow:0 18px 50px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.04)}.preview-window-bar{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.preview-window-bar span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.16)}.preview-window-bar span:nth-child(1){background:#f08b6c}.preview-window-bar span:nth-child(2){background:#f0c36c}.preview-window-bar span:nth-child(3){background:#7fd1ff}.preview-window-body{padding:16px;display:grid;gap:12px}.loadout-add-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.removable-chip{display:inline-flex;align-items:center;gap:8px}.sticky-card{position:sticky;top:24px}.species-entry-list{max-height:168px;overflow:auto}.species-benefits-shell{align-items:start}
+    .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}.spell-preview-card{display:grid;gap:12px}.reader-text.inline{max-height:320px;margin-top:0;padding:14px}.preview-window{border:1px solid rgba(127,209,255,.18);border-radius:22px;background:linear-gradient(180deg,rgba(26,23,38,.98),rgba(18,16,28,.95));box-shadow:0 18px 50px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.04)}.preview-window-bar{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.preview-window-bar span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.16)}.preview-window-bar span:nth-child(1){background:#f08b6c}.preview-window-bar span:nth-child(2){background:#f0c36c}.preview-window-bar span:nth-child(3){background:#7fd1ff}.preview-window-body{padding:16px;display:grid;gap:12px}.loadout-add-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.removable-chip{display:inline-flex;align-items:center;gap:8px}.sticky-card{position:sticky;top:24px}.species-entry-list{max-height:168px;overflow:auto}.species-benefits-shell{align-items:start}.finish-shell{align-items:start}
     .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.compendium-sidebar{position:sticky;top:24px}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.page-btn{display:grid;gap:4px;text-align:left}.page-btn small{color:inherit;opacity:.72;line-height:1.35}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-column{display:grid;gap:12px;align-content:start}.compendium-anchor-bar{position:sticky;top:24px;z-index:3}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto;max-height:72vh;scroll-behavior:smooth}.reader-text.structured{display:grid;gap:18px;white-space:normal}.reader-block{display:grid;gap:12px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.08)}.reader-block:last-child{border-bottom:none;padding-bottom:0}.reader-block h3{font-size:1rem;color:var(--accent)}.reader-block p{margin:0;line-height:1.65}.compendium-meta{display:grid;gap:8px;margin-bottom:4px}.compendium-meta div{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.04)}.compendium-meta span{color:var(--muted);font-size:.82rem}.compendium-meta strong{text-align:right}.compendium-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}.compendium-aside{display:grid;gap:12px}
     .export-actions{display:flex;gap:12px;flex-wrap:wrap}.primary-btn,.upload-btn{padding:14px 18px;font-weight:700;cursor:pointer}.upload-btn input{display:none}.notes{margin:0;padding-left:18px;display:grid;gap:8px}.empty-state{padding:28px;border-radius:22px;background:rgba(255,255,255,.04);color:var(--muted)}.hidden{display:none!important}
     .mobile-panel-switch{display:none}.mobile-panel{display:block}.desktop-only{display:block}
