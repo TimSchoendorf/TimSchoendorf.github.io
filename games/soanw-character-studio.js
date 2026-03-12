@@ -320,10 +320,9 @@ function defaultCharacter() {
   return {
     profile: {name: '', player: '', level: 1, species: 'Human', speciesSubtype: 'Border Lords', acquiredSpecies: 'None', className: 'Fighter', subclass: 'Soldier', elementalLore: 'Force'},
     abilities: {str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8},
-    combat: {hp: 0, vitality: 0, armorClass: 0, speed: 0, encumbrance: 0, carryLimit: 0},
     proficiencies: {skills: []},
     build: {feats: []},
-    loadout: {package: 'Soldier Kit', extras: [], extraWeight: 0, notes: '', money: ''},
+    loadout: {package: 'Soldier Kit', extraWeight: 0, notes: '', money: ''},
     magic: {arias: [], divine: [], elemental: [], wild: [], witchcraft: [], maneuvers: [], notes: ''},
     notes: {appearance: '', backstory: '', allies: '', goals: '', misc: ''},
   };
@@ -339,7 +338,6 @@ function loadState() {
       ...parsed,
       profile: {...defaults.profile, ...(parsed.profile || {})},
       abilities: {...defaults.abilities, ...(parsed.abilities || {})},
-      combat: {...defaults.combat, ...(parsed.combat || {})},
       proficiencies: {...defaults.proficiencies, ...(parsed.proficiencies || {})},
       build: {...defaults.build, ...(parsed.build || {})},
       loadout: {...defaults.loadout, ...(parsed.loadout || {})},
@@ -410,6 +408,20 @@ function isDateOrTimeLine(line) {
     || /^(Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag),/i.test(line);
 }
 
+function isLikelyNoiseLine(line) {
+  const compact = String(line || '').replace(/\s+/g, '').trim();
+  if (!compact) return false;
+  if (/^<ifndf>/i.test(line)) return true;
+  if (/^processed-.*\.(png|jpe?g)$/i.test(line)) return true;
+  if (/^untitled picture\.(png|jpe?g)$/i.test(line)) return true;
+  if (/^\.(png|jpe?g)$/i.test(line)) return true;
+  if (/^(Template Spell|Spell Template)$/i.test(line)) return true;
+  if (/^[A-Z0-9]{4,8}$/.test(compact)) return true;
+  if (compact.length <= 10 && /[0-9!?'`~:;,+\-/*\\()[\]{}]/.test(compact) && !/[aeiou]/i.test(compact)) return true;
+  if (compact.length <= 10 && /[A-Z]/.test(compact) && /[a-z]/.test(compact) && !/[aeiou]{2,}/i.test(compact)) return true;
+  return false;
+}
+
 function cleanedContentLines(page, {keepTitle = true} = {}) {
   const currentTitle = normalizeTitle(page?.title);
   const allTitles = handbookTitleSet();
@@ -423,6 +435,7 @@ function cleanedContentLines(page, {keepTitle = true} = {}) {
     .filter((line) => !/^https?:\/\//i.test(line))
     .filter((line) => !/^Reading Area/.test(line))
     .filter((line) => !isDateOrTimeLine(line))
+    .filter((line) => !isLikelyNoiseLine(line))
     .filter((line) => keepTitle || normalizeTitle(line) !== currentTitle)
     .filter((line) => normalizeTitle(line) === currentTitle || !allTitles.has(normalizeTitle(line)))
     .filter((line) => !/^[A-Z]$/.test(line))
@@ -452,14 +465,33 @@ function sanitizePageText(page) {
   const sliced = lines.slice(titleIndex >= 0 ? titleIndex : 0);
   const cutIndex = sliced.findIndex((line) => line === 'Math Assistant' || line === 'Add page');
   const duplicateTitleIndex = sliced.findIndex((line, index) => index > 4 && normalizeTitle(line) === normalizeTitle(page?.title));
-  const cleanedLines = duplicateTitleIndex > 0 ? sliced.slice(0, duplicateTitleIndex) : (cutIndex >= 0 ? sliced.slice(0, cutIndex) : sliced);
-  const cleaned = cleanedLines.join('\n');
+  const initialLines = duplicateTitleIndex > 0 ? sliced.slice(0, duplicateTitleIndex) : (cutIndex >= 0 ? sliced.slice(0, cutIndex) : sliced);
+  const subentryIndex = initialLines.findIndex((line, index) => {
+    if (index < 3) return false;
+    const next = initialLines[index + 1] || '';
+    if (!next) return false;
+    if (normalizeTitle(line) === normalizeTitle(page?.title)) return false;
+    if (!/^[A-Z][A-Za-z0-9'()?/-]+(?: [A-Z][A-Za-z0-9'()?/-]+){0,5}$/.test(line)) return false;
+    return /^Prerequisite:/i.test(next) || next.length > 40;
+  });
+  const cleanedLines = subentryIndex > 0 ? initialLines.slice(0, subentryIndex) : initialLines;
+  const dedupedLines = [];
+  const seen = new Set();
+  for (const line of cleanedLines) {
+    const key = line.replace(/\s+/g, ' ').trim().toLowerCase();
+    if (line.length >= 16 && seen.has(key) && !/^Level \d+$/i.test(line) && !/^(Hunger|Exhaustion)$/i.test(line)) continue;
+    seen.add(key);
+    dedupedLines.push(line);
+  }
+  const cleaned = dedupedLines.join('\n');
   const marker = cleaned.slice(0, Math.floor(cleaned.length / 2));
   const repeatedAt = cleaned.indexOf(marker, Math.floor(cleaned.length / 3));
   let result = repeatedAt > 120 ? cleaned.slice(0, repeatedAt).trim() : cleaned.trim();
   const resultLines = result.split('\n').filter(Boolean);
   while (resultLines.length > 4 && resultLines.slice(-4).every((line) => line.length < 28)) resultLines.pop();
-  result = resultLines.join('\n').trim();
+  result = resultLines.join('\n').trim()
+    .replace(/(\b[A-Za-z]+)\ns\b/g, '$1\'s')
+    .replace(/\n{3,}/g, '\n\n');
   return pageIsMostlyChrome(page) ? '' : result;
 }
 
@@ -2077,12 +2109,81 @@ function equipmentSlotMap(items) {
 function splitInventoryRows(items, notes = '') {
   const rows = [];
   const normalized = [...items];
-  if (notes) normalized.push(`Notes: ${notes}`);
+  if (notes) {
+    const extras = String(notes)
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter(Boolean);
+    normalized.push(...extras);
+  }
   for (let index = 0; index < normalized.length; index += 1) {
     rows.push([normalized[index], '1']);
     if (rows.length >= 3) break;
   }
   return rows;
+}
+
+const PDF_PAGE_TWO_FIELDS = new Set([
+  'Alignment', 'AGE', 'HEIGHT', 'WEIGHT', 'EYES', 'SKIN', 'HAIR', 'MARKS',
+  'Long Rest', 'Night Rest', 'Current Hunger', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6',
+  'Disease Name 1', 'Effect 1', 'Disease 1', 'Injury 1', 'Disease Name 2', 'Effect 2', 'Disease 2', 'Injury 2',
+  'Disease Name 3', 'Effect 3', 'Disease 3', 'Injury 3', 'Text32', 'C Name', 'C Speed', 'C INIT', 'C AC',
+  'C Unarmored AC', 'C STR', 'C STR MOD', 'C DEX', 'C DEX MOD', 'C CON', 'C CON MOD', 'C INT', 'C INT MOD',
+  'C WIS', 'C WIS MOD', 'C CHA', 'C CHA MOD', 'C Skills', 'C C HP', 'C C VIT', 'C Max HP', 'C MAX VIT',
+  'LOYALTY', 'UPKEEP', 'C AT NAME 1', 'C AT BONUS 1', 'C AT DMG 1', 'C Additional Features', 'Rations', 'Scrap',
+  'HEAD', 'CLOAK', 'ARMOR', 'LEFT HAND', 'RIGHT HAND', 'BACKPACK', 'BOOTS', 'QUICK ACCESS 1', 'QUICK ACCESS 2',
+  'QUICK ACCESS 3', 'Current Encumberment', 'Maximum Encumberment', 'SI Name 1', 'SI Quantity 1', 'SI Name 2',
+  'SI Quantity 2', 'SI Name 3', 'SI Quantity 3', 'Inventory', 'C AT NAME 2', 'C AT BONUS 2', 'C AT DMG 2',
+]);
+
+const PDF_MULTILINE_FIELDS = new Set([
+  'OTHER PROFICIENCIES', 'RACE FEAT', 'Feature 1', 'Inventory', 'BACKPACK', 'Text32', 'C Additional Features',
+  'C Skills', 'Effect 1', 'Effect 2', 'Effect 3',
+]);
+
+const PDF_CENTERED_FIELDS = new Set([
+  'STR', 'DEX', 'CON', 'INT', 'WIS', 'CHA', 'STR Mod', 'DEX Mod', 'CON Mod', 'INT Mod', 'WIS Mod', 'CHA Mod',
+  'Proficiency Bonus', 'Passive Perception', 'HP MAX', 'HP', 'TEMP HP', 'VIT MAX', 'VIT', 'TEMP VIT', 'AC',
+  'INITIATIVE', 'SPEED', 'Unarmored AC', 'SK0', 'SK1', 'SK2', 'SK3', 'SK4', 'SK5', 'SK6', 'SK7', 'SK8', 'SK9',
+  'SK10', 'SK11', 'SK12', 'SK13', 'SK14', 'SK15', 'SK16', 'SK17', 'SK18', 'SK19', 'SK20', 'HIT DICE', 'HD TOTAL',
+  'AT Bonus', 'AT Bonus 1', 'AT Bonus 2', 'AT Bonus 3', 'AT Bonus 4', 'AT Bonus 5', 'AT Bonus 6', 'AT Bonus 7',
+  'SP Bonus', 'SP Bonus 1', 'SP Bonus 2', 'SP Bonus 3', 'SP Bonus 4', 'SP Bonus 5', 'SP Bonus 6', 'SP Bonus 7',
+  'SP Bonus 8', 'SP Bonus 9', 'SP Bonus 10', 'SP Bonus 11', 'SP Bonus 12', 'SP Bonus 13', 'SP Bonus 14', 'SP Bonus 15',
+  'C Speed', 'C INIT', 'C AC', 'C Unarmored AC', 'C STR', 'C STR MOD', 'C DEX', 'C DEX MOD', 'C CON', 'C CON MOD',
+  'C INT', 'C INT MOD', 'C WIS', 'C WIS MOD', 'C CHA', 'C CHA MOD', 'C C HP', 'C C VIT', 'C Max HP', 'C MAX VIT',
+  'LOYALTY', 'UPKEEP', 'C AT BONUS 1', 'C AT BONUS 2', 'Rations', 'Scrap', 'Current Encumberment', 'Maximum Encumberment',
+  'SI Quantity 1', 'SI Quantity 2', 'SI Quantity 3',
+]);
+
+const PDF_FIELD_STYLE_OVERRIDES = {
+  Name: {maxSize: 18, minSize: 10, padding: 2.5},
+  'Class and level': {maxSize: 10, minSize: 6.5, padding: 2.5},
+  Race: {maxSize: 10, minSize: 6.5, padding: 2.5},
+  EXP: {maxSize: 9, minSize: 6.5, padding: 2.5},
+  'OTHER PROFICIENCIES': {maxSize: 8, minSize: 5, padding: 3},
+  'RACE FEAT': {maxSize: 7.5, minSize: 4.75, padding: 3},
+  'Feature 1': {maxSize: 7.5, minSize: 4.75, padding: 3},
+  Inventory: {maxSize: 7.5, minSize: 4.75, padding: 3},
+  Text32: {maxSize: 7.5, minSize: 4.75, padding: 3},
+  'C Additional Features': {maxSize: 7, minSize: 4.75, padding: 3},
+  BACKPACK: {maxSize: 6.5, minSize: 4.75, padding: 2.5},
+};
+
+function speciesHitDieLabel() {
+  const species = selectedBaseSpeciesData();
+  const key = `${species?.hpBase || ''}/${species?.hpPer || ''}`;
+  return ({
+    '5/3': 'd4',
+    '7/4': 'd6',
+    '9/5': 'd8',
+    '11/6': 'd10',
+  })[key] || 'd8';
+}
+
+function spellVitalityCost(page) {
+  const text = sanitizePageText(page || {});
+  const match = text.match(/Vitality Cost:\s*([^\n]+)/i);
+  return match ? match[1].replace(/\s+/g, ' ').trim().slice(0, 10) : '-';
 }
 
 async function exportPdf() {
@@ -2095,6 +2196,20 @@ async function exportPdf() {
   const pdfDoc = await PDFDocument.load(templateBytes);
   const form = pdfDoc.getForm();
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  const pages = pdfDoc.getPages();
+  const cachedFieldMeta = new Map(form.getFields().map((field) => {
+    const widgets = field.acroField?.getWidgets?.() || [];
+    const rect = widgets[0]?.getRectangle?.();
+    return [field.getName(), rect ? {
+      page: PDF_PAGE_TWO_FIELDS.has(field.getName()) ? pages[1] : pages[0],
+      x: Number(rect.x || 0),
+      y: Number(rect.y || 0),
+      width: Number(rect.width || 120),
+      height: Number(rect.height || 18),
+    } : null];
+  }));
+  form.flatten();
   const payload = btoa(unescape(encodeURIComponent(JSON.stringify(state.character))));
   const skillValues = SKILLS.map((skill) => `${selectedSkillSet().includes(skill) ? skillBonus(skill) : mod(finalAbilityScore(skillAbility(skill)))}`);
   const selectedSkills = selectedSkillSet();
@@ -2112,70 +2227,105 @@ async function exportPdf() {
     const page = spellPageRecord(entry.key, entry.title);
     return [
       cleanLabel(entry.title),
-      compactTierLabel(context.tier, entry.key === 'elemental' ? context.lore : ''),
+      spellVitalityCost(page),
       compactRuleSnippet(sanitizePageText(page || {}), 30) || SPELL_SECTION_LABELS[entry.key],
     ];
   });
-  const setText = (fieldName, value) => {
-    try {
-      const field = form.getTextField(fieldName);
-      const raw = String(value || '').trim();
-      const widgets = field.acroField?.getWidgets?.() || [];
-      const rect = widgets[0]?.getRectangle?.();
-      const width = Number(rect?.width || 120);
-      const height = Number(rect?.height || 18);
-      const multilineFields = new Set(['OTHER PROFICIENCIES', 'RACE FEAT', 'Feature 1', 'Inventory', 'BACKPACK']);
-      const maxSize = multilineFields.has(fieldName) ? 8 : fieldName === 'Name' ? 12 : 9;
-      const minSize = multilineFields.has(fieldName) ? 4.5 : 6;
-      const wrapForWidth = (text, size) => {
-        const limit = Math.max(6, Math.floor(width / Math.max(1, size * 0.52)));
-        const blocks = [];
-        for (const sourceLine of text.split('\n')) {
-          const words = sourceLine.split(/\s+/).filter(Boolean);
-          if (!words.length) {
-            blocks.push('');
-            continue;
-          }
-          let line = '';
-          for (const word of words) {
-            const candidate = line ? `${line} ${word}` : word;
-            if (candidate.length <= limit) {
-              line = candidate;
-              continue;
-            }
-            if (line) blocks.push(line);
-            line = word;
-          }
-          if (line) blocks.push(line);
-        }
-        return blocks.join('\n').trim();
-      };
-      let bestSize = minSize;
-      let bestText = raw;
-      for (let size = maxSize; size >= minSize; size -= 0.5) {
-        const candidate = wrapForWidth(raw, size);
-        const lineCount = candidate ? candidate.split('\n').length : 1;
-        const neededHeight = lineCount * size * 1.18;
-        if (neededHeight <= height * (multilineFields.has(fieldName) ? 1.7 : 1.15)) {
-          bestSize = size;
-          bestText = candidate;
-          break;
-        }
-        bestText = candidate;
+  const fieldMeta = (fieldName) => {
+    return cachedFieldMeta.get(fieldName) || null;
+  };
+  const wrapForWidth = (text, activeFont, size, width) => {
+    const maxWidth = Math.max(8, width);
+    const lines = [];
+    for (const sourceLine of String(text || '').split('\n')) {
+      const words = sourceLine.split(/\s+/).filter(Boolean);
+      if (!words.length) {
+        lines.push('');
+        continue;
       }
-      if (multilineFields.has(fieldName)) field.enableMultiline();
-      field.setFontSize(bestSize);
-      field.setText(bestText);
-    } catch {
-      // Ignore fields that are absent on the base sheet.
+      let line = '';
+      for (const word of words) {
+        const candidate = line ? `${line} ${word}` : word;
+        if (activeFont.widthOfTextAtSize(candidate, size) <= maxWidth) {
+          line = candidate;
+          continue;
+        }
+        if (line) lines.push(line);
+        line = word;
+      }
+      if (line) lines.push(line);
     }
+    return lines;
+  };
+  const drawTextField = (fieldName, value, overrides = {}) => {
+    const raw = String(value ?? '').trim();
+    if (!raw) return;
+    const meta = fieldMeta(fieldName);
+    if (!meta) return;
+    const style = {
+      multiline: PDF_MULTILINE_FIELDS.has(fieldName),
+      align: PDF_CENTERED_FIELDS.has(fieldName) ? 'center' : 'left',
+      maxSize: PDF_MULTILINE_FIELDS.has(fieldName) ? 8 : 9,
+      minSize: PDF_MULTILINE_FIELDS.has(fieldName) ? 4.75 : 6,
+      padding: PDF_MULTILINE_FIELDS.has(fieldName) ? 3 : 2,
+      lineHeight: 1.12,
+      valign: PDF_MULTILINE_FIELDS.has(fieldName) ? 'top' : 'middle',
+      font: font,
+      color: rgb(0.08, 0.08, 0.08),
+      ...PDF_FIELD_STYLE_OVERRIDES[fieldName],
+      ...overrides,
+    };
+    const maxWidth = Math.max(8, meta.width - style.padding * 2);
+    let bestSize = style.minSize;
+    let lines = [raw];
+    for (let size = style.maxSize; size >= style.minSize; size -= 0.25) {
+      const candidateLines = wrapForWidth(raw, style.font, size, maxWidth);
+      const totalHeight = candidateLines.length * size * style.lineHeight;
+      const availableHeight = Math.max(6, meta.height - style.padding * 2);
+      if (totalHeight <= availableHeight || (!style.multiline && candidateLines.length === 1)) {
+        bestSize = size;
+        lines = candidateLines;
+        break;
+      }
+      lines = candidateLines;
+    }
+    const totalHeight = lines.length * bestSize * style.lineHeight;
+    let y = style.valign === 'top'
+      ? meta.y + meta.height - style.padding - bestSize
+      : meta.y + (meta.height + totalHeight) / 2 - bestSize;
+    lines.forEach((line) => {
+      const textWidth = style.font.widthOfTextAtSize(line, bestSize);
+      const x = style.align === 'center'
+        ? meta.x + Math.max(style.padding, (meta.width - textWidth) / 2)
+        : meta.x + style.padding;
+      meta.page.drawText(line, {x, y, size: bestSize, font: style.font, color: style.color});
+      y -= bestSize * style.lineHeight;
+    });
+  };
+  const drawCheckMark = (fieldName, active = true) => {
+    if (!active) return;
+    const meta = fieldMeta(fieldName);
+    if (!meta) return;
+    const pad = Math.min(2, meta.width / 6, meta.height / 6);
+    meta.page.drawLine({
+      start: {x: meta.x + pad, y: meta.y + pad},
+      end: {x: meta.x + meta.width - pad, y: meta.y + meta.height - pad},
+      thickness: 1.1,
+      color: rgb(0.08, 0.08, 0.08),
+    });
+    meta.page.drawLine({
+      start: {x: meta.x + pad, y: meta.y + meta.height - pad},
+      end: {x: meta.x + meta.width - pad, y: meta.y + pad},
+      thickness: 1.1,
+      color: rgb(0.08, 0.08, 0.08),
+    });
   };
   const setRows = (fieldTriples, rows) => {
     fieldTriples.forEach(([nameField, bonusField, valueField], index) => {
       const row = rows[index] || [];
-      setText(nameField, row[0] || '');
-      if (bonusField) setText(bonusField, row[1] || '');
-      if (valueField) setText(valueField, row[2] || '');
+      drawTextField(nameField, row[0] || '');
+      if (bonusField) drawTextField(bonusField, row[1] || '');
+      if (valueField) drawTextField(valueField, row[2] || '');
     });
   };
   const attackFields = [
@@ -2206,56 +2356,68 @@ async function exportPdf() {
     ['SP NAME 14', 'SP Bonus 14', 'SP DAM 14'],
     ['SP NAME 15', 'SP Bonus 15', 'SP DAM 15'],
   ];
-  setText('Name', c.profile.name || '');
-  setText('Class and level', `${c.profile.className}${c.profile.subclass ? ` / ${c.profile.subclass}` : ''} Lv.${c.profile.level}`);
-  setText('Race', [c.profile.speciesSubtype || c.profile.species, c.profile.acquiredSpecies !== 'None' ? c.profile.acquiredSpecies : ''].filter(Boolean).join(' / '));
-  setText('EXP', c.profile.player || '');
-  setText('Alignment', c.notes.goals ? c.notes.goals.slice(0, 24) : '');
-  setText('STR', finalAbilityScore('str'));
-  setText('DEX', finalAbilityScore('dex'));
-  setText('CON', finalAbilityScore('con'));
-  setText('INT', finalAbilityScore('int'));
-  setText('WIS', finalAbilityScore('wis'));
-  setText('CHA', finalAbilityScore('cha'));
-  setText('STR Mod', mod(finalAbilityScore('str')) >= 0 ? `+${mod(finalAbilityScore('str'))}` : mod(finalAbilityScore('str')));
-  setText('DEX Mod', mod(finalAbilityScore('dex')) >= 0 ? `+${mod(finalAbilityScore('dex'))}` : mod(finalAbilityScore('dex')));
-  setText('CON Mod', mod(finalAbilityScore('con')) >= 0 ? `+${mod(finalAbilityScore('con'))}` : mod(finalAbilityScore('con')));
-  setText('INT Mod', mod(finalAbilityScore('int')) >= 0 ? `+${mod(finalAbilityScore('int'))}` : mod(finalAbilityScore('int')));
-  setText('WIS Mod', mod(finalAbilityScore('wis')) >= 0 ? `+${mod(finalAbilityScore('wis'))}` : mod(finalAbilityScore('wis')));
-  setText('CHA Mod', mod(finalAbilityScore('cha')) >= 0 ? `+${mod(finalAbilityScore('cha'))}` : mod(finalAbilityScore('cha')));
-  setText('Proficiency Bonus', `+${proficiencyBonus()}`);
-  setText('Passive Perception', 10 + skillBonus('Perception'));
-  setText('HP MAX', hitPoints());
-  setText('HP', hitPoints());
-  setText('VIT MAX', vitalityPoints());
-  setText('VIT', vitalityPoints());
-  setText('AC', armorClass());
-  setText('INITIATIVE', mod(finalAbilityScore('dex')) >= 0 ? `+${mod(finalAbilityScore('dex'))}` : mod(finalAbilityScore('dex')));
-  setText('SPEED', `${speedMeters()}m`);
-  setText('Unarmored AC', selectedSpeciesData()?.baseAc || '');
+  const passivePerception = 10 + Number(skillBonus('Perception'));
+  const dieLabel = speciesHitDieLabel();
+  const totalHitDice = `${Number(c.profile.level || 1) + 2}${dieLabel}`;
+  drawTextField('Name', c.profile.name || '', {font: boldFont});
+  drawTextField('Class and level', `${c.profile.className}${c.profile.subclass ? ` / ${c.profile.subclass}` : ''} Lv.${c.profile.level}`);
+  drawTextField('Race', [c.profile.speciesSubtype || c.profile.species, c.profile.acquiredSpecies !== 'None' ? c.profile.acquiredSpecies : ''].filter(Boolean).join(' / '));
+  drawTextField('EXP', c.profile.player || '');
+  drawTextField('Alignment', '');
+  drawTextField('STR', finalAbilityScore('str'));
+  drawTextField('DEX', finalAbilityScore('dex'));
+  drawTextField('CON', finalAbilityScore('con'));
+  drawTextField('INT', finalAbilityScore('int'));
+  drawTextField('WIS', finalAbilityScore('wis'));
+  drawTextField('CHA', finalAbilityScore('cha'));
+  drawTextField('STR Mod', mod(finalAbilityScore('str')) >= 0 ? `+${mod(finalAbilityScore('str'))}` : mod(finalAbilityScore('str')));
+  drawTextField('DEX Mod', mod(finalAbilityScore('dex')) >= 0 ? `+${mod(finalAbilityScore('dex'))}` : mod(finalAbilityScore('dex')));
+  drawTextField('CON Mod', mod(finalAbilityScore('con')) >= 0 ? `+${mod(finalAbilityScore('con'))}` : mod(finalAbilityScore('con')));
+  drawTextField('INT Mod', mod(finalAbilityScore('int')) >= 0 ? `+${mod(finalAbilityScore('int'))}` : mod(finalAbilityScore('int')));
+  drawTextField('WIS Mod', mod(finalAbilityScore('wis')) >= 0 ? `+${mod(finalAbilityScore('wis'))}` : mod(finalAbilityScore('wis')));
+  drawTextField('CHA Mod', mod(finalAbilityScore('cha')) >= 0 ? `+${mod(finalAbilityScore('cha'))}` : mod(finalAbilityScore('cha')));
+  drawTextField('Proficiency Bonus', `+${proficiencyBonus()}`);
+  drawTextField('Passive Perception', String(passivePerception));
+  drawTextField('HP MAX', hitPoints());
+  drawTextField('HP', hitPoints());
+  drawTextField('VIT MAX', vitalityPoints());
+  drawTextField('VIT', vitalityPoints());
+  drawTextField('AC', armorClass());
+  drawTextField('INITIATIVE', mod(finalAbilityScore('dex')) >= 0 ? `+${mod(finalAbilityScore('dex'))}` : mod(finalAbilityScore('dex')));
+  drawTextField('SPEED', `${speedMeters()}m`);
+  drawTextField('Unarmored AC', selectedSpeciesData()?.baseAc || '');
+  drawTextField('HIT DICE', dieLabel);
+  drawTextField('HD TOTAL', totalHitDice);
   ['SK0', 'SK1', 'SK2', 'SK3', 'SK4', 'SK5', 'SK6', 'SK7', 'SK8', 'SK9', 'SK10', 'SK11', 'SK12', 'SK13', 'SK14', 'SK15', 'SK16', 'SK17', 'SK18', 'SK19', 'SK20']
-    .forEach((fieldName, index) => setText(fieldName, skillValues[index] ?? ''));
-  setText('OTHER PROFICIENCIES', [
+    .forEach((fieldName, index) => drawTextField(fieldName, skillValues[index] ?? ''));
+  [
+    'Check Box81', 'Check Box82', 'Check Box83', 'Check Box84', 'Check Box85', 'Check Box86', 'Check Box87',
+    'Check Box88', 'Check Box89', 'Check Box811', 'Check Box812', 'Check Box813', 'Check Box814', 'Check Box815',
+    'Check Box816', 'Check Box817', 'Check Box818', 'Check Box819', 'Check Box8111', 'Check Box8112', 'Check Box20',
+  ].forEach((fieldName, index) => drawCheckMark(fieldName, selectedSkills.includes(SKILLS[index])));
+  drawTextField('OTHER PROFICIENCIES', [
     `Skills: ${selectedSkills.join(', ') || '-'}`,
     `Auto: ${automaticSkills().join(', ') || '-'}`,
     `Feats: ${c.build.feats.join(', ') || '-'}`,
   ].join('\n\n'));
-  setText('RACE FEAT', [
-    `Species: ${speciesFeatureText().join(', ') || '-'}`,
+  drawTextField('RACE FEAT', [
+    `Species: ${c.profile.speciesSubtype || c.profile.species}${c.profile.acquiredSpecies !== 'None' ? ` / ${c.profile.acquiredSpecies}` : ''}`,
+    `${speciesFeatureText().join(', ') || '-'}`,
     `Elemental Lore: ${magicAccess().elemental ? chosenElementalLore() : '-'}`,
     `Auto Channel: ${autoChannelSpellNames().join(', ') || '-'}`,
   ].join('\n'));
-  setText('Feature 1', [
+  drawTextField('Feature 1', [
     `Class: ${c.profile.className}${c.profile.subclass ? ` / ${c.profile.subclass}` : ''}`,
-    `Species: ${c.profile.speciesSubtype || c.profile.species}`,
-    `Magic: ${knownMagicEntries().map((entry) => cleanLabel(entry.title)).slice(0, 6).join(', ') || '-'}`,
-    `Maneuvers: ${c.magic.maneuvers.map(cleanLabel).slice(0, 4).join(', ') || '-'}`,
-    `Notes: ${[c.notes.appearance, c.notes.backstory, c.notes.allies, c.notes.misc].filter(Boolean).join(' | ').slice(0, 260) || '-'}`,
-  ].join('\n\n'));
-  setText('Inventory', [`Package: ${c.loadout.package || '-'}`, ...packageItems, c.loadout.notes ? `Notes: ${c.loadout.notes}` : ''].filter(Boolean).join('\n'));
-  setText('Current Encumberment', encumbrance());
-  setText('Maximum Encumberment', carryLimit());
-  Object.entries(loadoutSlots).forEach(([fieldName, value]) => setText(fieldName, value));
+    selectedClassRule().description,
+    SUBCLASS_SUMMARIES[c.profile.subclass] || '',
+    `Feats: ${c.build.feats.join(', ') || '-'}`,
+    `Magic: ${knownMagicEntries().map((entry) => cleanLabel(entry.title)).slice(0, 8).join(', ') || '-'}`,
+    `Maneuvers: ${c.magic.maneuvers.map(cleanLabel).slice(0, 6).join(', ') || '-'}`,
+  ].filter(Boolean).join('\n\n'));
+  drawTextField('Inventory', [`Package: ${c.loadout.package || '-'}`, ...packageItems, c.loadout.notes ? `Extra: ${c.loadout.notes}` : ''].filter(Boolean).join('\n'));
+  drawTextField('Current Encumberment', encumbrance());
+  drawTextField('Maximum Encumberment', carryLimit());
+  Object.entries(loadoutSlots).forEach(([fieldName, value]) => drawTextField(fieldName, value));
   setRows(attackFields, maneuverRows.slice(0, attackFields.length));
   setRows(spellFields, magicRows.slice(0, spellFields.length));
   setRows([
@@ -2263,16 +2425,18 @@ async function exportPdf() {
     ['SI Name 2', 'SI Quantity 2'],
     ['SI Name 3', 'SI Quantity 3'],
   ], inventoryRows);
-  setText('C Name', c.notes.allies ? c.notes.allies.slice(0, 24) : '');
-  setText('C Skills', selectedSkills.slice(0, 6).join(', '));
-  setText('C Additional Features', [
-    `Feat: ${c.build.feats[0] || '-'}`,
-    `Lore: ${magicAccess().elemental ? chosenElementalLore() : '-'}`,
-    `Package: ${c.loadout.package || '-'}`,
-  ].join('\n'));
-  form.updateFieldAppearances(font);
-  form.flatten();
-  const pages = pdfDoc.getPages();
+  drawTextField('Text32', [
+    c.notes.appearance ? `Appearance: ${c.notes.appearance}` : '',
+    c.notes.backstory ? `Backstory: ${c.notes.backstory}` : '',
+    c.notes.goals ? `Goals: ${c.notes.goals}` : '',
+    c.notes.allies ? `Allies: ${c.notes.allies}` : '',
+    c.notes.misc ? `Misc: ${c.notes.misc}` : '',
+  ].filter(Boolean).join('\n\n'));
+  drawTextField('C Name', c.notes.allies ? c.notes.allies.split(',')[0].trim().slice(0, 24) : '');
+  drawTextField('C Skills', c.notes.allies ? c.notes.allies : '');
+  drawTextField('C Additional Features', c.notes.allies ? `Allies & companions: ${c.notes.allies}` : '');
+  const pageTwo = pages[1];
+  pageTwo.drawText(c.profile.name || '', {x: 22, y: 724, size: 11, font: boldFont, color: rgb(0.08, 0.08, 0.08)});
   const payloadLines = payload.match(/.{1,70}/g)?.map((chunk, index) => `SOANW_JSON_${index}:${chunk}`) || [];
   const payloadPage = pages[pages.length - 1];
   payloadLines.forEach((line, index) => {

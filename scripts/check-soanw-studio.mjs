@@ -1,13 +1,23 @@
 import { chromium } from 'playwright';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 
 const baseUrl = 'http://127.0.0.1:4173/games/dnd-delve.html';
 const screenshotDir = 'C:/Bewerbungen/screenshots';
 const downloadDir = 'C:/Bewerbungen/tmp-soanw-downloads';
+const pdftotextPath = 'C:/Program Files/poppler-24.08.0/Library/bin/pdftotext.exe';
+const execFileAsync = promisify(execFile);
 
 async function ensureDir(dir) {
   await fs.mkdir(dir, {recursive: true});
+}
+
+async function extractPdfText(filePath) {
+  const textPath = filePath.replace(/\.pdf$/i, '.txt');
+  await execFileAsync(pdftotextPath, [filePath, textPath]);
+  return fs.readFile(textPath, 'utf8');
 }
 
 async function openStep(page, stepId) {
@@ -371,6 +381,29 @@ async function assertFinishExport(browser) {
   await context.close();
 }
 
+async function assertFeatFormatting(browser) {
+  const context = await browser.newContext({viewport: {width: 1440, height: 1600}});
+  const page = await context.newPage();
+  await page.goto(baseUrl, {waitUntil: 'networkidle', timeout: 120000});
+  await page.getByRole('button', {name: 'Compendium', exact: true}).click();
+  await page.locator('#searchInput').fill('War Caster');
+  await page.waitForTimeout(300);
+  await page.getByRole('button', {name: /War Caster/, exact: false}).click();
+  const warCaster = await page.locator('.reader-text').textContent();
+  if (/creature\s*s movement/i.test(warCaster || '') || /Template Spell/i.test(warCaster || '')) {
+    throw new Error(`War Caster formatting still broken: ${warCaster}`);
+  }
+
+  await page.locator('#searchInput').fill('Arcane Scholar');
+  await page.waitForTimeout(300);
+  await page.getByRole('button', {name: /Arcane Scholar/, exact: false}).click();
+  const arcaneScholar = await page.locator('.reader-text').textContent();
+  if (/EQRK|G4CO|Arcane Understanding \(OP\?\)|Template Spell/i.test(arcaneScholar || '')) {
+    throw new Error(`Arcane Scholar formatting still broken: ${arcaneScholar}`);
+  }
+  await context.close();
+}
+
 async function main() {
   await ensureDir(screenshotDir);
   await ensureDir(downloadDir);
@@ -398,6 +431,10 @@ async function main() {
   const download = await downloadPromise;
   const downloadPath = path.join(downloadDir, download.suggestedFilename());
   await download.saveAs(downloadPath);
+  const exportedText = await extractPdfText(downloadPath);
+  if (!/Aela Frost/.test(exportedText) || !/Mage \/ School of the Path/.test(exportedText) || !/Blast/.test(exportedText)) {
+    throw new Error(`Exported PDF is missing visible mapped content: ${exportedText.slice(0, 1200)}`);
+  }
 
   const mobile = await browser.newContext({viewport: {width: 430, height: 1600}});
   const mobilePage = await mobile.newPage();
@@ -426,6 +463,7 @@ async function main() {
   await assertLevelScaling(browser);
   await assertAcquiredSpeciesRules(browser);
   await assertFinishExport(browser);
+  await assertFeatFormatting(browser);
 
   if (errors.length) {
     throw new Error(errors.join('\n'));
