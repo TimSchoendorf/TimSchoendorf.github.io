@@ -26,7 +26,8 @@
     "@pkmn/data": "^0.10.7",
     "@pkmn/dex": "^0.10.7",
     "@pkmn/sim": "^0.10.7",
-    "esbuild": "^0.27.3"
+    "esbuild": "^0.27.3",
+    "peerjs": "^1.5.5"
   },
   "devDependencies": {
     "playwright": "^1.58.2"
