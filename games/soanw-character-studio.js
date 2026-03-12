@@ -1684,10 +1684,42 @@ function compendiumBlocksFromText(text, fallbackTitle = 'Content') {
     .map((block, index) => ({
       ...block,
       title: block.title || `${fallbackTitle} ${index + 1}`,
-      body: block.lines.join('\n').trim(),
+      body: block.lines
+        .filter((line, lineIndex) => !(lineIndex === 0 && normalizeTitle(line) === normalizeTitle(block.title)))
+        .filter((line, lineIndex, arr) => !(index === 0 && lineIndex === 0 && normalizeTitle(line) === normalizeTitle(fallbackTitle)))
+        .join('\n')
+        .trim(),
       anchorId: `compendium-anchor-${index + 1}`,
     }))
     .filter((block) => block.title || block.body);
+}
+
+function renderCompendiumBlockBody(body) {
+  const metaPattern = /^(Prerequisite|Requires|Vitality Cost|Casting Time|Use Time|Range|Duration|Target|Area|Components):\s*(.+)$/i;
+  const lines = String(body || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const metaLines = [];
+  const paragraphs = [];
+  let currentParagraph = [];
+  for (const line of lines) {
+    const match = line.match(metaPattern);
+    if (match) {
+      if (currentParagraph.length) {
+        paragraphs.push(currentParagraph.join(' '));
+        currentParagraph = [];
+      }
+      metaLines.push([match[1], match[2]]);
+      continue;
+    }
+    currentParagraph.push(line);
+  }
+  if (currentParagraph.length) paragraphs.push(currentParagraph.join(' '));
+  return `
+    ${metaLines.length ? `<div class="compendium-meta">${metaLines.map(([label, value]) => `<div><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`).join('')}</div>` : ''}
+    ${paragraphs.map((paragraph) => `<p>${escapeHtml(paragraph)}</p>`).join('')}
+  `;
 }
 
 function renderBuilder() {
@@ -1707,12 +1739,8 @@ function renderBuilder() {
           <label><span>Player</span><input data-field="profile.player" value="${c.profile.player}"></label>
           <label><span>Level</span><input type="number" min="1" max="10" data-field="profile.level" value="${c.profile.level}"></label>
         </div>
-        <div class="guide-card">
-          <div class="eyebrow">Builder Scope</div>
-          <p class="muted">Dieses Profil beschraenkt sich jetzt bewusst auf die Daten, die fuer den restlichen Wizard wirklich regelrelevant sind.</p>
-        </div>
       </div>
-    `, 'Nur Kernangaben, keine irrelevanten Freitextfelder mehr.');
+    `);
   } else if (step === 'species') {
     const featureDetails = speciesFeatureDetails();
     const speciesPreviewMap = Object.fromEntries(SPECIES.map((name) => [name, handbookPreview(handbookPage('Species', name), name)]));
@@ -1720,10 +1748,6 @@ function renderBuilder() {
     body = `
       ${panel('Step 2 - Species', `
         <div class="stack">
-          <div class="guide-card compact">
-            <div class="eyebrow">Was du hier festlegst</div>
-            <p class="muted">Waehle zuerst die Basis-Species, dann die genaue Linie. Acquired Species wie Wildling oder Changeling werden danach als Aufsatz darueber gelegt, behalten aber die HP-, Vitality-, Speed- und Grundkoerperwerte der Basisspecies.</p>
-          </div>
           <div>
             <div class="eyebrow">Base Species</div>
             ${renderChoiceCards(SPECIES, c.profile.species, 'profile.species', Object.fromEntries(SPECIES.map((name) => [name, cleanLabel(name)])), '', 'speciesFeaturePanel', speciesPreviewMap)}
@@ -1740,7 +1764,7 @@ function renderBuilder() {
             ${speciesFeatureText().map((feature) => `<div class="summary-chip">${feature}</div>`).join('')}
           </div>
         </div>
-      `, 'Species zeigt jetzt klar Linie, Boni und Kernfaehigkeiten an.')}
+      `)}
       <div class="split-shell">
         ${panel('Species Benefits', `
           <div class="guide-card">
@@ -1786,10 +1810,6 @@ function renderBuilder() {
     body = `
       ${panel('Step 3 - Class', `
         <div class="stack">
-          <div class="guide-card compact">
-            <div class="eyebrow">Was du hier festlegst</div>
-            <p class="muted">Waehle zuerst die Hauptklasse fuer deine Rolle im Spiel. Danach bestimmt die Subclass, welche Features, Kampfstile oder Magiepfade spaeter im Build ueberhaupt zur Verfuegung stehen.</p>
-          </div>
           <div>
             <div class="eyebrow">Class</div>
             ${renderChoiceCards(CLASSES, c.profile.className, 'profile.className', Object.fromEntries(CLASSES.map((name) => [name, CLASS_RULES[name].description])), '', 'classPreviewPanel', classPreviewMap)}
@@ -1804,7 +1824,7 @@ function renderBuilder() {
             ${Object.entries(magicAccess()).filter(([, enabled]) => enabled).map(([key]) => `<div class="summary-chip">${SPELL_SECTION_LABELS[key]}</div>`).join('')}
           </div>
         </div>
-      `, 'Klasse und Subclass zeigen jetzt direkt ihren Nutzen und ihre Unterschiede.')}
+      `)}
       <div class="split-shell">
         ${panel('Class Preview', `
           <div class="guide-card">
@@ -1871,7 +1891,7 @@ function renderBuilder() {
             </div>
           </div>
         </div>
-      `, 'Point Buy mit klarer Begrenzung, Kampfwerte nur automatisch.')}
+      `)}
       ${referencePanel('Ability Rules', handbookPage('Playing the Game', 'Chapter 6: Using Ability Scores-'), 'Playing the Game')}
     `;
   } else if (step === 'proficiencies') {
@@ -1896,7 +1916,7 @@ function renderBuilder() {
             </div>
           </div>
         </div>
-      `, 'Skill- und Feat-Auswahl ist jetzt begrenzt, erklaert und systemnah.')}
+      `)}
       <div class="split-shell">
         ${panel('Skills Reference', `<div class="guide-card">${selectedSkillSet().slice(0, 6).map((skill) => `<div class="summary-chip">${skill}: ${SKILL_DESCRIPTIONS[skill] || 'No description mapped yet.'}</div>`).join('') || '<div class="empty-state compact">Waehle Skills, um ihre Funktion zu sehen.</div>'}</div>`)}
         ${featPreview ? referencePanel(`Feat Reference: ${c.build.feats[0]}`, featPreview, 'Customization') : referencePanel('Feat Rules', handbookPage('Customization', 'Feats'), 'Customization')}
@@ -1946,7 +1966,7 @@ function renderBuilder() {
             </div>
           </div>
         </div>
-      `, 'Die Regeln liefern die Equipment-Kapitel, aber keine sauber extrahierbaren klassenweisen Startpakete. Diese Presets bleiben deshalb praktische Vorlagen und koennen ueber Gewicht und Notizen angepasst werden.')}
+      `)}
       <div class="split-shell">
         ${panel('Package Breakdown', `
           <div class="guide-card">
@@ -1976,10 +1996,6 @@ function renderBuilder() {
     const preview = currentMagicPreview();
     const choicesPane = activeMagicLists.length ? `
       <div class="stack">
-        <div class="guide-card compact">
-          <div class="eyebrow">Was du hier waehlen sollst</div>
-          <p class="muted">Waehle aus jeder freigeschalteten Liste die Spells oder Maneuvers, die dein Charakter auf dieser Stufe wirklich kennt. Das Studio zeigt nur Eintraege, die fuer Klasse, Subclass, Tier, Lore und Level legal sind.</p>
-        </div>
         ${magicAccess().elemental ? `
           <div class="guide-card">
             <div class="eyebrow">Elemental Access</div>
@@ -2022,7 +2038,7 @@ function renderBuilder() {
         </div>
         <div class="mobile-panel ${state.magicMobilePanel === 'choices' ? 'active' : ''}">${choicesPane}</div>
         <div class="mobile-panel ${state.magicMobilePanel === 'preview' ? 'active' : ''}">${previewPane('mobile')}</div>
-      `, 'Waehle hier die legalen Spells und Maneuvers fuer den aktuellen Charakterstand.')}
+      `)}
       <div class="desktop-only">${previewPane('desktop')}</div>
     `;
   } else if (step === 'notes') {
@@ -2037,7 +2053,7 @@ function renderBuilder() {
       <div class="export-actions">
         <button class="primary-btn" id="finishExportBtn">Fertig & PDF exportieren</button>
       </div>
-    `, 'Nur freie Abschlussnotizen bleiben hier uebrig.');
+    `);
   }
 
   return `
@@ -2079,7 +2095,7 @@ function renderCompendium() {
         <label class="search-box"><span>Suchen</span><input id="searchInput" value="${state.search}" placeholder="Spell, class, condition ..."></label>
         <div class="guide-card compact">
           <div class="eyebrow">Navigation</div>
-          <p class="muted">${state.search ? `Suche aktiv: ${visibleItems.length} Treffer ueber alle Sektionen.` : `${currentPages.length} nutzbare Eintraege in ${state.selectedSection}. OneNote-Abgleich eingearbeitet.`}</p>
+          <p class="muted">${state.search ? `Suche aktiv: ${visibleItems.length} Treffer ueber alle Sektionen.` : `${currentPages.length} Eintraege in ${state.selectedSection}.`}</p>
         </div>
         <div class="filter-list">
           ${sections.map((section) => `<button class="filter-btn ${section === state.selectedSection ? 'active' : ''}" data-section="${section}">${section}</button>`).join('')}
@@ -2107,7 +2123,7 @@ function renderCompendium() {
                 ${contentBlocks.map((block) => `
                   <section class="reader-block" id="${block.anchorId}">
                     <h3>${escapeHtml(block.title)}</h3>
-                    ${block.body ? `<pre>${escapeHtml(block.body)}</pre>` : ''}
+                    ${block.body ? renderCompendiumBlockBody(block.body) : ''}
                   </section>
                 `).join('')}
               </div>
@@ -2204,7 +2220,7 @@ function render() {
           <div>
             <div class="eyebrow">D&D-inspired P&P Builder</div>
             <h2>SoaNW Character Studio</h2>
-            <p class="muted">Vervollstaendigter Builder, gegengeprueftes Compendium und PDF-Workflow auf Basis der OneNote-Abschnitte aus dem Sagaofanewworld-Handbook. Der Character Builder und das Compendium sind damit vollstaendig und nutzbar.</p>
+            <p class="muted">Character Builder, Compendium und PDF-Export fuer Saga of a New World.</p>
             <div class="summary-row hero-chips">
               <div class="summary-chip">Level ${c.profile.level}</div>
               <div class="summary-chip">${c.profile.className}${c.profile.subclass ? ` / ${c.profile.subclass}` : ''}</div>
@@ -3030,7 +3046,7 @@ function injectStyles() {
     .pill-grid{display:flex;flex-wrap:wrap;gap:8px}.pill,.filter-btn,.page-btn,.wizard-step,.ghost-btn,.mini-link,.summary-chip.interactive{padding:10px 12px;color:var(--text);cursor:pointer}.pill.active,.filter-btn.active,.page-btn.active,.wizard-step.active,.choice-card.active{background:linear-gradient(135deg,#7fd1ff,#b4e7ff);color:var(--ink)}.summary-chip.interactive{text-align:left;border:1px solid var(--line)}.summary-chip.interactive:hover,.summary-chip.interactive:focus{background:rgba(127,209,255,.16)}
     .wizard-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;position:sticky;top:24px;z-index:4}.wizard-step{display:flex;align-items:center;gap:12px;text-align:left;border-radius:22px;background:rgba(255,255,255,.04)}.wizard-step.done{box-shadow:inset 0 0 0 1px rgba(240,195,108,.35)}.wizard-step span{display:grid;place-items:center;min-width:30px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.08)}.wizard-step small{display:block;color:inherit;opacity:.72}.wizard-nav{display:flex;justify-content:space-between;gap:12px}.reader-text.compact{max-height:360px}
     .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}.spell-preview-card{display:grid;gap:12px}.reader-text.inline{max-height:320px;margin-top:0;padding:14px}.preview-window{border:1px solid rgba(127,209,255,.18);border-radius:22px;background:linear-gradient(180deg,rgba(26,23,38,.98),rgba(18,16,28,.95));box-shadow:0 18px 50px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.04)}.preview-window-bar{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.preview-window-bar span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.16)}.preview-window-bar span:nth-child(1){background:#f08b6c}.preview-window-bar span:nth-child(2){background:#f0c36c}.preview-window-bar span:nth-child(3){background:#7fd1ff}.preview-window-body{padding:16px;display:grid;gap:12px}.loadout-add-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.removable-chip{display:inline-flex;align-items:center;gap:8px}
-    .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.compendium-sidebar{position:sticky;top:24px}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.page-btn{display:grid;gap:4px;text-align:left}.page-btn small{color:inherit;opacity:.72;line-height:1.35}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-column{display:grid;gap:12px;align-content:start}.compendium-anchor-bar{position:sticky;top:24px;z-index:3}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto;max-height:72vh;scroll-behavior:smooth}.reader-text.structured{display:grid;gap:18px;white-space:normal}.reader-block{display:grid;gap:10px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.08)}.reader-block:last-child{border-bottom:none;padding-bottom:0}.reader-block h3{font-size:1rem;color:var(--accent)}.reader-block pre{margin:0;white-space:pre-wrap;font-family:Georgia,serif;line-height:1.62}.compendium-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}.compendium-aside{display:grid;gap:12px}
+    .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.compendium-sidebar{position:sticky;top:24px}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.page-btn{display:grid;gap:4px;text-align:left}.page-btn small{color:inherit;opacity:.72;line-height:1.35}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-column{display:grid;gap:12px;align-content:start}.compendium-anchor-bar{position:sticky;top:24px;z-index:3}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto;max-height:72vh;scroll-behavior:smooth}.reader-text.structured{display:grid;gap:18px;white-space:normal}.reader-block{display:grid;gap:12px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.08)}.reader-block:last-child{border-bottom:none;padding-bottom:0}.reader-block h3{font-size:1rem;color:var(--accent)}.reader-block p{margin:0;line-height:1.65}.compendium-meta{display:grid;gap:8px;margin-bottom:4px}.compendium-meta div{display:flex;justify-content:space-between;gap:12px;padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.04)}.compendium-meta span{color:var(--muted);font-size:.82rem}.compendium-meta strong{text-align:right}.compendium-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}.compendium-aside{display:grid;gap:12px}
     .export-actions{display:flex;gap:12px;flex-wrap:wrap}.primary-btn,.upload-btn{padding:14px 18px;font-weight:700;cursor:pointer}.upload-btn input{display:none}.notes{margin:0;padding-left:18px;display:grid;gap:8px}.empty-state{padding:28px;border-radius:22px;background:rgba(255,255,255,.04);color:var(--muted)}.hidden{display:none!important}
     .mobile-panel-switch{display:none}.mobile-panel{display:block}.desktop-only{display:block}
     @media (max-width:1180px){.studio-shell,.compendium-shell,.form-grid.two,.form-grid.three,.ability-grid,.split-shell,.choice-grid,.wizard-strip,.compendium-layout,.loadout-add-row{grid-template-columns:1fr}.main-column{order:1}.left-rail{order:2}.summary-card.sticky,.wizard-strip,.compendium-sidebar,.compendium-anchor-bar{position:static}.hero,.wizard-nav{flex-direction:column;align-items:flex-start}.reader-text{max-height:none}}
