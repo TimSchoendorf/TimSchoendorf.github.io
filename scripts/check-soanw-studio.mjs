@@ -306,14 +306,14 @@ async function assertLevelScaling(browser) {
     await page.locator(`[data-field="abilities.${field}"]`).fill(String(value));
   }
   const levelOneStats = await page.locator('.summary-stats').textContent();
-  if (!/Proficiency\+2/i.test(levelOneStats || '') || !/HP10/i.test(levelOneStats || '') || !/Vitality14/i.test(levelOneStats || '')) {
+  if (!/Proficiency\+2/i.test(levelOneStats || '') || !/HP16/i.test(levelOneStats || '') || !/Vitality23/i.test(levelOneStats || '')) {
     throw new Error(`Unexpected level 1 scaling stats: ${levelOneStats}`);
   }
   await page.locator('[data-step="profile"]').click();
   await page.locator('[data-field="profile.level"]').fill('5');
   await page.waitForTimeout(250);
   const levelFiveStats = await page.locator('.summary-stats').textContent();
-  if (!/Proficiency\+3/i.test(levelFiveStats || '') || !/HP34/i.test(levelFiveStats || '') || !/Vitality50/i.test(levelFiveStats || '')) {
+  if (!/Proficiency\+3/i.test(levelFiveStats || '') || !/HP40/i.test(levelFiveStats || '') || !/Vitality59/i.test(levelFiveStats || '')) {
     throw new Error(`Unexpected level 5 scaling stats: ${levelFiveStats}`);
   }
   await context.close();
@@ -338,7 +338,7 @@ async function assertAcquiredSpeciesRules(browser) {
     await page.locator(`[data-field="abilities.${field}"]`).fill(String(value));
   }
   const changelingStats = await page.locator('.summary-stats').textContent();
-  if (!/HP34/i.test(changelingStats || '') || !/Vitality35/i.test(changelingStats || '')) {
+  if (!/HP40/i.test(changelingStats || '') || !/Vitality41/i.test(changelingStats || '')) {
     throw new Error(`Changeling did not retain base Human HP/Vitality: ${changelingStats}`);
   }
   await openStep(page, 'species');
@@ -347,7 +347,7 @@ async function assertAcquiredSpeciesRules(browser) {
   await page.locator('[data-choose-field="profile.acquiredSpecies"][data-choose-value="Wildling"]').click();
   await openStep(page, 'abilities');
   const wildlingStats = await page.locator('.summary-stats').textContent();
-  if (!/HP34/i.test(wildlingStats || '') || !/Vitality29/i.test(wildlingStats || '')) {
+  if (!/HP40/i.test(wildlingStats || '') || !/Vitality34/i.test(wildlingStats || '')) {
     throw new Error(`Wildling did not retain base Elf HP/Vitality: ${wildlingStats}`);
   }
   const abilitySummary = await page.locator('.ability-summary').textContent();

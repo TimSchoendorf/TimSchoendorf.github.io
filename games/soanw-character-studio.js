@@ -760,14 +760,14 @@ function hitPoints() {
   const species = selectedBaseSpeciesData();
   const con = mod(finalAbilityScore('con'));
   const level = Number(state.character.profile.level || 1);
-  return Math.max(1, Number(species?.hpBase || 5) + con + Math.max(0, level - 1) * (Number(species?.hpPer || 5) + con));
+  return Math.max(1, Number(species?.hpBase || 5) + con + Math.max(0, level) * (Number(species?.hpPer || 5) + con));
 }
 
 function vitalityPoints() {
   const species = selectedBaseSpeciesData();
   const level = Number(state.character.profile.level || 1);
   const bonus = vitalityBonusProfile();
-  return Math.max(1, Number(species?.vitalityBase || 10) + Number(bonus.start || 0) + Math.max(0, level - 1) * (Number(species?.vitalityPer || 5) + Number(bonus.perLevel || 0)) - magicVitalityTax());
+  return Math.max(1, Number(species?.vitalityBase || 10) + Number(bonus.start || 0) + Math.max(0, level) * (Number(species?.vitalityPer || 5) + Number(bonus.perLevel || 0)) - magicVitalityTax());
 }
 
 function hitPointFormulaText() {
