@@ -372,6 +372,11 @@ const LOADOUT_PACKAGES = {
   'Coven Kit': {weight: 4, armorBase: 1, items: ['formula book', 'tools', 'cloak', 'rations']},
   'Alchemy Kit': {weight: 5, armorBase: 1, items: ['alchemy set', 'knife', 'satchel', 'rations']},
 };
+const LOADOUT_ITEM_LIBRARY = [...new Set([
+  ...Object.values(LOADOUT_PACKAGES).flatMap((pkg) => pkg.items),
+  'ammo', 'bandages', 'bedroll', 'canteen', 'cloak', 'compass', 'crowbar', 'focus', 'grenade', 'journal', 'lock tools',
+  'map', 'medkit', 'potion', 'rations', 'rope', 'satchel', 'shield', 'tool kit', 'torch', 'waterskin', 'whetstone',
+])].sort((a, b) => a.localeCompare(b));
 
 const state = {
   tab: 'builder',
@@ -391,7 +396,7 @@ function defaultCharacter() {
     abilities: {str: 8, dex: 8, con: 8, int: 8, wis: 8, cha: 8},
     proficiencies: {skills: []},
     build: {feats: []},
-    loadout: {package: 'Soldier Kit', extraWeight: 0, notes: '', money: ''},
+    loadout: {package: 'Soldier Kit', extraWeight: 0, notes: '', money: '', customItems: [], itemToAdd: ''},
     magic: {arias: [], divine: [], elemental: [], wild: [], witchcraft: [], maneuvers: [], notes: ''},
     notes: {appearance: '', backstory: '', allies: '', goals: '', misc: ''},
   };
@@ -447,7 +452,7 @@ function normalizeTitle(value) {
 }
 
 function cleanLabel(value) {
-  return String(value || '').replace(/[\s_-]+$/g, '').trim();
+  return String(value || '').replace(/_/g, ' ').replace(/\s+/g, ' ').replace(/[\s-]+$/g, '').trim();
 }
 
 function handbookSection(sectionName) {
@@ -762,6 +767,10 @@ function featSlots() {
 
 function selectedPackage() {
   return LOADOUT_PACKAGES[state.character.loadout.package] || null;
+}
+
+function selectedLoadoutItems() {
+  return [...(selectedPackage()?.items || []), ...(state.character.loadout.customItems || [])];
 }
 
 function carryLimit() {
@@ -1847,6 +1856,8 @@ function renderBuilder() {
     `;
   } else if (step === 'loadout') {
     const packageOptions = classRule.loadouts || [];
+    const loadoutItems = selectedLoadoutItems();
+    const customItems = c.loadout.customItems || [];
     body = `
       ${panel('Step 6 - Loadout', `
         <div class="stack">
@@ -1857,7 +1868,7 @@ function renderBuilder() {
           <div class="split-shell">
             <div class="guide-card">
               <h3>${c.loadout.package}</h3>
-              <p class="muted">${selectedPackage()?.items.join(', ') || ''}</p>
+              <p class="muted">${loadoutItems.join(', ') || ''}</p>
               <div class="stat-table">
                 <div><span>Encumbrance</span><strong>${encumbrance()}</strong></div>
                 <div><span>Carry Limit</span><strong>${carryLimit()}</strong></div>
@@ -1865,7 +1876,24 @@ function renderBuilder() {
               </div>
             </div>
             <div class="stack">
+              <label><span>Scrap</span><input type="number" min="0" step="1" data-field="loadout.money" value="${escapeHtml(c.loadout.money || '')}" placeholder="0"></label>
               <label><span>Extra Weight</span><input type="number" min="0" step="1" data-field="loadout.extraWeight" value="${c.loadout.extraWeight}"></label>
+              <div class="guide-card">
+                <div class="eyebrow">Add Individual Item</div>
+                <div class="loadout-add-row">
+                  <label class="full">
+                    <span>Item Name</span>
+                    <input list="loadoutItemLibrary" data-field="loadout.itemToAdd" value="${escapeHtml(c.loadout.itemToAdd || '')}" placeholder="e.g. rope, shield, medkit">
+                  </label>
+                  <button class="ghost-btn" type="button" data-loadout-add="${escapeHtml(c.loadout.itemToAdd || '')}">Add Item</button>
+                </div>
+                <datalist id="loadoutItemLibrary">${LOADOUT_ITEM_LIBRARY.map((item) => `<option value="${escapeHtml(item)}"></option>`).join('')}</datalist>
+                <div class="mini-list">
+                  ${customItems.length
+                    ? customItems.map((item) => `<button class="summary-chip interactive removable-chip" type="button" data-loadout-remove="${escapeHtml(item)}">${escapeHtml(item)} <span aria-hidden="true">x</span></button>`).join('')
+                    : '<div class="empty-state compact">Noch keine individuellen Items hinzugefuegt.</div>'}
+                </div>
+              </div>
               <label><span>Additions / Notes</span><textarea data-field="loadout.notes">${c.loadout.notes}</textarea></label>
             </div>
           </div>
@@ -1875,17 +1903,19 @@ function renderBuilder() {
         ${panel('Package Breakdown', `
           <div class="guide-card">
             <div class="eyebrow">Included Items</div>
-            <div class="mini-list">${(selectedPackage()?.items || []).map((item) => `<div class="summary-chip">${item}</div>`).join('')}</div>
+            <div class="mini-list">${loadoutItems.map((item) => `<div class="summary-chip">${escapeHtml(item)}</div>`).join('') || '<div class="empty-state compact">Keine Items im aktuellen Loadout.</div>'}</div>
             <div class="eyebrow">Relevant Chapters</div>
             <div class="mini-list">${EQUIPMENT_REFERENCES.map((title) => `<button class="mini-link" data-open-section="Equipment" data-open-page="${title}">${title}</button>`).join('')}</div>
           </div>
         `)}
         ${panel('Loadout Notes', `
           <div class="guide-card">
-            <p class="muted">Die Share-Ansicht der Equipment-Unterseiten ist ungleichmaessig. Statt leerer Reader werden hier die Paketinhalte und direkte Kapitel-Links gezeigt.</p>
+            <p class="muted">Die Share-Ansicht der Equipment-Unterseiten ist ungleichmaessig. Statt leerer Reader werden hier die Paketinhalte, individuelle Zusaetze und direkte Kapitel-Links gezeigt.</p>
             <div class="stat-table">
               <div><span>Package Weight</span><strong>${selectedPackage()?.weight || 0}</strong></div>
               <div><span>Armor Added</span><strong>+${selectedPackage()?.armorBase || 0}</strong></div>
+              <div><span>Custom Items</span><strong>${customItems.length}</strong></div>
+              <div><span>Scrap Carried</span><strong>${c.loadout.money || 0}</strong></div>
             </div>
           </div>
         `)}
@@ -2164,6 +2194,17 @@ function toggleArrayValue(path, value) {
   target[keys[0]] = [...arr, value];
 }
 
+function addLoadoutItem(item) {
+  const normalized = cleanLabel(item);
+  if (!normalized) return;
+  state.character.loadout.customItems = [...new Set([...(state.character.loadout.customItems || []), normalized])];
+  state.character.loadout.itemToAdd = '';
+}
+
+function removeLoadoutItem(item) {
+  state.character.loadout.customItems = (state.character.loadout.customItems || []).filter((entry) => entry !== item);
+}
+
 function applyFieldChange(path, value) {
   if (path.startsWith('abilities.')) {
     const spentWithout = pointBuySpent() - (POINT_BUY_COST[Number(state.character.abilities[path.split('.')[1]] || 8)] || 0);
@@ -2316,13 +2357,14 @@ function equipmentSlotMap(items) {
   const remaining = [];
   for (const item of items) {
     const lower = item.toLowerCase();
-    if (!values.ARMOR && /armor|vest|coat|jacket|robe|suit|mail|plate|shield/.test(lower)) values.ARMOR = item;
-    else if (!values.HEAD && /helmet|hood|hat|mask|goggles|glasses/.test(lower)) values.HEAD = item;
-    else if (!values.BOOTS && /boots|shoes/.test(lower)) values.BOOTS = item;
-    else if (!values.CLOAK && /cloak|cape/.test(lower)) values.CLOAK = item;
-    else if (!values['RIGHT HAND'] && /sword|axe|mace|staff|wand|bow|gun|pistol|rifle|shield|blade|knife/.test(lower)) values['RIGHT HAND'] = item;
-    else if (!values['LEFT HAND'] && /torch|focus|wand|dagger|knife|potion|kit/.test(lower)) values['LEFT HAND'] = item;
-    else remaining.push(item);
+    const label = cleanLabel(item);
+    if (!values.ARMOR && /armor|vest|coat|jacket|robe|suit|mail|plate|shield/.test(lower)) values.ARMOR = label;
+    else if (!values.HEAD && /helmet|hood|hat|mask|goggles|glasses/.test(lower)) values.HEAD = label;
+    else if (!values.BOOTS && /boots|shoes/.test(lower)) values.BOOTS = label;
+    else if (!values.CLOAK && /cloak|cape/.test(lower)) values.CLOAK = label;
+    else if (!values['RIGHT HAND'] && /sword|axe|mace|staff|wand|bow|gun|pistol|rifle|shield|blade|knife/.test(lower)) values['RIGHT HAND'] = label;
+    else if (!values['LEFT HAND'] && /torch|focus|wand|dagger|knife|potion|kit/.test(lower)) values['LEFT HAND'] = label;
+    else remaining.push(label);
   }
   values.BACKPACK = remaining.slice(0, 2).join(', ');
   values['QUICK ACCESS 1'] = remaining[2] || '';
@@ -2439,9 +2481,9 @@ async function exportPdf() {
   const payload = btoa(unescape(encodeURIComponent(JSON.stringify(state.character))));
   const selectedSkills = selectedSkillSet();
   const speciesData = selectedSpeciesData();
-  const packageItems = selectedPackage()?.items || [];
+  const packageItems = selectedLoadoutItems();
   const loadoutSlots = equipmentSlotMap(packageItems);
-  const inventoryRows = splitInventoryRows(packageItems, c.loadout.notes);
+  const inventoryRows = splitInventoryRows(packageItems.map(cleanLabel), c.loadout.notes);
   const maneuverRows = c.magic.maneuvers.map((title) => {
     const page = spellPageRecord('maneuvers', title);
     const context = spellContextForTitle('maneuvers', title);
@@ -2642,7 +2684,7 @@ async function exportPdf() {
     `Magic: ${knownMagicEntries().map((entry) => cleanLabel(entry.title)).slice(0, 8).join(', ') || '-'}`,
     `Maneuvers: ${c.magic.maneuvers.map(cleanLabel).slice(0, 6).join(', ') || '-'}`,
   ].filter(Boolean).join('\n\n'));
-  drawTextField('Inventory', [`Package: ${c.loadout.package || '-'}`, ...packageItems, c.loadout.notes ? `Extra: ${c.loadout.notes}` : ''].filter(Boolean).join('\n'));
+  drawTextField('Inventory', [`Package: ${c.loadout.package || '-'}`, ...packageItems.map(cleanLabel), c.loadout.notes ? `Extra: ${c.loadout.notes}` : ''].filter(Boolean).join('\n'));
   drawTextField('Current Encumberment', encumbrance());
   drawTextField('Maximum Encumberment', carryLimit());
   drawTextField('Rations', rationCount(packageItems, c.loadout.notes) || '');
@@ -2811,6 +2853,16 @@ function bindEvents() {
   });
   document.getElementById('exportPdfBtn')?.addEventListener('click', runPdfExport);
   document.getElementById('finishExportBtn')?.addEventListener('click', runPdfExport);
+  document.querySelectorAll('[data-loadout-add]').forEach((button) => button.addEventListener('click', () => {
+    addLoadoutItem(state.character.loadout.itemToAdd || button.dataset.loadoutAdd || '');
+    saveState();
+    render();
+  }));
+  document.querySelectorAll('[data-loadout-remove]').forEach((button) => button.addEventListener('click', () => {
+    removeLoadoutItem(button.dataset.loadoutRemove || '');
+    saveState();
+    render();
+  }));
   document.getElementById('importPdfInput')?.addEventListener('change', async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -2875,17 +2927,17 @@ function injectStyles() {
   style.textContent = `
     :root{--bg:#11111a;--bg2:#201924;--panel:#191622;--soft:#221d2b;--line:rgba(255,255,255,.11);--text:#f8f4ef;--muted:#b9afbf;--accent:#f0c36c;--accent2:#7fd1ff;--ink:#211923}
     *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:"Segoe UI",system-ui,sans-serif;background:radial-gradient(circle at top left,rgba(127,209,255,.16),transparent 24%),radial-gradient(circle at bottom right,rgba(240,195,108,.14),transparent 26%),linear-gradient(180deg,#100f18,#1b1420 52%,#120f18);color:var(--text);padding:24px}button,input,select,textarea{font:inherit}
-    .studio-shell{width:min(1480px,100%);margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px}.left-rail{display:grid;align-content:start}.summary-card,.panel,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn,.choice-card,.ghost-btn,.wizard-step,.guide-card,.search-box{border:1px solid var(--line);border-radius:24px;background:rgba(25,22,34,.82);backdrop-filter:blur(14px)}.summary-card.sticky{position:static;padding:20px}.back-link{text-decoration:none;display:inline-flex;margin-bottom:14px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--text)}h1,h2,h3{margin:0}.muted{color:var(--muted)}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.78rem;color:var(--accent)}
+    .studio-shell{width:min(1480px,100%);margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px}.left-rail{display:grid;align-content:start}.summary-card,.panel,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn,.choice-card,.ghost-btn,.wizard-step,.guide-card,.search-box{border:1px solid var(--line);border-radius:24px;background:rgba(25,22,34,.82);backdrop-filter:blur(14px)}.summary-card.sticky{position:sticky;top:24px;padding:20px}.back-link{text-decoration:none;display:inline-flex;margin-bottom:14px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--text)}h1,h2,h3{margin:0}.muted{color:var(--muted)}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.78rem;color:var(--accent)}
     .summary-stats,.ability-summary{display:grid;gap:10px}.summary-stats{grid-template-columns:repeat(2,1fr);margin:18px 0}.summary-stats div,.ability-summary div,.summary-chip,.summary-pill{padding:12px;border-radius:18px;background:rgba(255,255,255,.04)}.summary-chip.wide{width:100%;line-height:1.45;white-space:pre-wrap}.summary-chip.success{background:rgba(127,209,255,.18);color:var(--text)}.summary-chip.warning{background:rgba(240,195,108,.16);color:var(--text)}.summary-stats span,.ability-summary span{display:block;color:var(--muted);font-size:.78rem}.ability-summary{grid-template-columns:repeat(3,1fr);margin-bottom:14px}.ability-summary strong{display:block;font-size:1.1rem}.ability-summary small{color:var(--accent2)}.summary-section-label{margin:6px 0 10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}.summary-foot{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);margin-top:12px}.skill-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:0}.skill-column{display:grid;gap:8px}.skill-summary-item{padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.04);display:flex;justify-content:space-between;gap:10px;align-items:center}.skill-summary-item span{font-size:.82rem;color:var(--muted);line-height:1.2}.skill-summary-item strong{font-size:.95rem}.skill-summary-item.active{background:rgba(127,209,255,.14);box-shadow:inset 0 0 0 1px rgba(127,209,255,.3)}
     .main-column{display:grid;gap:18px}.hero{padding:18px;display:flex;justify-content:space-between;gap:18px;align-items:end}.tab-row{display:flex;gap:10px;flex-wrap:wrap}.tab-btn{padding:12px 16px;color:var(--text);cursor:pointer}.tab-btn.active,.primary-btn,.upload-btn{background:linear-gradient(135deg,#f0c36c,#ffdd96);color:var(--ink)}.tab-btn.disabled{opacity:.45;cursor:default}
     .panel{padding:18px;display:grid;gap:16px}.panel.soft{background:rgba(255,255,255,.04)}.panel-head{display:flex;justify-content:space-between;gap:12px}.form-grid{display:grid;gap:14px}.form-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}label{display:grid;gap:8px}label.full{grid-column:1/-1}input,select,textarea{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text)}textarea{min-height:112px;resize:vertical}
     .ability-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}.ability-card{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.ability-card strong{font-size:1.4rem}.summary-row{display:flex;gap:10px;flex-wrap:wrap}.summary-chip{color:var(--text)}
     .pill-grid{display:flex;flex-wrap:wrap;gap:8px}.pill,.filter-btn,.page-btn,.wizard-step,.ghost-btn,.mini-link,.summary-chip.interactive{padding:10px 12px;color:var(--text);cursor:pointer}.pill.active,.filter-btn.active,.page-btn.active,.wizard-step.active,.choice-card.active{background:linear-gradient(135deg,#7fd1ff,#b4e7ff);color:var(--ink)}.summary-chip.interactive{text-align:left;border:1px solid var(--line)}.summary-chip.interactive:hover,.summary-chip.interactive:focus{background:rgba(127,209,255,.16)}
     .wizard-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.wizard-step{display:flex;align-items:center;gap:12px;text-align:left;border-radius:22px;background:rgba(255,255,255,.04)}.wizard-step.done{box-shadow:inset 0 0 0 1px rgba(240,195,108,.35)}.wizard-step span{display:grid;place-items:center;min-width:30px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.08)}.wizard-step small{display:block;color:inherit;opacity:.72}.wizard-nav{display:flex;justify-content:space-between;gap:12px}.reader-text.compact{max-height:360px}
-    .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}.spell-preview-card{display:grid;gap:12px}.reader-text.inline{max-height:320px;margin-top:0;padding:14px}.preview-window{border:1px solid rgba(127,209,255,.18);border-radius:22px;background:linear-gradient(180deg,rgba(26,23,38,.98),rgba(18,16,28,.95));box-shadow:0 18px 50px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.04)}.preview-window-bar{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.preview-window-bar span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.16)}.preview-window-bar span:nth-child(1){background:#f08b6c}.preview-window-bar span:nth-child(2){background:#f0c36c}.preview-window-bar span:nth-child(3){background:#7fd1ff}.preview-window-body{padding:16px;display:grid;gap:12px}
+    .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}.spell-preview-card{display:grid;gap:12px}.reader-text.inline{max-height:320px;margin-top:0;padding:14px}.preview-window{border:1px solid rgba(127,209,255,.18);border-radius:22px;background:linear-gradient(180deg,rgba(26,23,38,.98),rgba(18,16,28,.95));box-shadow:0 18px 50px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.04)}.preview-window-bar{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.preview-window-bar span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.16)}.preview-window-bar span:nth-child(1){background:#f08b6c}.preview-window-bar span:nth-child(2){background:#f0c36c}.preview-window-bar span:nth-child(3){background:#7fd1ff}.preview-window-body{padding:16px;display:grid;gap:12px}.loadout-add-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.removable-chip{display:inline-flex;align-items:center;gap:8px}
     .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.page-btn{display:grid;gap:4px;text-align:left}.page-btn small{color:inherit;opacity:.72;line-height:1.35}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto}.compendium-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}.compendium-aside{display:grid;gap:12px}
     .export-actions{display:flex;gap:12px;flex-wrap:wrap}.primary-btn,.upload-btn{padding:14px 18px;font-weight:700;cursor:pointer}.upload-btn input{display:none}.notes{margin:0;padding-left:18px;display:grid;gap:8px}.empty-state{padding:28px;border-radius:22px;background:rgba(255,255,255,.04);color:var(--muted)}.hidden{display:none!important}
-    @media (max-width:1180px){.studio-shell,.compendium-shell,.form-grid.two,.form-grid.three,.ability-grid,.split-shell,.choice-grid,.wizard-strip,.compendium-layout{grid-template-columns:1fr}.left-rail{order:1}.main-column{order:2}.summary-card.sticky{position:static}.hero,.wizard-nav{flex-direction:column;align-items:flex-start}}
+    @media (max-width:1180px){.studio-shell,.compendium-shell,.form-grid.two,.form-grid.three,.ability-grid,.split-shell,.choice-grid,.wizard-strip,.compendium-layout,.loadout-add-row{grid-template-columns:1fr}.main-column{order:1}.left-rail{order:2}.summary-card.sticky{position:static}.hero,.wizard-nav{flex-direction:column;align-items:flex-start}}
     @media (max-width:720px){body{padding:16px}.summary-stats,.ability-summary,.skill-columns{grid-template-columns:1fr}.panel,.summary-card.sticky,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn{border-radius:18px}}
   `;
   document.head.appendChild(style);
