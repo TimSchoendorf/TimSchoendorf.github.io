@@ -67,8 +67,13 @@ const SKILL_TO_ABILITY = {
   Driving: 'dex',
   Explosives: 'int',
 };
-const SPECIES = ['Dwarf', 'Elf', 'Giant', 'Human', 'Half-Humans', 'Harpy', 'Fairy', 'Kobold', 'Merfolk', 'Wildling', 'Changeling', 'Lizardfolk'];
-const ACQUIRED_SPECIES = ['None', 'Wildling', 'Changeling', 'Lizardfolk', 'Template', 'Acquired Species'];
+const SPECIES = ['Dwarf', 'Elf', 'Giant', 'Human', 'Half-Humans', 'Harpy', 'Fairy', 'Kobold', 'Merfolk'];
+const ACQUIRED_SPECIES = ['None', 'Wildling', 'Changeling', 'Lizardfolk'];
+const ACQUIRED_SPECIES_RULES = {
+  Wildling: {inheritsCoreStats: true, addsAbilityBonuses: true, addsAutomaticSkills: true, keepsBaseTraits: true},
+  Changeling: {inheritsCoreStats: true, addsAbilityBonuses: false, addsAutomaticSkills: false, keepsBaseTraits: false},
+  Lizardfolk: {inheritsCoreStats: true, addsAbilityBonuses: true, addsAutomaticSkills: true, keepsBaseTraits: true},
+};
 const CLASSES = ['Barbarian', 'Bard', 'Druid', 'Fighter', 'Mage', 'Monk', 'Paladin', 'Prophet', 'Ranger', 'Rogue', 'Sorcerer', 'Witch'];
 const SUBCLASS_MAP = {
   Barbarian: ['Way of the Berserker', 'Way of the War Crier'],
@@ -207,7 +212,7 @@ const SPECIES_OPTIONS = {
     {name: 'Kobold', abilities: {dex: 2}, baseAc: 12, speed: 10, hpBase: 7, hpPer: 4, vitalityBase: 7, vitalityPer: 4, carryMultiplier: 2, autoSkills: [], feats: ['Keen Senses', 'Light Build', 'Scavenger'], summary: 'Small, quick and skittish scavenger with sharp senses and excellent survivability for its size.'},
   ],
   Merfolk: [
-    {name: 'Merfolk', abilities: {dex: 2, wis: 1}, baseAc: 10, speed: 8, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Amphibious', 'Echolocation', 'Water Acclimation'], summary: 'Amphibious, adaptable swimmer with strong mobility in and out of water and keen aquatic senses.'},
+    {name: 'Merfolk', abilities: {dex: 2, wis: 1}, baseAc: 10, speed: 8, hpBase: 5, hpPer: 5, vitalityBase: 9, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Amphibious', 'Echolocation', 'Water Acclimation'], summary: 'Amphibious, adaptable swimmer with strong mobility in and out of water and keen aquatic senses.'},
   ],
   Wildling: [
     {name: 'Wildling', abilities: {wis: 1, dex: 1}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Wild Speech', 'Darkvision', 'Wild Blessing'], summary: 'Wild-magic hybrid layered over a base species, defined by horns, tails, blessings and deep attunement to nature.'},
@@ -220,18 +225,18 @@ const SPECIES_OPTIONS = {
   ],
 };
 const CLASS_RULES = {
-  Barbarian: {description: 'Front-line bruiser with rage, durability and heavy physical pressure.', skillChoices: 2, skillList: ['Athletics', 'Animal Handling', 'Intimidation', 'Nature', 'Perception', 'Survival', 'Acrobatics'], hpBonus: 3, vitalityBonus: 0, spellMode: 'none', maneuverMode: 'martial', loadouts: ['Raider Kit', 'Survival Kit']},
-  Bard: {description: 'Performance-focused support caster with dialogue and aria control.', skillChoices: 3, skillList: ['Acrobatics', 'Arcana', 'Deception', 'History', 'Insight', 'Investigation', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand'], hpBonus: 1, vitalityBonus: 2, spellMode: 'full', maneuverMode: 'none', loadouts: ['Performer Kit', 'Diplomat Kit']},
-  Druid: {description: 'Wild caster with nature support, survival tools and beast synergy.', skillChoices: 2, skillList: ['Animal Handling', 'Arcana', 'Insight', 'Medicine', 'Nature', 'Perception', 'Religion', 'Survival'], hpBonus: 1, vitalityBonus: 2, spellMode: 'full', maneuverMode: 'none', loadouts: ['Warden Kit', 'Forager Kit']},
-  Fighter: {description: 'Flexible martial specialist with weapons, discipline and pressure.', skillChoices: 2, skillList: ['Acrobatics', 'Animal Handling', 'Athletics', 'History', 'Insight', 'Intimidation', 'Perception', 'Survival', 'Driving'], hpBonus: 2, vitalityBonus: 0, spellMode: 'none', maneuverMode: 'martial', loadouts: ['Soldier Kit', 'Skirmisher Kit']},
-  Mage: {description: 'Dedicated elemental caster built around lore choice and spell throughput.', skillChoices: 2, skillList: ['Arcana', 'History', 'Insight', 'Investigation', 'Medicine', 'Nature', 'Religion', 'Science'], hpBonus: 0, vitalityBonus: 3, spellMode: 'full', maneuverMode: 'none', loadouts: ['Scholar Kit', 'Path Kit']},
-  Monk: {description: 'Mobile unarmored combatant with focus, reactions and maneuvers.', skillChoices: 2, skillList: ['Acrobatics', 'Athletics', 'History', 'Insight', 'Medicine', 'Perception', 'Religion', 'Stealth'], hpBonus: 1, vitalityBonus: 1, spellMode: 'none', maneuverMode: 'martial', loadouts: ['Pilgrim Kit', 'Pursuer Kit']},
-  Paladin: {description: 'Durable divine front-liner mixing weapon pressure and holy techniques.', skillChoices: 2, skillList: ['Athletics', 'History', 'Insight', 'Intimidation', 'Medicine', 'Persuasion', 'Religion'], hpBonus: 2, vitalityBonus: 1, spellMode: 'half', maneuverMode: 'martial', loadouts: ['Knight Kit', 'Zealot Kit']},
-  Prophet: {description: 'Mind-focused divine manipulator with social and psychic control.', skillChoices: 2, skillList: ['Arcana', 'History', 'Insight', 'Medicine', 'Nature', 'Perception', 'Religion', 'Survival'], hpBonus: 0, vitalityBonus: 3, spellMode: 'full', maneuverMode: 'none', loadouts: ['Cultist Kit', 'Missionary Kit']},
-  Ranger: {description: 'Self-sufficient hybrid using weapons, wilderness knowledge and wild magic.', skillChoices: 3, skillList: ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Mechanics', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Science', 'Sleight of Hand', 'Stealth', 'Survival'], hpBonus: 2, vitalityBonus: 1, spellMode: 'half', maneuverMode: 'martial', loadouts: ['Scout Kit', 'Hunter Kit']},
-  Rogue: {description: 'Precision specialist for stealth, trickery, mobility and opportunistic combat.', skillChoices: 4, skillList: ['Acrobatics', 'Athletics', 'Deception', 'Insight', 'Intimidation', 'Investigation', 'Mechanics', 'Perception', 'Performance', 'Persuasion', 'Sleight of Hand', 'Stealth', 'Survival', 'Driving'], hpBonus: 1, vitalityBonus: 0, spellMode: 'none', maneuverMode: 'martial', loadouts: ['Infiltrator Kit', 'Scavenger Kit']},
-  Sorcerer: {description: 'Innate elemental caster defined by spark and raw magical expression.', skillChoices: 2, skillList: ['Arcana', 'Deception', 'Insight', 'Intimidation', 'Persuasion', 'Religion', 'Science', 'Survival'], hpBonus: 0, vitalityBonus: 3, spellMode: 'full', maneuverMode: 'none', loadouts: ['Channeler Kit', 'Traveler Kit']},
-  Witch: {description: 'Formula and enchantment specialist with preparation and resource play.', skillChoices: 2, skillList: ['Animal Handling', 'Arcana', 'Crafting', 'History', 'Insight', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Science', 'Survival'], hpBonus: 1, vitalityBonus: 2, spellMode: 'full', maneuverMode: 'none', loadouts: ['Coven Kit', 'Alchemy Kit']},
+  Barbarian: {description: 'Front-line bruiser with rage, durability and heavy physical pressure.', skillChoices: 2, skillList: ['Athletics', 'Animal Handling', 'Intimidation', 'Nature', 'Perception', 'Survival', 'Acrobatics'], vitalityBonus: 0, spellMode: 'none', maneuverMode: 'martial', loadouts: ['Raider Kit', 'Survival Kit']},
+  Bard: {description: 'Performance-focused support caster with dialogue and aria control.', skillChoices: 3, skillList: ['Acrobatics', 'Arcana', 'Deception', 'History', 'Insight', 'Investigation', 'Performance', 'Persuasion', 'Religion', 'Sleight of Hand'], vitalityBonus: 2, spellMode: 'full', maneuverMode: 'none', loadouts: ['Performer Kit', 'Diplomat Kit']},
+  Druid: {description: 'Wild caster with nature support, survival tools and beast synergy.', skillChoices: 2, skillList: ['Animal Handling', 'Arcana', 'Insight', 'Medicine', 'Nature', 'Perception', 'Religion', 'Survival'], vitalityBonus: 2, spellMode: 'full', maneuverMode: 'none', loadouts: ['Warden Kit', 'Forager Kit']},
+  Fighter: {description: 'Flexible martial specialist with weapons, discipline and pressure.', skillChoices: 2, skillList: ['Acrobatics', 'Animal Handling', 'Athletics', 'History', 'Insight', 'Intimidation', 'Perception', 'Survival', 'Driving'], vitalityBonus: 0, spellMode: 'none', maneuverMode: 'martial', loadouts: ['Soldier Kit', 'Skirmisher Kit']},
+  Mage: {description: 'Dedicated elemental caster built around lore choice and spell throughput.', skillChoices: 2, skillList: ['Arcana', 'History', 'Insight', 'Investigation', 'Medicine', 'Nature', 'Religion', 'Science'], vitalityBonus: 3, spellMode: 'full', maneuverMode: 'none', loadouts: ['Scholar Kit', 'Path Kit']},
+  Monk: {description: 'Mobile unarmored combatant with focus, reactions and maneuvers.', skillChoices: 2, skillList: ['Acrobatics', 'Athletics', 'History', 'Insight', 'Medicine', 'Perception', 'Religion', 'Stealth'], vitalityBonus: 1, spellMode: 'none', maneuverMode: 'martial', loadouts: ['Pilgrim Kit', 'Pursuer Kit']},
+  Paladin: {description: 'Durable divine front-liner mixing weapon pressure and holy techniques.', skillChoices: 2, skillList: ['Athletics', 'History', 'Insight', 'Intimidation', 'Medicine', 'Persuasion', 'Religion'], vitalityBonus: 1, spellMode: 'half', maneuverMode: 'martial', loadouts: ['Knight Kit', 'Zealot Kit']},
+  Prophet: {description: 'Mind-focused divine manipulator with social and psychic control.', skillChoices: 2, skillList: ['Arcana', 'History', 'Insight', 'Medicine', 'Nature', 'Perception', 'Religion', 'Survival'], vitalityBonus: 3, spellMode: 'full', maneuverMode: 'none', loadouts: ['Cultist Kit', 'Missionary Kit']},
+  Ranger: {description: 'Self-sufficient hybrid using weapons, wilderness knowledge and wild magic.', skillChoices: 3, skillList: ['Acrobatics', 'Animal Handling', 'Arcana', 'Athletics', 'Deception', 'History', 'Insight', 'Intimidation', 'Investigation', 'Mechanics', 'Medicine', 'Nature', 'Perception', 'Performance', 'Persuasion', 'Religion', 'Science', 'Sleight of Hand', 'Stealth', 'Survival'], vitalityBonus: 1, spellMode: 'half', maneuverMode: 'martial', loadouts: ['Scout Kit', 'Hunter Kit']},
+  Rogue: {description: 'Precision specialist for stealth, trickery, mobility and opportunistic combat.', skillChoices: 4, skillList: ['Acrobatics', 'Athletics', 'Deception', 'Insight', 'Intimidation', 'Investigation', 'Mechanics', 'Perception', 'Performance', 'Persuasion', 'Sleight of Hand', 'Stealth', 'Survival', 'Driving'], vitalityBonus: 0, spellMode: 'none', maneuverMode: 'martial', loadouts: ['Infiltrator Kit', 'Scavenger Kit']},
+  Sorcerer: {description: 'Innate elemental caster defined by spark and raw magical expression.', skillChoices: 2, skillList: ['Arcana', 'Deception', 'Insight', 'Intimidation', 'Persuasion', 'Religion', 'Science', 'Survival'], vitalityBonus: 3, spellMode: 'full', maneuverMode: 'none', loadouts: ['Channeler Kit', 'Traveler Kit']},
+  Witch: {description: 'Formula and enchantment specialist with preparation and resource play.', skillChoices: 2, skillList: ['Animal Handling', 'Arcana', 'Crafting', 'History', 'Insight', 'Investigation', 'Medicine', 'Nature', 'Perception', 'Science', 'Survival'], vitalityBonus: 2, spellMode: 'full', maneuverMode: 'none', loadouts: ['Coven Kit', 'Alchemy Kit']},
 };
 const SUBCLASS_SUMMARIES = {
   'Way of the Berserker': 'Explosive offense and direct brutality.',
@@ -561,7 +566,10 @@ function currentStepIndex() {
 }
 
 function availableFeats() {
-  const speciesSpecific = SPECIES_FEATS[state.character.profile.species] || [];
+  const speciesSpecific = [
+    ...(SPECIES_FEATS[state.character.profile.species] || []),
+    ...(SPECIES_FEATS[state.character.profile.acquiredSpecies] || []),
+  ];
   const speciesFeatSet = new Set(Object.values(SPECIES_FEATS).flat());
   const access = magicAccess();
   const isCaster = access.arias || access.divine || access.elemental || access.wild || access.witchcraft;
@@ -590,8 +598,21 @@ function selectedSpeciesOptions() {
   return SPECIES_OPTIONS[state.character.profile.species] || [];
 }
 
-function selectedSpeciesData() {
+function selectedBaseSpeciesData() {
   return selectedSpeciesOptions().find((item) => item.name === state.character.profile.speciesSubtype) || selectedSpeciesOptions()[0] || null;
+}
+
+function acquiredSpeciesRule() {
+  return ACQUIRED_SPECIES_RULES[state.character.profile.acquiredSpecies] || null;
+}
+
+function selectedAcquiredSpeciesData() {
+  if (state.character.profile.acquiredSpecies === 'None') return null;
+  return (SPECIES_OPTIONS[state.character.profile.acquiredSpecies] || [])[0] || null;
+}
+
+function selectedSpeciesData() {
+  return selectedBaseSpeciesData();
 }
 
 function selectedClassRule() {
@@ -599,7 +620,11 @@ function selectedClassRule() {
 }
 
 function speciesAbilityBonus(key) {
-  return Number(selectedSpeciesData()?.abilities?.[key] || 0);
+  const base = Number(selectedBaseSpeciesData()?.abilities?.[key] || 0);
+  const acquired = selectedAcquiredSpeciesData();
+  const rule = acquiredSpeciesRule();
+  if (!acquired || !rule?.addsAbilityBonuses) return base;
+  return base + Number(acquired.abilities?.[key] || 0);
 }
 
 function finalAbilityScore(key) {
@@ -619,7 +644,11 @@ function classSkillLimit() {
 }
 
 function automaticSkills() {
-  return selectedSpeciesData()?.autoSkills || [];
+  const base = selectedBaseSpeciesData()?.autoSkills || [];
+  const acquired = selectedAcquiredSpeciesData();
+  const rule = acquiredSpeciesRule();
+  const extra = acquired && rule?.addsAutomaticSkills ? (acquired.autoSkills || []) : [];
+  return [...new Set([...base, ...extra])];
 }
 
 function selectedSkillSet() {
@@ -654,7 +683,7 @@ function encumbrance() {
 }
 
 function armorClass() {
-  const species = selectedSpeciesData();
+  const species = selectedBaseSpeciesData();
   const packageArmor = selectedPackage()?.armorBase || 0;
   const dex = mod(finalAbilityScore('dex'));
   let ac = Number(species?.baseAc || 10) + dex + packageArmor;
@@ -728,21 +757,33 @@ function magicVitalityTax() {
 }
 
 function hitPoints() {
-  const species = selectedSpeciesData();
+  const species = selectedBaseSpeciesData();
   const con = mod(finalAbilityScore('con'));
   const level = Number(state.character.profile.level || 1);
   return Math.max(1, Number(species?.hpBase || 5) + con + Math.max(0, level - 1) * (Number(species?.hpPer || 5) + con));
 }
 
 function vitalityPoints() {
-  const species = selectedSpeciesData();
+  const species = selectedBaseSpeciesData();
   const level = Number(state.character.profile.level || 1);
   const bonus = vitalityBonusProfile();
   return Math.max(1, Number(species?.vitalityBase || 10) + Number(bonus.start || 0) + Math.max(0, level - 1) * (Number(species?.vitalityPer || 5) + Number(bonus.perLevel || 0)) - magicVitalityTax());
 }
 
+function hitPointFormulaText() {
+  const species = selectedBaseSpeciesData();
+  const con = mod(finalAbilityScore('con'));
+  return `0th: ${species?.hpBase || 5} ${con >= 0 ? '+' : '-'} ${Math.abs(con)} CON | Higher Levels: ${species?.hpPer || 5} ${con >= 0 ? '+' : '-'} ${Math.abs(con)} CON per level`;
+}
+
+function vitalityFormulaText() {
+  const species = selectedBaseSpeciesData();
+  const bonus = vitalityBonusProfile();
+  return `0th: ${species?.vitalityBase || 10}${bonus.start ? ` ${bonus.start >= 0 ? '+' : '-'} ${Math.abs(bonus.start)}` : ''} | Higher Levels: ${species?.vitalityPer || 5}${bonus.perLevel ? ` ${bonus.perLevel >= 0 ? '+' : '-'} ${Math.abs(bonus.perLevel)}` : ''} per level${magicVitalityTax() ? ` | Current tax: -${magicVitalityTax()}` : ''}`;
+}
+
 function speedMeters() {
-  return Number(selectedSpeciesData()?.speed || 10);
+  return Number(selectedBaseSpeciesData()?.speed || 10);
 }
 
 function spellTierForTitle(sectionName, title) {
@@ -1038,14 +1079,20 @@ function summarySnippet(text, max = 180) {
 }
 
 function speciesFeatureText() {
-  const species = selectedSpeciesData();
+  const species = selectedBaseSpeciesData();
+  const acquired = selectedAcquiredSpeciesData();
+  const rule = acquiredSpeciesRule();
   if (!species) return [];
+  const baseTraits = rule?.keepsBaseTraits === false ? [] : (species.feats || []);
+  const acquiredTraits = acquired?.feats || [];
   return [
     ...Object.entries(species.abilities || {}).filter(([, value]) => value).map(([key, value]) => `${ABILITY_LABELS[key]} ${value >= 0 ? '+' : ''}${value}`),
+    ...((acquired && rule?.addsAbilityBonuses) ? Object.entries(acquired.abilities || {}).filter(([, value]) => value).map(([key, value]) => `${ABILITY_LABELS[key]} ${value >= 0 ? '+' : ''}${value} (${acquired.name})`) : []),
     `Base AC ${species.baseAc}`,
     `Speed ${species.speed}m`,
     `Carry Limit STR x 3`,
-    ...(species.feats || []),
+    ...baseTraits,
+    ...acquiredTraits,
   ];
 }
 
@@ -1128,15 +1175,26 @@ function extractFeatureBlocks(page) {
 }
 
 function speciesFeatureDetails() {
-  const species = selectedSpeciesData();
-  const page = handbookPage('Species', state.character.profile.speciesSubtype) || speciesHandbookEntry();
-  return (species?.feats || []).map((feature) => ({
+  const species = selectedBaseSpeciesData();
+  const acquired = selectedAcquiredSpeciesData();
+  const rule = acquiredSpeciesRule();
+  const basePage = handbookPage('Species', state.character.profile.speciesSubtype) || speciesHandbookEntry();
+  const acquiredPage = acquiredSpeciesEntry();
+  const baseFeatures = rule?.keepsBaseTraits === false ? [] : (species?.feats || []).map((feature) => ({
     name: feature,
-    description: extractFeatureSnippet(page, feature) || handbookPreview(page, feature),
+    description: extractFeatureSnippet(basePage, feature) || handbookPreview(basePage, feature),
     section: 'Species',
-    page: page?.title || species?.name || '',
+    page: basePage?.title || species?.name || '',
     chips: [species?.name || state.character.profile.speciesSubtype || 'Species Feature'],
   }));
+  const acquiredFeatures = (acquired?.feats || []).map((feature) => ({
+    name: feature,
+    description: extractFeatureSnippet(acquiredPage, feature) || handbookPreview(acquiredPage, feature),
+    section: 'Species',
+    page: acquiredPage?.title || acquired?.name || '',
+    chips: [acquired?.name || 'Acquired Species'],
+  }));
+  return [...baseFeatures, ...acquiredFeatures];
 }
 
 function renderHoverChips(items, targetId) {
@@ -1344,20 +1402,25 @@ function renderBuilder() {
   } else if (step === 'species') {
     const featureDetails = speciesFeatureDetails();
     const speciesPreviewMap = Object.fromEntries(SPECIES.map((name) => [name, handbookPreview(handbookPage('Species', name), name)]));
+    const acquiredPreviewMap = Object.fromEntries(ACQUIRED_SPECIES.filter((name) => name !== 'None').map((name) => [name, handbookPreview(handbookPage('Species', name), name)]));
     body = `
       ${panel('Step 2 - Species', `
         <div class="stack">
           <div class="guide-card compact">
             <div class="eyebrow">Was du hier festlegst</div>
-            <p class="muted">Waehle zuerst die Species, dann die genaue Linie. Diese Entscheidung setzt Grundwerte wie HP, Vitality, Speed, Carry Limit und viele angeborene Features fuer den restlichen Build.</p>
+            <p class="muted">Waehle zuerst die Basis-Species, dann die genaue Linie. Acquired Species wie Wildling oder Changeling werden danach als Aufsatz darueber gelegt, behalten aber die HP-, Vitality-, Speed- und Grundkoerperwerte der Basisspecies.</p>
           </div>
           <div>
-            <div class="eyebrow">Species</div>
+            <div class="eyebrow">Base Species</div>
             ${renderChoiceCards(SPECIES, c.profile.species, 'profile.species', Object.fromEntries(SPECIES.map((name) => [name, cleanLabel(name)])), '', 'speciesFeaturePanel', speciesPreviewMap)}
           </div>
           <div>
             <div class="eyebrow">Subspecies / Lineage</div>
             ${renderChoiceCards(selectedSpeciesOptions().map((item) => item.name), c.profile.speciesSubtype, 'profile.speciesSubtype', Object.fromEntries(selectedSpeciesOptions().map((item) => [item.name, item.summary])), '', 'speciesFeaturePanel', Object.fromEntries(selectedSpeciesOptions().map((item) => [item.name, handbookPreview(handbookPage('Species', item.name) || speciesPage, item.summary)])))}
+          </div>
+          <div>
+            <div class="eyebrow">Acquired Species</div>
+            ${renderChoiceCards(ACQUIRED_SPECIES, c.profile.acquiredSpecies, 'profile.acquiredSpecies', {None: 'Keine erworbene Species auf dem Basisprofil.'}, '', 'speciesFeaturePanel', {...acquiredPreviewMap, None: 'Keine zusaetzliche Acquired Species aktiv.'})}
           </div>
           <div class="summary-row">
             ${speciesFeatureText().map((feature) => `<div class="summary-chip">${feature}</div>`).join('')}
@@ -1370,9 +1433,9 @@ function renderBuilder() {
             <h3>${species?.name || 'Species'}</h3>
             <p class="muted">${species?.summary || ''}</p>
             <div class="stat-table">
-              <div><span>HP Formula</span><strong>${species?.hpBase || 0} + CON, dann ${species?.hpPer || 0} + CON/Lv</strong></div>
-              <div><span>Vitality Formula</span><strong>${species?.vitalityBase || 0}, dann ${species?.vitalityPer || 0}/Lv</strong></div>
-              <div><span>Carry Limit</span><strong>STR x ${species?.carryMultiplier || 4}</strong></div>
+              <div><span>HP Formula</span><strong>${hitPointFormulaText()}</strong></div>
+              <div><span>Vitality Formula</span><strong>${vitalityFormulaText()}</strong></div>
+              <div><span>Carry Limit</span><strong>STR x 3</strong></div>
             </div>
             <div>
               <div class="eyebrow">Species Features</div>
@@ -1423,7 +1486,6 @@ function renderBuilder() {
           </div>
           <div class="summary-row">
             <div class="summary-chip">${classRule.skillChoices} class skills</div>
-            <div class="summary-chip">HP bonus +${classRule.hpBonus}/Lv</div>
             <div class="summary-chip">Vitality bonus +${classRule.vitalityBonus}/Lv</div>
             ${Object.entries(magicAccess()).filter(([, enabled]) => enabled).map(([key]) => `<div class="summary-chip">${SPELL_SECTION_LABELS[key]}</div>`).join('')}
           </div>
@@ -1436,11 +1498,10 @@ function renderBuilder() {
               eyebrow: 'Class Detail',
               title: c.profile.subclass || c.profile.className,
               text: handbookPreview(subclassPage, classRule.description),
-              chips: [`${classRule.skillChoices} Class Skills`, `HP +${classRule.hpBonus}/Lv`, `Vitality +${classRule.vitalityBonus}/Lv`],
+              chips: [`${classRule.skillChoices} Class Skills`, `Vitality +${classRule.vitalityBonus}/Lv`],
             })}</div>
             <div class="summary-row">
               <div class="summary-chip">${classRule.skillChoices} Class Skills</div>
-              <div class="summary-chip">HP +${classRule.hpBonus}/Lv</div>
               <div class="summary-chip">Vitality +${classRule.vitalityBonus}/Lv</div>
             </div>
             <div class="inline-actions">${openCompendiumButton('Classes', c.profile.subclass || c.profile.className)}</div>
@@ -1491,6 +1552,8 @@ function renderBuilder() {
               <div><span>Armor Class</span><strong>${armorClass()}</strong></div>
               <div><span>Speed</span><strong>${speedMeters()}m</strong></div>
               <div><span>Carry Limit</span><strong>${carryLimit()}</strong></div>
+              <div><span>HP Rules</span><strong>${hitPointFormulaText()}</strong></div>
+              <div><span>Vitality Rules</span><strong>${vitalityFormulaText()}</strong></div>
             </div>
           </div>
         </div>
@@ -1531,7 +1594,7 @@ function renderBuilder() {
       ${panel('Step 6 - Loadout', `
         <div class="stack">
           <div>
-            <div class="eyebrow">Loadout Package</div>
+            <div class="eyebrow">Loadout Preset</div>
             ${renderChoiceCards(packageOptions, c.loadout.package, 'loadout.package', Object.fromEntries(packageOptions.map((name) => [name, `${LOADOUT_PACKAGES[name].items.join(', ')} | ${LOADOUT_PACKAGES[name].weight} enc.`])))}
           </div>
           <div class="split-shell">
@@ -1544,10 +1607,13 @@ function renderBuilder() {
                 <div><span>Armor from Loadout</span><strong>+${selectedPackage()?.armorBase || 0}</strong></div>
               </div>
             </div>
-            <label><span>Additions / Notes</span><textarea data-field="loadout.notes">${c.loadout.notes}</textarea></label>
+            <div class="stack">
+              <label><span>Extra Weight</span><input type="number" min="0" step="1" data-field="loadout.extraWeight" value="${c.loadout.extraWeight}"></label>
+              <label><span>Additions / Notes</span><textarea data-field="loadout.notes">${c.loadout.notes}</textarea></label>
+            </div>
           </div>
         </div>
-      `, 'Loadout kommt jetzt aus Listen statt aus freiem Tippen.')}
+      `, 'Die Regeln liefern die Equipment-Kapitel, aber keine sauber extrahierbaren klassenweisen Startpakete. Diese Presets bleiben deshalb praktische Vorlagen und koennen ueber Gewicht und Notizen angepasst werden.')}
       <div class="split-shell">
         ${panel('Package Breakdown', `
           <div class="guide-card">
@@ -1624,6 +1690,9 @@ function renderBuilder() {
         <label><span>Goals</span><textarea data-field="notes.goals">${c.notes.goals}</textarea></label>
         <label class="full"><span>Misc</span><textarea data-field="notes.misc">${c.notes.misc}</textarea></label>
       </div>
+      <div class="export-actions">
+        <button class="primary-btn" id="finishExportBtn">Fertig & PDF exportieren</button>
+      </div>
     `, 'Nur freie Abschlussnotizen bleiben hier uebrig.');
   }
 
@@ -1646,7 +1715,7 @@ function renderBuilder() {
     ${body}
     <section class="wizard-nav">
       <button class="tab-btn ${currentStepIndex() === 0 ? 'disabled' : ''}" data-step-nav="-1" ${currentStepIndex() === 0 ? 'disabled' : ''}>Zurueck</button>
-      <button class="primary-btn" data-step-nav="1">${currentStepIndex() === BUILDER_STEPS.length - 1 ? 'Fertig' : 'Weiter'}</button>
+      <button class="primary-btn" data-step-nav="1">${currentStepIndex() === BUILDER_STEPS.length - 1 ? 'Fertig & PDF' : 'Weiter'}</button>
     </section>
   `;
 }
@@ -1736,7 +1805,7 @@ function renderSummary() {
       <a class="back-link" href="../index.html#games">Zurueck zur Startseite</a>
       <div class="eyebrow">SoaNW Character Studio</div>
       <h1>${c.profile.name || 'Unbenannter Charakter'}</h1>
-      <p class="muted">${c.profile.speciesSubtype || c.profile.species} ${c.profile.className} ${c.profile.subclass ? `- ${c.profile.subclass}` : ''}</p>
+      <p class="muted">${[c.profile.speciesSubtype || c.profile.species, c.profile.acquiredSpecies !== 'None' ? c.profile.acquiredSpecies : '', c.profile.className, c.profile.subclass ? `- ${c.profile.subclass}` : ''].filter(Boolean).join(' ')}</p>
       <div class="summary-stats">
         <div><span>Level</span><strong>${c.profile.level}</strong></div>
         <div><span>Proficiency</span><strong>+${proficiencyBonus()}</strong></div>
@@ -1851,6 +1920,10 @@ function applyFieldChange(path, value) {
     state.character.build.feats = state.character.build.feats.filter((feat) => availableFeats().includes(feat));
   }
   if (path === 'profile.speciesSubtype') {
+    state.character.proficiencies.skills = state.character.proficiencies.skills.filter((skill) => !automaticSkills().includes(skill));
+    state.character.build.feats = state.character.build.feats.filter((feat) => availableFeats().includes(feat));
+  }
+  if (path === 'profile.acquiredSpecies') {
     state.character.proficiencies.skills = state.character.proficiencies.skills.filter((skill) => !automaticSkills().includes(skill));
     state.character.build.feats = state.character.build.feats.filter((feat) => availableFeats().includes(feat));
   }
@@ -2168,7 +2241,7 @@ async function exportPdf() {
     `Feats: ${c.build.feats.join(', ') || '-'}`,
   ].join('\n\n'));
   setText('RACE FEAT', [
-    `Species: ${speciesData?.feats?.join(', ') || '-'}`,
+    `Species: ${speciesFeatureText().join(', ') || '-'}`,
     `Elemental Lore: ${magicAccess().elemental ? chosenElementalLore() : '-'}`,
     `Auto Channel: ${autoChannelSpellNames().join(', ') || '-'}`,
   ].join('\n'));
@@ -2219,6 +2292,19 @@ async function exportPdf() {
   link.download = `${(c.profile.name || 'soanw-character').replace(/\s+/g, '-').toLowerCase()}.pdf`;
   link.click();
   setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+}
+
+async function runPdfExport() {
+  if (!window.PDFLib?.PDFDocument) {
+    window.alert('PDF-Export ist derzeit nicht verfuegbar, weil pdf-lib nicht geladen wurde.');
+    return;
+  }
+  try {
+    await exportPdf();
+  } catch (error) {
+    console.error(error);
+    window.alert(`PDF-Export fehlgeschlagen: ${error.message || error}`);
+  }
 }
 
 async function importPdf(file) {
@@ -2283,7 +2369,11 @@ function bindEvents() {
   document.querySelectorAll('[data-step-nav]').forEach((button) => button.addEventListener('click', () => {
     if (Number(button.dataset.stepNav) > 0 && !stepIsComplete(state.builderStep)) return;
     const next = currentStepIndex() + Number(button.dataset.stepNav);
-    if (next < 0 || next >= BUILDER_STEPS.length) return;
+    if (next >= BUILDER_STEPS.length) {
+      runPdfExport();
+      return;
+    }
+    if (next < 0) return;
     state.builderStep = BUILDER_STEPS[next].id;
     render();
   }));
@@ -2324,7 +2414,8 @@ function bindEvents() {
     refreshSearch();
     render();
   });
-  document.getElementById('exportPdfBtn')?.addEventListener('click', exportPdf);
+  document.getElementById('exportPdfBtn')?.addEventListener('click', runPdfExport);
+  document.getElementById('finishExportBtn')?.addEventListener('click', runPdfExport);
   document.getElementById('importPdfInput')?.addEventListener('change', async (event) => {
     const file = event.target.files?.[0];
     if (!file) return;

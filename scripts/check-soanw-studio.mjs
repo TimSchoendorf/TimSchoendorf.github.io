@@ -288,6 +288,89 @@ async function assertWitchRules(browser) {
   await context.close();
 }
 
+async function assertLevelScaling(browser) {
+  const context = await browser.newContext({viewport: {width: 1440, height: 1600}});
+  const page = await context.newPage();
+  await page.goto(baseUrl, {waitUntil: 'networkidle', timeout: 120000});
+  await page.locator('[data-field="profile.name"]').fill('Scale Test');
+  await page.locator('[data-field="profile.player"]').fill('Tim');
+  await page.locator('[data-field="profile.level"]').fill('1');
+  await openStep(page, 'species');
+  await page.locator('[data-choose-field="profile.species"][data-choose-value="Human"]').click();
+  await page.locator('[data-choose-field="profile.speciesSubtype"][data-choose-value="Border Lords"]').click();
+  await openStep(page, 'class');
+  await page.locator('[data-choose-field="profile.className"][data-choose-value="Bard"]').click();
+  await page.locator('[data-choose-field="profile.subclass"][data-choose-value="Mythos of Eloquence"]').click();
+  await openStep(page, 'abilities');
+  for (const [field, value] of Object.entries({str: 8, dex: 12, con: 12, int: 10, wis: 12, cha: 15})) {
+    await page.locator(`[data-field="abilities.${field}"]`).fill(String(value));
+  }
+  const levelOneStats = await page.locator('.summary-stats').textContent();
+  if (!/Proficiency\+2/i.test(levelOneStats || '') || !/HP10/i.test(levelOneStats || '') || !/Vitality14/i.test(levelOneStats || '')) {
+    throw new Error(`Unexpected level 1 scaling stats: ${levelOneStats}`);
+  }
+  await page.locator('[data-step="profile"]').click();
+  await page.locator('[data-field="profile.level"]').fill('5');
+  await page.waitForTimeout(250);
+  const levelFiveStats = await page.locator('.summary-stats').textContent();
+  if (!/Proficiency\+3/i.test(levelFiveStats || '') || !/HP34/i.test(levelFiveStats || '') || !/Vitality50/i.test(levelFiveStats || '')) {
+    throw new Error(`Unexpected level 5 scaling stats: ${levelFiveStats}`);
+  }
+  await context.close();
+}
+
+async function assertAcquiredSpeciesRules(browser) {
+  const context = await browser.newContext({viewport: {width: 1440, height: 1600}});
+  const page = await context.newPage();
+  await page.goto(baseUrl, {waitUntil: 'networkidle', timeout: 120000});
+  await page.locator('[data-field="profile.name"]').fill('Shift Test');
+  await page.locator('[data-field="profile.player"]').fill('Tim');
+  await page.locator('[data-field="profile.level"]').fill('5');
+  await openStep(page, 'species');
+  await page.locator('[data-choose-field="profile.species"][data-choose-value="Human"]').click();
+  await page.locator('[data-choose-field="profile.speciesSubtype"][data-choose-value="Border Lords"]').click();
+  await page.locator('[data-choose-field="profile.acquiredSpecies"][data-choose-value="Changeling"]').click();
+  await openStep(page, 'class');
+  await page.locator('[data-choose-field="profile.className"][data-choose-value="Fighter"]').click();
+  await page.locator('[data-choose-field="profile.subclass"][data-choose-value="Soldier"]').click();
+  await openStep(page, 'abilities');
+  for (const [field, value] of Object.entries({str: 12, dex: 12, con: 12, int: 10, wis: 10, cha: 10})) {
+    await page.locator(`[data-field="abilities.${field}"]`).fill(String(value));
+  }
+  const changelingStats = await page.locator('.summary-stats').textContent();
+  if (!/HP34/i.test(changelingStats || '') || !/Vitality35/i.test(changelingStats || '')) {
+    throw new Error(`Changeling did not retain base Human HP/Vitality: ${changelingStats}`);
+  }
+  await openStep(page, 'species');
+  await page.locator('[data-choose-field="profile.species"][data-choose-value="Elf"]').click();
+  await page.locator('[data-choose-field="profile.speciesSubtype"][data-choose-value="Dark Elf"]').click();
+  await page.locator('[data-choose-field="profile.acquiredSpecies"][data-choose-value="Wildling"]').click();
+  await openStep(page, 'abilities');
+  const wildlingStats = await page.locator('.summary-stats').textContent();
+  if (!/HP34/i.test(wildlingStats || '') || !/Vitality29/i.test(wildlingStats || '')) {
+    throw new Error(`Wildling did not retain base Elf HP/Vitality: ${wildlingStats}`);
+  }
+  const abilitySummary = await page.locator('.ability-summary').textContent();
+  if (!/DEX15/i.test(abilitySummary || '') || !/WIS11/i.test(abilitySummary || '')) {
+    throw new Error(`Wildling bonuses were not layered on top of the base species: ${abilitySummary}`);
+  }
+  await context.close();
+}
+
+async function assertFinishExport(browser) {
+  const context = await browser.newContext({acceptDownloads: true, viewport: {width: 1440, height: 1700}});
+  const page = await context.newPage();
+  await fillWizard(page);
+  await openStep(page, 'notes');
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByRole('button', {name: 'Fertig & PDF exportieren', exact: true}).click();
+  const download = await downloadPromise;
+  if (!/\.pdf$/i.test(download.suggestedFilename())) {
+    throw new Error(`Finish button did not trigger a PDF download: ${download.suggestedFilename()}`);
+  }
+  await context.close();
+}
+
 async function main() {
   await ensureDir(screenshotDir);
   await ensureDir(downloadDir);
@@ -340,6 +423,9 @@ async function main() {
   await assertManeuverHover(browser);
   await assertPaladinRules(browser);
   await assertWitchRules(browser);
+  await assertLevelScaling(browser);
+  await assertAcquiredSpeciesRules(browser);
+  await assertFinishExport(browser);
 
   if (errors.length) {
     throw new Error(errors.join('\n'));
