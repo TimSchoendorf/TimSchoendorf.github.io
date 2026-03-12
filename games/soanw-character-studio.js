@@ -1655,6 +1655,41 @@ function compendiumSectionsFromText(text) {
     .slice(0, 12);
 }
 
+function compendiumBlocksFromText(text, fallbackTitle = 'Content') {
+  const lines = String(text || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean);
+  if (!lines.length) return [];
+  const blocks = [];
+  let current = {title: fallbackTitle, lines: []};
+  const isHeading = (line) => line.length >= 4 && (
+    /^([A-Z][A-Z\s:'()/-]+|Chapter\s+\d+[:.-].+|The Lore of .+|Tier\s+\d+.+)$/i.test(line)
+    || (/^[A-Z][A-Za-z0-9'()/:,-]+(?: [A-Z][A-Za-z0-9'()/:,-]+){0,7}$/.test(line) && lines.includes(line))
+  );
+  for (const line of lines) {
+    if (isHeading(line) && current.lines.length) {
+      blocks.push(current);
+      current = {title: line, lines: []};
+      continue;
+    }
+    if (isHeading(line) && !current.lines.length && current.title === fallbackTitle) {
+      current.title = line;
+      continue;
+    }
+    current.lines.push(line);
+  }
+  if (current.title || current.lines.length) blocks.push(current);
+  return blocks
+    .map((block, index) => ({
+      ...block,
+      title: block.title || `${fallbackTitle} ${index + 1}`,
+      body: block.lines.join('\n').trim(),
+      anchorId: `compendium-anchor-${index + 1}`,
+    }))
+    .filter((block) => block.title || block.body);
+}
+
 function renderBuilder() {
   const c = state.character;
   const step = state.builderStep;
@@ -2036,7 +2071,8 @@ function renderCompendium() {
   const visibleItems = searchItems();
   const cleaned = sanitizePageText(page);
   const pageText = cleaned || compendiumFallbackText(page);
-  const contentAnchors = compendiumSectionsFromText(pageText);
+  const contentBlocks = compendiumBlocksFromText(pageText, cleanLabel(page?.title || 'Content'));
+  const contentAnchors = contentBlocks.map((block) => ({label: block.title, id: block.anchorId}));
   return `
     <section class="panel compendium-shell">
       <div class="compendium-sidebar">
@@ -2065,9 +2101,16 @@ function renderCompendium() {
             <div class="reader-column">
               <div class="guide-card compact compendium-anchor-bar ${contentAnchors.length ? '' : 'hidden'}">
                 <div class="eyebrow">Inhalt</div>
-                <div class="mini-list">${contentAnchors.map((anchor) => `<button class="mini-link" type="button" data-compendium-anchor="${escapeHtml(anchor)}">${escapeHtml(anchor)}</button>`).join('')}</div>
+                <div class="mini-list">${contentAnchors.map((anchor) => `<button class="mini-link" type="button" data-compendium-anchor="${escapeHtml(anchor.id)}">${escapeHtml(anchor.label)}</button>`).join('')}</div>
               </div>
-              <pre class="reader-text" id="compendiumReader">${pageText}</pre>
+              <div class="reader-text structured" id="compendiumReader">
+                ${contentBlocks.map((block) => `
+                  <section class="reader-block" id="${block.anchorId}">
+                    <h3>${escapeHtml(block.title)}</h3>
+                    ${block.body ? `<pre>${escapeHtml(block.body)}</pre>` : ''}
+                  </section>
+                `).join('')}
+              </div>
             </div>
             <div class="compendium-aside">
               <div class="guide-card compact">
@@ -2885,12 +2928,9 @@ function bindEvents() {
     const anchor = button.dataset.compendiumAnchor || '';
     state.compendiumAnchor = anchor;
     const reader = document.getElementById('compendiumReader');
-    if (!reader || !anchor) return;
-    const text = reader.textContent || '';
-    const index = text.indexOf(anchor);
-    if (index < 0) return;
-    const ratio = index / Math.max(1, text.length);
-    reader.scrollTop = Math.max(0, (reader.scrollHeight - reader.clientHeight) * ratio);
+    const target = anchor ? document.getElementById(anchor) : null;
+    if (!reader || !target) return;
+    reader.scrollTop = Math.max(0, target.offsetTop - reader.offsetTop - 8);
   }));
   document.querySelectorAll('[data-hover-preview-open]').forEach((button) => button.addEventListener('click', (event) => {
     const current = event.currentTarget;
@@ -2991,7 +3031,7 @@ function injectStyles() {
     .pill-grid{display:flex;flex-wrap:wrap;gap:8px}.pill,.filter-btn,.page-btn,.wizard-step,.ghost-btn,.mini-link,.summary-chip.interactive{padding:10px 12px;color:var(--text);cursor:pointer}.pill.active,.filter-btn.active,.page-btn.active,.wizard-step.active,.choice-card.active{background:linear-gradient(135deg,#7fd1ff,#b4e7ff);color:var(--ink)}.summary-chip.interactive{text-align:left;border:1px solid var(--line)}.summary-chip.interactive:hover,.summary-chip.interactive:focus{background:rgba(127,209,255,.16)}
     .wizard-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;position:sticky;top:24px;z-index:4}.wizard-step{display:flex;align-items:center;gap:12px;text-align:left;border-radius:22px;background:rgba(255,255,255,.04)}.wizard-step.done{box-shadow:inset 0 0 0 1px rgba(240,195,108,.35)}.wizard-step span{display:grid;place-items:center;min-width:30px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.08)}.wizard-step small{display:block;color:inherit;opacity:.72}.wizard-nav{display:flex;justify-content:space-between;gap:12px}.reader-text.compact{max-height:360px}
     .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}.spell-preview-card{display:grid;gap:12px}.reader-text.inline{max-height:320px;margin-top:0;padding:14px}.preview-window{border:1px solid rgba(127,209,255,.18);border-radius:22px;background:linear-gradient(180deg,rgba(26,23,38,.98),rgba(18,16,28,.95));box-shadow:0 18px 50px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.04)}.preview-window-bar{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.preview-window-bar span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.16)}.preview-window-bar span:nth-child(1){background:#f08b6c}.preview-window-bar span:nth-child(2){background:#f0c36c}.preview-window-bar span:nth-child(3){background:#7fd1ff}.preview-window-body{padding:16px;display:grid;gap:12px}.loadout-add-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}.removable-chip{display:inline-flex;align-items:center;gap:8px}
-    .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.compendium-sidebar{position:sticky;top:24px}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.page-btn{display:grid;gap:4px;text-align:left}.page-btn small{color:inherit;opacity:.72;line-height:1.35}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-column{display:grid;gap:12px;align-content:start}.compendium-anchor-bar{position:sticky;top:24px;z-index:3}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto;max-height:72vh;scroll-behavior:smooth}.compendium-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}.compendium-aside{display:grid;gap:12px}
+    .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.compendium-sidebar{position:sticky;top:24px}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.page-btn{display:grid;gap:4px;text-align:left}.page-btn small{color:inherit;opacity:.72;line-height:1.35}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-column{display:grid;gap:12px;align-content:start}.compendium-anchor-bar{position:sticky;top:24px;z-index:3}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto;max-height:72vh;scroll-behavior:smooth}.reader-text.structured{display:grid;gap:18px;white-space:normal}.reader-block{display:grid;gap:10px;padding-bottom:18px;border-bottom:1px solid rgba(255,255,255,.08)}.reader-block:last-child{border-bottom:none;padding-bottom:0}.reader-block h3{font-size:1rem;color:var(--accent)}.reader-block pre{margin:0;white-space:pre-wrap;font-family:Georgia,serif;line-height:1.62}.compendium-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}.compendium-aside{display:grid;gap:12px}
     .export-actions{display:flex;gap:12px;flex-wrap:wrap}.primary-btn,.upload-btn{padding:14px 18px;font-weight:700;cursor:pointer}.upload-btn input{display:none}.notes{margin:0;padding-left:18px;display:grid;gap:8px}.empty-state{padding:28px;border-radius:22px;background:rgba(255,255,255,.04);color:var(--muted)}.hidden{display:none!important}
     .mobile-panel-switch{display:none}.mobile-panel{display:block}.desktop-only{display:block}
     @media (max-width:1180px){.studio-shell,.compendium-shell,.form-grid.two,.form-grid.three,.ability-grid,.split-shell,.choice-grid,.wizard-strip,.compendium-layout,.loadout-add-row{grid-template-columns:1fr}.main-column{order:1}.left-rail{order:2}.summary-card.sticky,.wizard-strip,.compendium-sidebar,.compendium-anchor-bar{position:static}.hero,.wizard-nav{flex-direction:column;align-items:flex-start}.reader-text{max-height:none}}
