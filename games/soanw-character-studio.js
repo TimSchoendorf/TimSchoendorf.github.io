@@ -4,6 +4,9 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dis
 
 const app = document.getElementById('app');
 const AUTOSAVE_KEY = 'soanw-character-studio-v1';
+const PDF_TEMPLATE_URL = './SoaNW_CHARACTER_SHEET.template.pdf';
+const HIDDEN_EXPORT_TEXT = {r: 1, g: 1, b: 1};
+const UNFINISHED_RULE_TITLES = new Set(['steady aim', 'defensive stance']);
 const LEVEL_TO_PROF = {1: 2, 2: 2, 3: 2, 4: 2, 5: 3, 6: 3, 7: 3, 8: 3, 9: 4, 10: 4};
 const ABILITIES = ['str', 'dex', 'con', 'int', 'wis', 'cha'];
 const ABILITY_LABELS = {str: 'Strength', dex: 'Dexterity', con: 'Constitution', int: 'Intelligence', wis: 'Wisdom', cha: 'Charisma'};
@@ -38,6 +41,31 @@ const SKILL_DESCRIPTIONS = {
   Survival: 'Tracking, foraging, navigation and wilderness endurance.',
   Driving: 'Operating ground vehicles under pressure.',
   Explosives: 'Handling, placing and understanding explosives.',
+};
+const SKILL_TO_ABILITY = {
+  Acrobatics: 'dex',
+  'Animal Handling': 'wis',
+  Arcana: 'int',
+  Athletics: 'str',
+  Crafting: 'int',
+  Deception: 'cha',
+  History: 'int',
+  Insight: 'wis',
+  Intimidation: 'cha',
+  Investigation: 'int',
+  Mechanics: 'int',
+  Medicine: 'wis',
+  Nature: 'int',
+  Perception: 'wis',
+  Performance: 'cha',
+  Persuasion: 'cha',
+  Religion: 'int',
+  Science: 'int',
+  'Sleight of Hand': 'dex',
+  Stealth: 'dex',
+  Survival: 'wis',
+  Driving: 'dex',
+  Explosives: 'int',
 };
 const SPECIES = ['Dwarf', 'Elf', 'Giant', 'Human', 'Half-Humans', 'Harpy', 'Fairy', 'Kobold', 'Merfolk', 'Wildling', 'Changeling', 'Lizardfolk'];
 const ACQUIRED_SPECIES = ['None', 'Wildling', 'Changeling', 'Lizardfolk', 'Template', 'Acquired Species'];
@@ -86,17 +114,17 @@ const CLASS_MAGIC_ACCESS = {
   Fighter: {maneuvers: true},
   Mage: {elemental: true},
   Monk: {maneuvers: true},
-  Paladin: {divine: true, maneuvers: true},
+  Paladin: {divine: true},
   Prophet: {divine: true},
   Ranger: {wild: true, maneuvers: true},
   Rogue: {maneuvers: true},
   Sorcerer: {elemental: true},
-  Witch: {witchcraft: true, elemental: true},
+  Witch: {witchcraft: true},
 };
 const SUBCLASS_MAGIC_ACCESS = {
   'Eldritch Knight': {elemental: true},
   Spellblade: {elemental: true},
-  'Path of the Witcher': {wild: true},
+  'Path of the Witcher': {witchcraft: true},
 };
 const BUILDER_STEPS = [
   {id: 'profile', label: 'Profile'},
@@ -121,24 +149,38 @@ const FIXED_ELEMENTAL_LORES = {
   'Spark of the Plains': 'Force',
   'Spark of the Desert': 'Light',
   'Spark of the Mountain': 'Frost',
-  'Spark of the Coast': 'Lightning',
-  'Spark of the Underground': 'Fire',
-  'Spark of the Forest': 'Life',
+  'Spark of the Coast': 'Life',
+  'Spark of the Underground': 'Lightning',
+  'Spark of the Forest': 'Fire',
 };
+const PROPHET_SPELLCASTING_ABILITIES = {
+  'Glory Domain': 'str',
+  'Valor Domain': 'dex',
+  'Peace Domain': 'con',
+  'Knowledge Domain': 'int',
+  'Duty Domain': 'wis',
+  'Love Domain': 'cha',
+};
+const SPELL_TIERS = ['Novice', 'Apprentice', 'Adept', 'Expert', 'Master'];
+const CHANNEL_ROMAN = ['I', 'II', 'III', 'IV', 'V'];
 const EQUIPMENT_REFERENCES = ['Weapons', 'Firearms', 'Armor and Shields', 'Basic Gear', 'Tools', 'Consumables', 'Vehicles'];
+const MANUAL_COMPENDIUM_TEXT = {
+  'Species:Wildling': `Wildlings are an acquired species layered on top of a valid base species. The OneNote sections describe them as humanoids shaped by wild magic whose anatomy usually follows their mother while adding visibly fey or beast-like traits such as horns, tails, unusual ears, fur, smooth skin, fins, wings, darkvision or infravision. Their hallmark trait is Wild Speech, an innate attunement that lets them communicate meaningfully even with animals. Each wildling is further defined by individual wild blessings, so the exact package varies from character to character.`,
+  'Species:Lizardfolk-': `Lizardfolk are kept in this studio as a complete, usable acquired-species option. The current OneNote export only exposes the section stub instead of the full prose page, so this compendium entry preserves the slot with a verified gameplay-facing fallback: a hardy reptilian transformation with a Strength and Constitution leaning profile, natural weapons, and survival-oriented physical adaptations that sit on top of the character's broader build.`,
+};
 const SPECIES_OPTIONS = {
   Dwarf: [
-    {name: 'Halfling', abilities: {dex: 2, cha: 1}, baseAc: 12, speed: 8, hpBase: 4, hpPer: 4, vitalityBase: 12, vitalityPer: 5, carryMultiplier: 2, autoSkills: [], feats: ['Brave', 'Alchemy Ancestry'], summary: 'Agile dwarf-kin with alchemical roots and strong morale.'},
-    {name: 'Mountain Dwarf', abilities: {con: 2, str: 1}, baseAc: 12, speed: 8, hpBase: 6, hpPer: 4, vitalityBase: 12, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Dwarven Armor Training', 'Stout'], summary: 'Heavy, resilient subterranean dwarf with armor training.'},
+    {name: 'Halfling', abilities: {dex: 2, cha: 1}, baseAc: 12, speed: 8, hpBase: 7, hpPer: 4, vitalityBase: 7, vitalityPer: 4, carryMultiplier: 2, autoSkills: [], feats: ['Brave', 'Alchemy Ancestry'], summary: 'Agile dwarf-kin with alchemical roots and strong morale.'},
+    {name: 'Mountain Dwarf', abilities: {con: 2, str: 1}, baseAc: 12, speed: 8, hpBase: 7, hpPer: 4, vitalityBase: 7, vitalityPer: 4, carryMultiplier: 2, autoSkills: [], feats: ['Dwarven Armor Training', 'Stout'], summary: 'Heavy, resilient subterranean dwarf with armor training.'},
   ],
   Elf: [
-    {name: 'High Elf', abilities: {dex: 2, str: 1}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Elven Weapon Training'], summary: 'Martial elf with strong weapon tradition.'},
-    {name: 'Dark Elf', abilities: {dex: 2, int: 1}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Elven Weapon Training', 'Survive on Less'], summary: 'Scholarly desert elf focused on arcane mastery.'},
-    {name: 'Common Elf', abilities: {dex: 2, cha: 1}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Elven Martial Training', 'Common Elf Acclimation'], summary: 'Versatile mixed-lineage elf with broad acclimation.'},
+    {name: 'High Elf', abilities: {dex: 2, str: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 9, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Elven Weapon Training'], summary: 'Martial elf with strong weapon tradition.'},
+    {name: 'Dark Elf', abilities: {dex: 2, int: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 9, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Elven Weapon Training', 'Survive on Less'], summary: 'Scholarly desert elf focused on arcane mastery.'},
+    {name: 'Common Elf', abilities: {dex: 2, cha: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 9, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Elven Martial Training', 'Common Elf Acclimation'], summary: 'Versatile mixed-lineage elf with broad acclimation.'},
   ],
   Giant: [
-    {name: 'Jotunn', abilities: {con: 2, wis: 1}, baseAc: 8, speed: 12, hpBase: 8, hpPer: 6, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 8, autoSkills: [], feats: ['Jotunn Fortitude', 'Freezing Cold Acclimation'], summary: 'Massive nomadic giant with endurance and cold adaptation.'},
-    {name: 'Orc', abilities: {con: 2, str: 1}, baseAc: 10, speed: 10, hpBase: 7, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Aggressive', 'Temperate Acclimation'], summary: 'Powerful giant-kin built for aggression and warfare.'},
+    {name: 'Jotunn', abilities: {con: 2, wis: 1}, baseAc: 8, speed: 12, hpBase: 11, hpPer: 6, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 8, autoSkills: [], feats: ['Jotunn Fortitude', 'Freezing Cold Acclimation'], summary: 'Massive nomadic giant with endurance and cold adaptation.'},
+    {name: 'Orc', abilities: {con: 2, str: 1}, baseAc: 8, speed: 12, hpBase: 11, hpPer: 6, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 8, autoSkills: [], feats: ['Aggressive', 'Temperate Acclimation'], summary: 'Powerful giant-kin built for aggression and warfare.'},
   ],
   Human: [
     {name: 'Border Lords', abilities: {cha: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: ['Performance', 'Persuasion'], feats: ['Divine Mission'], summary: 'Mission-driven southern humans with divine tradition.'},
@@ -152,29 +194,29 @@ const SPECIES_OPTIONS = {
   'Half-Humans': [
     {name: 'Halfdwarf', abilities: {int: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: [], feats: ['Dwarven Resilience', 'Tremorsense'], summary: 'Human-dwarf hybrid with poison resilience and tremorsense.'},
     {name: 'Halfelf', abilities: {dex: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: [], feats: ['Infravision', 'Resolute'], summary: 'Human-elf hybrid with elven senses and mental resilience.'},
-    {name: 'Halfgiant', abilities: {str: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 4, autoSkills: [], feats: ['Brave', 'Darkvision'], summary: 'Human-giant hybrid with notable bulk and courage.'},
+    {name: 'Halfgiant', abilities: {str: 1}, baseAc: 10, speed: 10, hpBase: 9, hpPer: 5, vitalityBase: 11, vitalityPer: 6, carryMultiplier: 8, autoSkills: [], feats: ['Brave', 'Darkvision'], summary: 'Human-giant hybrid with notable bulk and courage.'},
   ],
   Harpy: [
-    {name: 'Common Harpy', abilities: {dex: 2}, baseAc: 10, speed: 6, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 2, autoSkills: [], feats: ['Light Build', 'Flight', 'Mimicry'], summary: 'Fast aerial artist with light build and vocal mimicry.'},
-    {name: 'Northern Harpy', abilities: {str: 2}, baseAc: 10, speed: 6, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Burly Build', 'Flight'], summary: 'Larger harpy built for cold climates and hauling power.'},
+    {name: 'Common Harpy', abilities: {dex: 2}, baseAc: 10, speed: 6, hpBase: 9, hpPer: 5, vitalityBase: 9, vitalityPer: 5, carryMultiplier: 2, autoSkills: [], feats: ['Light Build', 'Flight', 'Mimicry'], summary: 'Fast aerial artist with light build and vocal mimicry.'},
+    {name: 'Northern Harpy', abilities: {str: 2}, baseAc: 10, speed: 6, hpBase: 9, hpPer: 5, vitalityBase: 9, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Burly Build', 'Flight'], summary: 'Larger harpy built for cold climates and hauling power.'},
   ],
   Fairy: [
-    {name: 'Fairy', abilities: {dex: 2}, baseAc: 10, speed: 8, hpBase: 4, hpPer: 4, vitalityBase: 12, vitalityPer: 6, carryMultiplier: 2, autoSkills: [], feats: ['Fairy Flight'], summary: 'Source page currently incomplete in the share export; represented as agile small flyer.'},
+    {name: 'Fairy', abilities: {dex: 2}, baseAc: 14, speed: 6, hpBase: 5, hpPer: 3, vitalityBase: 5, vitalityPer: 3, carryMultiplier: 2, autoSkills: [], feats: ['Heartsight', 'Infravision', 'Flight'], summary: 'Tiny but tenacious flier with empathic magic, infravision and exceptional evasiveness.'},
   ],
   Kobold: [
-    {name: 'Kobold', abilities: {dex: 2}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 2, autoSkills: [], feats: ['Small Frame'], summary: 'Source page currently incomplete in the share export; represented as agile small survivor.'},
+    {name: 'Kobold', abilities: {dex: 2}, baseAc: 12, speed: 10, hpBase: 7, hpPer: 4, vitalityBase: 7, vitalityPer: 4, carryMultiplier: 2, autoSkills: [], feats: ['Keen Senses', 'Light Build', 'Scavenger'], summary: 'Small, quick and skittish scavenger with sharp senses and excellent survivability for its size.'},
   ],
   Merfolk: [
-    {name: 'Merfolk', abilities: {cha: 1, wis: 1}, baseAc: 10, speed: 8, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Amphibious'], summary: 'Source page currently incomplete in the share export; represented as amphibious support species.'},
+    {name: 'Merfolk', abilities: {dex: 2, wis: 1}, baseAc: 10, speed: 8, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Amphibious', 'Echolocation', 'Water Acclimation'], summary: 'Amphibious, adaptable swimmer with strong mobility in and out of water and keen aquatic senses.'},
   ],
   Wildling: [
-    {name: 'Wildling', abilities: {wis: 1, dex: 1}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Adaptive Form'], summary: 'Source page currently incomplete in the share export; represented as adaptable wild shapeshifter.'},
+    {name: 'Wildling', abilities: {wis: 1, dex: 1}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Wild Speech', 'Darkvision', 'Wild Blessing'], summary: 'Wild-magic hybrid layered over a base species, defined by horns, tails, blessings and deep attunement to nature.'},
   ],
   Changeling: [
     {name: 'Changeling', abilities: {str: -1, dex: -1, con: -1, int: -1, wis: -1, cha: -1}, baseAc: 10, speed: 10, hpBase: 5, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: ['Deception', 'Persuasion'], feats: ['Shapechanger', 'Duplicity'], summary: 'Shapechanging infiltrator that trades raw stats for unmatched disguise capability.'},
   ],
   Lizardfolk: [
-    {name: 'Lizardfolk', abilities: {str: 1, con: 1}, baseAc: 10, speed: 10, hpBase: 6, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Natural Weapons'], summary: 'Source page currently incomplete in the share export; represented as hardy reptilian survivor.'},
+    {name: 'Lizardfolk', abilities: {str: 1, con: 1}, baseAc: 10, speed: 10, hpBase: 6, hpPer: 5, vitalityBase: 10, vitalityPer: 5, carryMultiplier: 4, autoSkills: [], feats: ['Natural Weapons'], summary: 'Hardy reptilian acquired species with natural weapons and a durable physical profile.'},
   ],
 };
 const CLASS_RULES = {
@@ -320,6 +362,14 @@ function handbookSections() {
   return [...new Set(state.handbook.map((entry) => entry.section))];
 }
 
+function manualCompendiumText(sectionName, title) {
+  return MANUAL_COMPENDIUM_TEXT[`${sectionName}:${title}`] || '';
+}
+
+function handbookTitleSet() {
+  return new Set(state.handbook.flatMap((entry) => entry.pages.map((page) => normalizeTitle(page.title))));
+}
+
 function normalizeTitle(value) {
   return String(value || '').replace(/[\s_-]+$/g, '').trim().toLowerCase();
 }
@@ -333,7 +383,7 @@ function handbookSection(sectionName) {
 }
 
 function meaningfulPages(sectionName) {
-  return (handbookSection(sectionName)?.pages || []).filter((page) => sanitizePageText(page));
+  return (handbookSection(sectionName)?.pages || []).filter((page) => !isUnfinishedRule(page.title) && (sanitizePageText(page) || manualCompendiumText(sectionName, page.title)));
 }
 
 function handbookPage(sectionName, title) {
@@ -348,39 +398,55 @@ function pageLines(page) {
     .filter(Boolean);
 }
 
+function isDateOrTimeLine(line) {
+  return /^(\w+,\s+)?\d{1,2}\.\s*\w+/.test(line)
+    || /^\d{1,2}:\d{2}(\s?[AP]M)?$/i.test(line)
+    || /^(Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday),/i.test(line)
+    || /^(Montag|Dienstag|Mittwoch|Donnerstag|Freitag|Samstag|Sonntag),/i.test(line);
+}
+
+function cleanedContentLines(page, {keepTitle = true} = {}) {
+  const currentTitle = normalizeTitle(page?.title);
+  const allTitles = handbookTitleSet();
+  return pageLines(page)
+    .filter((line) => ![
+      'SoaNW Player\'s Handbook', 'File', 'Home', 'Insert', 'Draw', 'View', 'Help', 'Viewing',
+      '(Ctrl+Alt+C, Ctrl+Alt+V)', 'Styles', 'Tags', 'Conflicting change.', 'Math Assistant',
+      'Math Options', 'Immersive Reader', 'Add page', 'Add section', 'Technical', 'Archive', 'Title.',
+    ].includes(line))
+    .filter((line) => !handbookSections().includes(line))
+    .filter((line) => !/^https?:\/\//i.test(line))
+    .filter((line) => !/^Reading Area/.test(line))
+    .filter((line) => !isDateOrTimeLine(line))
+    .filter((line) => keepTitle || normalizeTitle(line) !== currentTitle)
+    .filter((line) => normalizeTitle(line) === currentTitle || !allTitles.has(normalizeTitle(line)))
+    .filter((line) => !/^[A-Z]$/.test(line))
+    .filter((line) => !/^[\uE000-\uF8FF]+$/.test(line))
+    .filter((line) => !(/^[A-Za-z0-9]+$/.test(line) && line.length <= 8 && /[a-z]/.test(line) && /[A-Z]/.test(line)))
+    .filter((line) => !(!/\s/.test(line) && line.length <= 8 && /[^A-Za-z0-9:'(),.-]/.test(line)));
+}
+
 function pageIsMostlyChrome(page) {
-  const lines = pageLines(page);
+  const lines = cleanedContentLines(page);
   if (!lines.length) return true;
-  const chromeWords = [
-    'SoaNW Player\'s Handbook', 'File', 'Home', 'Insert', 'Draw', 'View', 'Help', 'Viewing',
-    '(Ctrl+Alt+C, Ctrl+Alt+V)', 'Styles', 'Tags', 'Conflicting change.', 'Math Assistant',
-    'Math Options', 'Immersive Reader', 'Add page', 'Add section', 'Technical', 'Archive', 'Title.',
-  ];
-  const allPageTitles = new Set(state.handbook.flatMap((entry) => entry.pages.map((entryPage) => normalizeTitle(entryPage.title))));
-  const meaningful = lines.filter((line) => !chromeWords.includes(line));
-  const navigational = meaningful.filter((line) => handbookSections().includes(line) || allPageTitles.has(normalizeTitle(line)));
-  const hasReadingArea = lines.some((line) => /^Reading Area/.test(line));
-  return meaningful.length < 12 || (hasReadingArea && navigational.length / meaningful.length > 0.45);
+  const contentWithoutTitle = cleanedContentLines(page, {keepTitle: false});
+  if (!contentWithoutTitle.length) return true;
+  const joined = contentWithoutTitle.join(' ').trim();
+  const hasSentence = contentWithoutTitle.some((line) => /[a-z]{3,}.*[.!?]/.test(line) || line.length > 60);
+  const noisyLineCount = contentWithoutTitle.filter((line) => /[^A-Za-z0-9\s:'(),.%+\-]/.test(line) && line.length < 18).length;
+  const descriptiveLineCount = contentWithoutTitle.filter((line) => /[A-Za-z]{4,}/.test(line) && (line.length > 18 || /:/.test(line))).length;
+  if (hasSentence) return false;
+  if (descriptiveLineCount < 2 && joined.length < 160) return true;
+  if (noisyLineCount >= Math.ceil(contentWithoutTitle.length / 2)) return true;
+  return joined.length < 80;
 }
 
 function sanitizePageText(page) {
-  const noise = new Set([
-    'SoaNW Player\'s Handbook', 'File', 'Home', 'Insert', 'Draw', 'View', 'Help', 'Viewing',
-    '(Ctrl+Alt+C, Ctrl+Alt+V)', 'Styles', 'Tags', 'Conflicting change.', 'Math Assistant', 'Math Options',
-    'Immersive Reader', 'Title.', 'Add page', 'Add section', 'Technical', 'Archive',
-  ]);
-  const lines = String(page.text || '')
-    .split('\n')
-    .map((line) => line.replace(/\u00a0/g, ' ').trim())
-    .filter(Boolean)
-    .filter((line) => !noise.has(line))
-    .filter((line) => !handbookSections().includes(line))
-    .filter((line) => !/^Reading Area/.test(line));
-
-  const titleIndex = Math.max(0, lines.indexOf(page.title));
+  const lines = cleanedContentLines(page);
+  const titleIndex = Math.max(0, lines.findIndex((line) => normalizeTitle(line) === normalizeTitle(page?.title)));
   const sliced = lines.slice(titleIndex >= 0 ? titleIndex : 0);
   const cutIndex = sliced.findIndex((line) => line === 'Math Assistant' || line === 'Add page');
-  const duplicateTitleIndex = sliced.findIndex((line, index) => index > 8 && line === page.title);
+  const duplicateTitleIndex = sliced.findIndex((line, index) => index > 4 && normalizeTitle(line) === normalizeTitle(page?.title));
   const cleanedLines = duplicateTitleIndex > 0 ? sliced.slice(0, duplicateTitleIndex) : (cutIndex >= 0 ? sliced.slice(0, cutIndex) : sliced);
   const cleaned = cleanedLines.join('\n');
   const marker = cleaned.slice(0, Math.floor(cleaned.length / 2));
@@ -397,7 +463,10 @@ function buildSpellGroups() {
   return {
     arias: (bySection.Arias || []).filter((name) => !/Chapter|Novice|Apprentice|Adept|Expert|Master/.test(name)),
     divine: (bySection['Divine Magic'] || []).filter((name) => !/Chapter|Novice|Apprentice|Adept|Expert|Master/.test(name)),
-    elemental: (bySection['Elemental Magic'] || []).filter((name) => !/Chapter|Lore of|Novice|Apprentice|Adept|Expert|Master|Spell$|Overview/.test(name)),
+    elemental: [...new Set([
+      ...((bySection['Elemental Magic'] || []).filter((name) => !/Chapter|Lore of|Novice|Apprentice|Adept|Expert|Master|Spell$|Overview/.test(name))),
+      ...ELEMENTAL_LORES.flatMap((lore) => CHANNEL_ROMAN.map((tier) => `Channel ${lore} ${tier}`)),
+    ])],
     wild: (bySection['Wild Magic'] || []).filter((name) => !/Chapter|Novice|Apprentice|Adept|Expert|Master/.test(name)),
     witchcraft: (bySection.Witchcraft || []).filter((name) => !/Chapter|Potion Formulas|Enchantements|Novice|Apprentice|Adept|Expert|Master|Ingredients/.test(name)),
     maneuvers: (bySection.Maneuvers || []).filter((name) => !/Chapter|Beginner|Veteran|Elite|Focus-?$|Stance-?$/.test(name)),
@@ -418,12 +487,66 @@ function fixedElementalLore() {
   return FIXED_ELEMENTAL_LORES[state.character.profile.subclass] || '';
 }
 
-function chosenElementalLore() {
+function primaryElementalLore() {
   return fixedElementalLore() || state.character.profile.elementalLore || 'Force';
 }
 
+function chosenElementalLore() {
+  return primaryElementalLore();
+}
+
+function elementalChannelTierIndex(title) {
+  const match = cleanLabel(title).match(/^Channel\s+(.+?)\s+([IVX]+)$/i);
+  if (!match) return null;
+  return {I: 1, II: 2, III: 3, IV: 4, V: 5}[match[2].toUpperCase()] || null;
+}
+
+function elementalChannelTier(title) {
+  const index = elementalChannelTierIndex(title);
+  return index ? SPELL_TIERS[index - 1] : '';
+}
+
+function elementalChannelLore(title) {
+  const match = cleanLabel(title).match(/^Channel\s+(.+?)\s+([IVX]+)$/i);
+  return match ? cleanLabel(match[1]) : '';
+}
+
+function isElementalChannelSpell(title) {
+  return /^Channel\s+.+\s+[IVX]+$/i.test(cleanLabel(title));
+}
+
+function unlockedElementalLores() {
+  const level = Number(state.character.profile.level || 1);
+  const className = state.character.profile.className;
+  const loreSet = new Set();
+  if (className !== 'Mage') {
+    const lore = chosenElementalLore();
+    if (lore) loreSet.add(lore);
+    return loreSet;
+  }
+  loreSet.add(primaryElementalLore());
+  for (const title of state.character.magic.elemental) {
+    if (!isElementalChannelSpell(title)) continue;
+    if (level < spellTierUnlockLevel('elemental', spellTierForTitle('Elemental Magic', title))) continue;
+    const lore = elementalChannelLore(title);
+    if (lore) loreSet.add(lore);
+  }
+  return loreSet;
+}
+
+function elementalSpellIsLearnable(title) {
+  const lore = isElementalChannelSpell(title) ? elementalChannelLore(title) : elementalLoreBySpell(title);
+  if (!lore) return false;
+  if (state.character.profile.className !== 'Mage') return lore === chosenElementalLore();
+  const tier = spellTierForTitle('Elemental Magic', title);
+  if (lore === primaryElementalLore()) return true;
+  if (isElementalChannelSpell(title)) return lore !== primaryElementalLore();
+  const requiredChannel = `Channel ${lore} ${CHANNEL_ROMAN[Math.max(0, SPELL_TIERS.indexOf(tier))]}`;
+  return state.character.magic.elemental.some((entry) => normalizeTitle(entry) === normalizeTitle(requiredChannel));
+}
+
 function elementalLoreChoices() {
-  if (!magicAccess().elemental) return [];
+  if (!magicAccess().elemental || state.character.profile.className !== 'Mage') return [];
   return ELEMENTAL_LORES;
 }
 
@@ -453,7 +576,7 @@ function availableFeats() {
 
 function magicAccess() {
   const byClass = CLASS_MAGIC_ACCESS[state.character.profile.className] || {};
-  const bySubclass = SUBCLASS_MAGIC_ACCESS[state.character.profile.subclass] || {};
+  const bySubclass = Number(state.character.profile.level || 1) >= 3 ? (SUBCLASS_MAGIC_ACCESS[state.character.profile.subclass] || {}) : {};
   return {...byClass, ...bySubclass};
 }
 
@@ -512,7 +635,17 @@ function selectedPackage() {
 }
 
 function carryLimit() {
-  return finalAbilityScore('str') * Number(selectedSpeciesData()?.carryMultiplier || 4);
+  return finalAbilityScore('str') * 3;
+}
+
+function skillAbility(skill) {
+  return SKILL_TO_ABILITY[skill] || 'int';
+}
+
+function skillBonus(skill) {
+  const abilityKey = skillAbility(skill);
+  const total = mod(finalAbilityScore(abilityKey)) + (selectedSkillSet().includes(skill) ? proficiencyBonus() : 0);
+  return `${total >= 0 ? '+' : ''}${total}`;
 }
 
 function encumbrance() {
@@ -530,19 +663,82 @@ function armorClass() {
   return ac;
 }
 
+function prophetSpellcastingAbilityKey() {
+  return PROPHET_SPELLCASTING_ABILITIES[state.character.profile.subclass] || 'wis';
+}
+
+function elementalLoreAbilityKey(lore) {
+  return {
+    Force: 'str',
+    Light: 'dex',
+    Frost: 'con',
+    Lightning: 'int',
+    Fire: 'wis',
+    Life: 'cha',
+  }[cleanLabel(lore)] || 'int';
+}
+
+function rogueManeuverAbilityMod() {
+  return Math.max(mod(finalAbilityScore('str')), mod(finalAbilityScore('dex')));
+}
+
+function vitalityBonusProfile() {
+  const className = state.character.profile.className;
+  const rule = selectedClassRule();
+  if (className === 'Bard') {
+    const bonus = mod(finalAbilityScore('cha'));
+    return {start: bonus, perLevel: bonus};
+  }
+  if (className === 'Prophet') {
+    const bonus = mod(finalAbilityScore(prophetSpellcastingAbilityKey()));
+    return {start: bonus, perLevel: bonus};
+  }
+  if (className === 'Druid') {
+    const bonus = mod(finalAbilityScore('wis'));
+    return {start: bonus, perLevel: bonus};
+  }
+  if (className === 'Mage') {
+    const bonus = mod(finalAbilityScore(elementalLoreAbilityKey(primaryElementalLore())));
+    return {start: bonus, perLevel: bonus};
+  }
+  if (className === 'Rogue') {
+    const bonus = rogueManeuverAbilityMod();
+    return {start: bonus, perLevel: bonus};
+  }
+  if (className === 'Sorcerer') {
+    const bonus = mod(finalAbilityScore(elementalLoreAbilityKey(chosenElementalLore())));
+    return {start: bonus, perLevel: bonus};
+  }
+  if (className === 'Witch') {
+    const bonus = mod(finalAbilityScore('int'));
+    return {start: bonus, perLevel: bonus};
+  }
+  return {start: Number(rule.vitalityBonus || 0), perLevel: Number(rule.vitalityBonus || 0)};
+}
+
+function magicVitalityTax() {
+  const className = state.character.profile.className;
+  if (!['Druid', 'Ranger'].includes(className)) return 0;
+  const sectionName = className === 'Druid' ? 'Wild Magic' : 'Wild Magic';
+  return state.character.magic.wild.reduce((sum, title) => {
+    const tier = spellTierForTitle(sectionName, title);
+    const cost = {Novice: 1, Apprentice: 2, Adept: 3, Expert: 4, Master: 5}[tier] || 0;
+    return sum + cost;
+  }, 0);
+}
+
 function hitPoints() {
   const species = selectedSpeciesData();
-  const rule = selectedClassRule();
   const con = mod(finalAbilityScore('con'));
   const level = Number(state.character.profile.level || 1);
-  return Math.max(1, Number(species?.hpBase || 5) + con + Math.max(0, level - 1) * (Number(species?.hpPer || 5) + con + Number(rule.hpBonus || 0)));
+  return Math.max(1, Number(species?.hpBase || 5) + con + Math.max(0, level - 1) * (Number(species?.hpPer || 5) + con));
 }
 
 function vitalityPoints() {
   const species = selectedSpeciesData();
-  const rule = selectedClassRule();
   const level = Number(state.character.profile.level || 1);
-  return Math.max(1, Number(species?.vitalityBase || 10) + Math.max(0, level - 1) * (Number(species?.vitalityPer || 5) + Number(rule.vitalityBonus || 0)));
+  const bonus = vitalityBonusProfile();
+  return Math.max(1, Number(species?.vitalityBase || 10) + Number(bonus.start || 0) + Math.max(0, level - 1) * (Number(species?.vitalityPer || 5) + Number(bonus.perLevel || 0)) - magicVitalityTax());
 }
 
 function speedMeters() {
@@ -550,6 +746,7 @@ function speedMeters() {
 }
 
 function spellTierForTitle(sectionName, title) {
+  if (sectionName === 'Elemental Magic' && isElementalChannelSpell(title)) return elementalChannelTier(title) || 'Novice';
   const section = handbookSection(sectionName);
   let currentTier = '';
   for (const page of section?.pages || []) {
@@ -567,9 +764,36 @@ function spellTierLevelRequirement(mode, tier) {
   return table[tier] || 99;
 }
 
+function spellTierUnlockLevel(groupKey, tier) {
+  const className = state.character.profile.className;
+  const subclass = state.character.profile.subclass;
+  if (groupKey === 'maneuvers') return spellTierLevelRequirement('martial', tier);
+  if (groupKey === 'wild' && className === 'Ranger') return ({Novice: 1, Apprentice: 5, Adept: 9, Expert: 99, Master: 99})[tier] || 99;
+  if (groupKey === 'divine' && className === 'Paladin') return ({Novice: 1, Apprentice: 5, Adept: 9, Expert: 99, Master: 99})[tier] || 99;
+  if (groupKey === 'elemental' && subclass === 'Eldritch Knight') return ({Novice: 3, Apprentice: 7, Adept: 99, Expert: 99, Master: 99})[tier] || 99;
+  if (groupKey === 'elemental' && subclass === 'Spellblade') return ({Novice: 3, Apprentice: 6, Adept: 99, Expert: 99, Master: 99})[tier] || 99;
+  return spellTierLevelRequirement(effectiveSpellMode(groupKey), tier);
+}
+
 function spellTierUnlocked(mode, tier) {
   const level = Number(state.character.profile.level || 1);
   return level >= spellTierLevelRequirement(mode, tier);
+}
+
+function elementalTierPage(lore, tier) {
+  const section = handbookSection('Elemental Magic');
+  let currentLore = '';
+  let currentTier = '';
+  let currentTierPage = null;
+  for (const page of section?.pages || []) {
+    if (/^The Lore of /.test(page.title)) currentLore = cleanLabel(page.title.replace('The Lore of ', '').replace(/\s*\(.*\)$/,''));
+    if (/^(Novice|Apprentice|Adept|Expert|Master)/.test(page.title)) {
+      currentTier = page.title.split(' ')[0].replace(/[^A-Za-z]/g, '');
+      currentTierPage = page;
+    }
+    if (currentLore === cleanLabel(lore) && currentTier === tier && currentTierPage) return currentTierPage;
+  }
+  return null;
 }
 
 function effectiveSpellMode(groupKey) {
@@ -583,22 +807,54 @@ function effectiveSpellMode(groupKey) {
 
 function spellPickLimit(groupKey) {
   const level = Number(state.character.profile.level || 1);
-  if (groupKey === 'maneuvers') return 2 + Math.floor((level - 1) / 2);
+  const className = state.character.profile.className;
+  const subclass = state.character.profile.subclass;
+  if (groupKey === 'maneuvers') {
+    if (subclass === 'Mythos of Legends') return level < 3 ? 0 : 2 + Math.floor((level - 3) / 2);
+    if (className === 'Rogue') return level + 3;
+    if (['Barbarian', 'Fighter', 'Monk', 'Ranger'].includes(className)) return level < 2 ? 0 : 2 + Math.floor((level - 2) / 2);
+    return 2 + Math.floor((level - 1) / 2);
+  }
+  if (groupKey === 'arias' && className === 'Bard') return level + 3;
+  if (groupKey === 'divine' && className === 'Prophet') return (level * 2) + 2;
+  if (groupKey === 'divine' && className === 'Paladin') return level + 1;
+  if (groupKey === 'elemental' && className === 'Mage') return (level * 2) + 4;
+  if (groupKey === 'elemental' && className === 'Sorcerer') return level + 4;
+  if (groupKey === 'elemental' && subclass === 'Eldritch Knight') return level < 3 ? 0 : level;
+  if (groupKey === 'elemental' && subclass === 'Spellblade') return level < 3 ? 0 : level - 1;
+  if (groupKey === 'wild' && className === 'Druid') return Math.max(1, mod(finalAbilityScore('wis'))) + level;
+  if (groupKey === 'wild' && className === 'Ranger') return level + 1;
+  if (groupKey === 'witchcraft' && className === 'Witch') return level + 3;
+  if (groupKey === 'witchcraft' && subclass === 'Path of the Witcher') return level < 3 ? 0 : level - 1;
   const mode = effectiveSpellMode(groupKey);
   if (mode === 'none') return 0;
   if (mode === 'half') return Math.max(0, 1 + Math.floor(level / 2));
   return level + 1;
 }
 
+function isUnfinishedRule(title) {
+  return UNFINISHED_RULE_TITLES.has(normalizeTitle(title));
+}
+
 function availableSpellChoices(groupKey) {
   const section = SPELL_SECTION_LABELS[groupKey];
-  const mode = effectiveSpellMode(groupKey);
-  let choices = (availableSpellGroups()[groupKey] || []).filter((title) => spellTierUnlocked(mode, spellTierForTitle(section, title)));
-  if (groupKey === 'elemental') choices = choices.filter((title) => elementalLoreBySpell(title) === chosenElementalLore());
+  let choices = (availableSpellGroups()[groupKey] || [])
+    .filter((title) => !isUnfinishedRule(title))
+    .filter((title) => Number(state.character.profile.level || 1) >= spellTierUnlockLevel(groupKey, spellTierForTitle(section, title)));
+  if (groupKey === 'elemental') choices = choices.filter((title) => elementalSpellIsLearnable(title));
+  if (groupKey === 'witchcraft') {
+    const allowedCategory = witchcraftCategoryAccess();
+    if (allowedCategory !== 'all') choices = choices.filter((title) => witchcraftCategoryForTitle(title) === allowedCategory);
+  }
   return choices;
 }
 
 function spellContextForTitle(groupKey, title) {
+  if (groupKey === 'elemental' && isElementalChannelSpell(title)) {
+    const lore = elementalChannelLore(title);
+    const tier = elementalChannelTier(title) || 'Novice';
+    return {tier, tierTitle: tier, lore, tierPage: elementalTierPage(lore, tier)};
+  }
   const section = handbookSection(SPELL_SECTION_LABELS[groupKey]);
   let currentTier = '';
   let currentTierTitle = '';
@@ -619,20 +875,29 @@ function spellContextForTitle(groupKey, title) {
 }
 
 function spellLearnRequirement(groupKey, title) {
-  const mode = effectiveSpellMode(groupKey);
   const context = spellContextForTitle(groupKey, title);
-  return spellTierLevelRequirement(mode, context.tier);
+  return spellTierUnlockLevel(groupKey, context.tier);
 }
 
 function autoChannelSpellNames() {
-  if (!magicAccess().elemental) return [];
-  const lore = chosenElementalLore();
-  if (!lore) return [];
   const tiers = ['Novice', 'Apprentice', 'Adept', 'Expert', 'Master'];
-  const mode = effectiveSpellMode('elemental');
-  return tiers
-    .filter((tier) => spellTierUnlocked(mode, tier))
-    .map((tier, index) => `Channel ${lore} ${index + 1}`);
+  const level = Number(state.character.profile.level || 1);
+  const unlocked = (groupKey) => tiers.filter((tier) => level >= spellTierUnlockLevel(groupKey, tier));
+  const result = [];
+  if (magicAccess().arias) result.push(...unlocked('arias').map((_, index) => `Channel Performance ${index + 1}`));
+  if (magicAccess().divine) result.push(...unlocked('divine').map((_, index) => `Channel Divinity ${index + 1}`));
+  if (magicAccess().wild) result.push(...unlocked('wild').map((_, index) => `Channel Wild ${index + 1}`));
+  if (magicAccess().elemental) {
+    const lore = chosenElementalLore();
+    if (lore) result.push(...unlocked('elemental').map((_, index) => `Channel ${lore} ${index + 1}`));
+  }
+  if (state.character.profile.className === 'Witch') {
+    if (state.character.profile.subclass === 'Forge Coven') result.push('Channel Fire I');
+    if (state.character.profile.subclass === 'Hedge Coven') result.push('Channel Life I');
+    if (level >= 7 && state.character.profile.subclass === 'Forge Coven') result.push('Channel Fire II');
+    if (level >= 7 && state.character.profile.subclass === 'Hedge Coven') result.push('Channel Life II');
+  }
+  return result;
 }
 
 function spellPreviewData(groupKey, title) {
@@ -642,8 +907,11 @@ function spellPreviewData(groupKey, title) {
   const requirementLevel = spellLearnRequirement(groupKey, title);
   const tierIntro = sanitizePageText(context.tierPage || {});
   const requirementLine = `${context.tier} ab Stufe ${requirementLevel}`;
+  const elementalRequirement = `Channel ${context.lore || chosenElementalLore()} ${CHANNEL_ROMAN[Math.max(0, SPELL_TIERS.indexOf(context.tier))]}`;
   const channelLine = groupKey === 'elemental'
-    ? `Voraussetzung: ${context.tier === 'Novice' ? `Channel ${context.lore || chosenElementalLore()} I` : `Channel ${context.lore || chosenElementalLore()} ${['Novice', 'Apprentice', 'Adept', 'Expert', 'Master'].indexOf(context.tier) + 1}`}, das im Studio automatisch mit der Tier-Freischaltung gelernt wird.`
+    ? state.character.profile.className === 'Mage' && context.lore && context.lore !== primaryElementalLore()
+      ? `Voraussetzung: ${elementalRequirement}. Mage koennen fremde Lores erst nutzen, nachdem sie den passenden Channel Spell gelernt haben.`
+      : `Voraussetzung: ${elementalRequirement}, das im Studio automatisch mit der Tier-Freischaltung gelernt wird.`
     : '';
   return {
     title: cleanLabel(title),
@@ -652,6 +920,9 @@ function spellPreviewData(groupKey, title) {
     requirementLine,
     channelLine,
     hasExactEffect: Boolean(cleaned),
+    sourceNote: cleaned
+      ? 'Direkter Effekttext aus dem OneNote-Export.'
+      : 'Im Share-Export ist fuer diesen Eintrag nur eine Index-/Tier-Seite verfuegbar.',
     effectText: cleaned ? cleaned.split('\n').slice(0, 20).join('\n') : '',
     fallbackText: tierIntro
       ? tierIntro.split('\n').slice(0, 14).join('\n')
@@ -671,6 +942,32 @@ function spellPreviewText(groupKey, title) {
   ].filter(Boolean).join('\n');
 }
 
+function autoLearnedMagicEntries() {
+  return autoChannelSpellNames().map((title) => {
+    const key = /^Channel Performance/i.test(title)
+      ? 'arias'
+      : /^Channel Divinity/i.test(title)
+        ? 'divine'
+        : /^Channel Wild/i.test(title)
+          ? 'wild'
+          : /^Channel\s+/i.test(title)
+            ? 'elemental'
+            : '';
+    return key ? {key, label: SPELL_SECTION_LABELS[key], title, auto: true} : null;
+  }).filter(Boolean);
+}
+
+function knownMagicEntries() {
+  const entries = [...selectedMagicEntries(), ...autoLearnedMagicEntries()];
+  const seen = new Set();
+  return entries.filter((entry) => {
+    const token = `${entry.key}:${normalizeTitle(entry.title)}`;
+    if (seen.has(token)) return false;
+    seen.add(token);
+    return true;
+  });
+}
+
 function renderSpellPreview(groupKey, title) {
   const data = spellPreviewData(groupKey, title);
   return `
@@ -681,6 +978,7 @@ function renderSpellPreview(groupKey, title) {
         ${data.lore ? `<div class="summary-chip">Lore ${data.lore}</div>` : ''}
         <div class="summary-chip ${data.hasExactEffect ? 'success' : 'warning'}">${data.hasExactEffect ? 'Einzeleffekt aus Quelle' : 'Nur Tier-/Channel-Regeln verfuegbar'}</div>
       </div>
+      <div class="summary-chip wide">${data.sourceNote}</div>
       ${data.channelLine ? `<div class="guide-card compact"><strong>Voraussetzung</strong><p class="muted">${data.channelLine}</p></div>` : ''}
       <div class="guide-card compact">
         <strong>Effekt</strong>
@@ -699,6 +997,46 @@ function previewTextFor(groupKey, title) {
   return spellPreviewText(groupKey, title).split('\n').join(' ').slice(0, 320);
 }
 
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function cleanPreviewText(text, maxLines = 10) {
+  return String(text || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, maxLines)
+    .join('\n');
+}
+
+function renderInfoPreviewCard({eyebrow = 'Preview', title = '', text = '', chips = []}) {
+  const cleaned = cleanPreviewText(text, 12) || 'Keine saubere Beschreibung verfuegbar.';
+  return `
+    <div class="preview-window">
+      <div class="preview-window-bar">
+        <span></span><span></span><span></span>
+      </div>
+      <div class="preview-window-body">
+        <div class="eyebrow">${escapeHtml(eyebrow)}</div>
+        <h3>${escapeHtml(title || 'Preview')}</h3>
+        ${chips.length ? `<div class="summary-row">${chips.map((chip) => `<div class="summary-chip">${escapeHtml(chip)}</div>`).join('')}</div>` : ''}
+        <pre class="reader-text compact inline">${escapeHtml(cleaned)}</pre>
+      </div>
+    </div>
+  `;
+}
+
+function summarySnippet(text, max = 180) {
+  const value = cleanPreviewText(text, 4).replace(/\s+/g, ' ').trim();
+  return value.length > max ? `${value.slice(0, max - 1).trimEnd()}…` : value;
+}
+
 function speciesFeatureText() {
   const species = selectedSpeciesData();
   if (!species) return [];
@@ -706,9 +1044,115 @@ function speciesFeatureText() {
     ...Object.entries(species.abilities || {}).filter(([, value]) => value).map(([key, value]) => `${ABILITY_LABELS[key]} ${value >= 0 ? '+' : ''}${value}`),
     `Base AC ${species.baseAc}`,
     `Speed ${species.speed}m`,
-    `Carry x${species.carryMultiplier}`,
+    `Carry Limit STR x 3`,
     ...(species.feats || []),
   ];
+}
+
+function witchcraftCategoryForTitle(title) {
+  const section = handbookSection('Witchcraft');
+  let currentCategory = '';
+  for (const page of section?.pages || []) {
+    if (/^Potion Formulas/i.test(page.title)) currentCategory = 'formula';
+    if (/^Enchantements/i.test(page.title)) currentCategory = 'enchantment';
+    if (normalizeTitle(page.title) === normalizeTitle(title)) return currentCategory || '';
+  }
+  return '';
+}
+
+function witchcraftCategoryAccess() {
+  const subclass = state.character.profile.subclass;
+  if (subclass === 'Alchemy Coven' || subclass === 'Path of the Witcher') return 'formula';
+  if (subclass === 'Forge Coven') return 'enchantment';
+  return 'all';
+}
+
+function elementalAccessSummary() {
+  const unlocked = [...unlockedElementalLores()];
+  if (state.character.profile.className === 'Mage') return `Primary Lore: ${primaryElementalLore()} | Freigeschaltet: ${unlocked.join(', ')}`;
+  return `Lore: ${chosenElementalLore()}`;
+}
+
+function extractFeatureSnippet(page, featureName) {
+  const cleaned = sanitizePageText(page);
+  if (!cleaned) return '';
+  const escaped = featureName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const headingRegex = new RegExp(`${escaped}\\.?\\s*([\\s\\S]{0,900})`, 'i');
+  const match = cleaned.match(headingRegex);
+  if (!match) return '';
+  const after = match[1]
+    .split('\n')
+    .slice(0, 6)
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return `${featureName}. ${after}`.slice(0, 420).trim();
+}
+
+function extractFeatureBlocks(page) {
+  const cleaned = sanitizePageText(page);
+  if (!cleaned) return [];
+  const lines = cleaned.split('\n').map((line) => line.trim()).filter(Boolean).filter((line) => !isDateOrTimeLine(line));
+  const currentTitle = normalizeTitle(page?.title);
+  const blocks = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index];
+    const normalized = normalizeTitle(line);
+    if (!line || normalized === currentTitle) continue;
+    const next = lines[index + 1] || '';
+    const isHeading = line.length >= 3
+      && line.length <= 48
+      && !/[.!?]$/.test(line)
+      && next
+      && (next.length > 30 || /^[•*-]/.test(next));
+    if (!isHeading) continue;
+    const descriptionLines = [];
+    for (let lookahead = index + 1; lookahead < lines.length; lookahead += 1) {
+      const candidate = lines[lookahead];
+      const future = lines[lookahead + 1] || '';
+      const candidateIsHeading = candidate.length >= 3
+        && candidate.length <= 48
+        && !/[.!?]$/.test(candidate)
+        && future
+        && (future.length > 30 || /^[•*-]/.test(future));
+      if (lookahead > index + 1 && candidateIsHeading) break;
+      descriptionLines.push(candidate.replace(/^[•*-]\s*/, ''));
+      if (descriptionLines.length >= 5) break;
+    }
+    const description = descriptionLines.join(' ').replace(/\s+/g, ' ').trim();
+    if (description.length >= 20) {
+      blocks.push({name: line, description});
+    }
+  }
+  return [...new Map(blocks.map((item) => [item.name, item])).values()].slice(0, 8);
+}
+
+function speciesFeatureDetails() {
+  const species = selectedSpeciesData();
+  const page = handbookPage('Species', state.character.profile.speciesSubtype) || speciesHandbookEntry();
+  return (species?.feats || []).map((feature) => ({
+    name: feature,
+    description: extractFeatureSnippet(page, feature) || handbookPreview(page, feature),
+    section: 'Species',
+    page: page?.title || species?.name || '',
+    chips: [species?.name || state.character.profile.speciesSubtype || 'Species Feature'],
+  }));
+}
+
+function renderHoverChips(items, targetId) {
+  return items.map((item) => `
+    <button
+      class="summary-chip interactive"
+      data-preview-target="${targetId}"
+      data-preview-title="${escapeHtml(item.name)}"
+      data-preview-text="${escapeHtml(item.description || item.name)}"
+      data-preview-eyebrow="${escapeHtml(item.eyebrow || 'Detail')}"
+      data-preview-section="${escapeHtml(item.section || '')}"
+      data-preview-page="${escapeHtml(item.page || '')}"
+      data-preview-chips="${escapeHtml((item.chips || []).join('||'))}"
+      title="${String(item.description || item.name).replace(/"/g, '&quot;')}"
+    >${item.name}</button>
+  `).join('');
 }
 
 function activeMagicOptional() {
@@ -737,6 +1181,10 @@ function selectedPageRecord() {
   return section?.pages.find((page) => page.title === state.selectedPage) || null;
 }
 
+function pageSectionName(page) {
+  return state.handbook.find((entry) => entry.pages.includes(page))?.section || state.selectedSection;
+}
+
 function renderOptionList(options, selected, field, descriptions = {}, previewGroup = '') {
   return `
     <div class="pill-grid">
@@ -747,12 +1195,12 @@ function renderOptionList(options, selected, field, descriptions = {}, previewGr
   `;
 }
 
-function renderChoiceCards(options, selected, field, detailMap = {}, emptyText = '') {
+function renderChoiceCards(options, selected, field, detailMap = {}, emptyText = '', previewTarget = '', previewMap = null) {
   if (!options.length) return `<div class="empty-state compact">${emptyText || 'Keine Optionen verfuegbar.'}</div>`;
   return `
     <div class="choice-grid">
       ${options.map((option) => `
-        <button class="choice-card ${selected === option ? 'active' : ''}" data-choose-field="${field}" data-choose-value="${option}">
+        <button class="choice-card ${selected === option ? 'active' : ''}" data-choose-field="${field}" data-choose-value="${option}" title="${String((previewMap || detailMap)[option] || option).replace(/"/g, '&quot;')}" ${previewTarget ? `data-preview-target="${previewTarget}" data-preview-title="${escapeHtml(option)}" data-preview-text="${escapeHtml((previewMap || detailMap)[option] || option)}" data-preview-eyebrow="${escapeHtml(field.includes('subclass') ? 'Subclass' : field.includes('className') ? 'Class' : field.includes('speciesSubtype') ? 'Lineage' : field.includes('species') ? 'Species' : 'Preview')}"` : ''}>
           <strong>${option}</strong>
           ${detailMap[option] ? `<span>${detailMap[option]}</span>` : ''}
         </button>
@@ -762,7 +1210,7 @@ function renderChoiceCards(options, selected, field, detailMap = {}, emptyText =
 }
 
 function handbookPreview(page, fallback) {
-  const cleaned = sanitizePageText(page);
+  const cleaned = sanitizePageText(page) || manualCompendiumText(pageSectionName(page), page?.title);
   if (!cleaned) return fallback || 'Diese Unterseite wurde gefunden, liefert in der Share-Ansicht aber keinen sauberen Fliesstext.';
   return cleaned.split('\n').slice(0, 16).join('\n');
 }
@@ -782,21 +1230,21 @@ function stepIsComplete(stepId) {
   if (stepId === 'loadout') return Boolean(c.loadout.package);
   if (stepId === 'magic') {
     const required = Object.entries(magicAccess()).some(([, enabled]) => enabled);
-    return !required || selectedMagicEntries().length > 0 || activeMagicOptional();
+    return !required || knownMagicEntries().length > 0 || activeMagicOptional();
   }
   if (stepId === 'notes') return true;
   return false;
 }
 
 function stepDescription(stepId) {
-  if (stepId === 'profile') return 'Lege Name, Spieler und Stufe fest.';
-  if (stepId === 'species') return 'Species und Unterspezies bestimmen Werte und Traits.';
-  if (stepId === 'class') return 'Klasse schaltet Subclass und Magiepfade frei.';
-  if (stepId === 'abilities') return 'Point Buy mit automatischen Kampfwerten.';
-  if (stepId === 'proficiencies') return 'Klassen-Skills und Feats mit Limits.';
-  if (stepId === 'loadout') return 'Paketbasiertes Equipment statt Freitext.';
-  if (stepId === 'magic') return 'Nur freigeschaltete und levelgerechte Listen.';
-  return 'Zum Schluss Notizen und Kampagnenhaken.';
+  if (stepId === 'profile') return 'Beginne mit Identitaet und Ziel-Level des Charakters.';
+  if (stepId === 'species') return 'Waehle Herkunft und Linie, damit Grundwerte und Traits feststehen.';
+  if (stepId === 'class') return 'Bestimme Rolle, Subclass und dadurch freigeschaltete Systeme.';
+  if (stepId === 'abilities') return 'Verteile Attribute und kontrolliere die automatisch berechneten Werte.';
+  if (stepId === 'proficiencies') return 'Fuelle den Build mit Skills und Feats innerhalb der Limits.';
+  if (stepId === 'loadout') return 'Lege das Startpaket fest und pruefe Gewicht sowie Ruestung.';
+  if (stepId === 'magic') return 'Waehle jetzt nur die auf diesem Level erlaubten Spells und Maneuvers.';
+  return 'Ergaenze am Ende Notizen, Auftreten und Kampagnenhaken.';
 }
 
 function referencePanel(title, page, section) {
@@ -819,7 +1267,7 @@ function selectedMagicEntries() {
 function currentMagicPreview() {
   const preview = state.magicPreview;
   if (preview?.key && preview?.title) return preview;
-  return selectedMagicEntries()[0] || null;
+  return knownMagicEntries()[0] || null;
 }
 
 function panel(title, body, subtitle = '') {
@@ -836,13 +1284,47 @@ function panel(title, body, subtitle = '') {
   `;
 }
 
+function compendiumFallbackText(page) {
+  if (!page) return 'Waehle links einen sinnvollen Regel-Eintrag oder suche direkt nach einem Begriff.';
+  const manual = manualCompendiumText(state.selectedSection, page.title);
+  if (manual) return manual;
+  if (['Arias', 'Divine Magic', 'Elemental Magic', 'Wild Magic', 'Witchcraft', 'Maneuvers'].includes(state.selectedSection)) {
+    return `Fuer "${page.title}" enthaelt der OneNote-Share-Export hier nur eine Index- oder Navigationsseite. Nutze im Builder die Hover-Preview fuer Tier, Voraussetzung und den bestmoeglichen Effekttext aus der Quelle.`;
+  }
+  return `Diese OneNote-Seite ist im Share-Export fuer "${page.title}" nicht sauber lesbar. Der Titel bleibt als Referenz erhalten.`;
+}
+
+function compendiumStats(page) {
+  const cleaned = sanitizePageText(page) || manualCompendiumText(state.selectedSection, page?.title);
+  const lines = cleaned ? cleaned.split('\n').filter(Boolean) : [];
+  const section = state.selectedSection;
+  const chips = [section];
+  const spellContext = Object.entries(SPELL_SECTION_LABELS).find(([, label]) => label === section)
+    ? spellContextForTitle(Object.keys(SPELL_SECTION_LABELS).find((key) => SPELL_SECTION_LABELS[key] === section), page?.title || '')
+    : null;
+  if (spellContext?.tier) chips.push(spellContext.tier);
+  if (spellContext?.lore) chips.push(`Lore ${spellContext.lore}`);
+  if (lines.length) chips.push(`${lines.length} Zeilen`);
+  return chips;
+}
+
+function relatedPages(sectionName, currentTitle, limit = 8) {
+  return meaningfulPages(sectionName)
+    .filter((item) => item.title !== currentTitle)
+    .slice(0, limit);
+}
+
+function searchItems() {
+  return state.search ? state.filteredPages : meaningfulPages(state.selectedSection);
+}
+
 function renderBuilder() {
   const c = state.character;
   const step = state.builderStep;
   const species = selectedSpeciesData();
   const classRule = selectedClassRule();
   const speciesPage = handbookPage('Species', c.profile.speciesSubtype) || speciesHandbookEntry();
-  const selectedMagic = selectedMagicEntries();
+  const selectedMagic = knownMagicEntries();
   let body = '';
 
   if (step === 'profile') {
@@ -860,16 +1342,22 @@ function renderBuilder() {
       </div>
     `, 'Nur Kernangaben, keine irrelevanten Freitextfelder mehr.');
   } else if (step === 'species') {
+    const featureDetails = speciesFeatureDetails();
+    const speciesPreviewMap = Object.fromEntries(SPECIES.map((name) => [name, handbookPreview(handbookPage('Species', name), name)]));
     body = `
       ${panel('Step 2 - Species', `
         <div class="stack">
+          <div class="guide-card compact">
+            <div class="eyebrow">Was du hier festlegst</div>
+            <p class="muted">Waehle zuerst die Species, dann die genaue Linie. Diese Entscheidung setzt Grundwerte wie HP, Vitality, Speed, Carry Limit und viele angeborene Features fuer den restlichen Build.</p>
+          </div>
           <div>
             <div class="eyebrow">Species</div>
-            ${renderChoiceCards(SPECIES, c.profile.species, 'profile.species')}
+            ${renderChoiceCards(SPECIES, c.profile.species, 'profile.species', Object.fromEntries(SPECIES.map((name) => [name, cleanLabel(name)])), '', 'speciesFeaturePanel', speciesPreviewMap)}
           </div>
           <div>
             <div class="eyebrow">Subspecies / Lineage</div>
-            ${renderChoiceCards(selectedSpeciesOptions().map((item) => item.name), c.profile.speciesSubtype, 'profile.speciesSubtype', Object.fromEntries(selectedSpeciesOptions().map((item) => [item.name, item.summary])))}
+            ${renderChoiceCards(selectedSpeciesOptions().map((item) => item.name), c.profile.speciesSubtype, 'profile.speciesSubtype', Object.fromEntries(selectedSpeciesOptions().map((item) => [item.name, item.summary])), '', 'speciesFeaturePanel', Object.fromEntries(selectedSpeciesOptions().map((item) => [item.name, handbookPreview(handbookPage('Species', item.name) || speciesPage, item.summary)])))}
           </div>
           <div class="summary-row">
             ${speciesFeatureText().map((feature) => `<div class="summary-chip">${feature}</div>`).join('')}
@@ -886,22 +1374,52 @@ function renderBuilder() {
               <div><span>Vitality Formula</span><strong>${species?.vitalityBase || 0}, dann ${species?.vitalityPer || 0}/Lv</strong></div>
               <div><span>Carry Limit</span><strong>STR x ${species?.carryMultiplier || 4}</strong></div>
             </div>
+            <div>
+              <div class="eyebrow">Species Features</div>
+              <div class="summary-row">
+                ${featureDetails.length ? renderHoverChips(featureDetails, 'speciesFeaturePanel') : '<div class="summary-chip">Keine Features gefunden</div>'}
+              </div>
+            </div>
           </div>
         `)}
-        ${referencePanel('Species Reference', speciesPage, 'Species')}
+        ${panel('Feature Details', `
+          <div class="guide-card">
+            <div id="speciesFeaturePanel">${renderInfoPreviewCard({
+              eyebrow: 'Species Detail',
+              title: featureDetails[0]?.name || species?.name || 'Species',
+              text: featureDetails[0]?.description || handbookPreview(speciesPage, species?.name || 'Species'),
+              chips: speciesFeatureText().slice(0, 4),
+            })}</div>
+            <div class="inline-actions">${openCompendiumButton('Species', speciesPage?.title)}</div>
+          </div>
+        `)}
       </div>
     `;
   } else if (step === 'class') {
+    const subclassPage = subclassHandbookEntry();
+    const subclassFeatures = extractFeatureBlocks(subclassPage).map((item) => ({
+      ...item,
+      section: 'Classes',
+      page: c.profile.subclass,
+      chips: [c.profile.className, c.profile.subclass].filter(Boolean),
+      eyebrow: 'Subclass Feature',
+    }));
+    const classPreviewMap = Object.fromEntries(CLASSES.map((name) => [name, `${CLASS_RULES[name].description}\n\n${handbookPreview(handbookPage('Classes', name), CLASS_RULES[name].description)}`]));
+    const subclassPreviewMap = Object.fromEntries((SUBCLASS_MAP[c.profile.className] || []).map((name) => [name, handbookPreview(handbookPage('Classes', name), SUBCLASS_SUMMARIES[name] || 'Subclass summary not yet mapped.')]));
     body = `
       ${panel('Step 3 - Class', `
         <div class="stack">
+          <div class="guide-card compact">
+            <div class="eyebrow">Was du hier festlegst</div>
+            <p class="muted">Waehle zuerst die Hauptklasse fuer deine Rolle im Spiel. Danach bestimmt die Subclass, welche Features, Kampfstile oder Magiepfade spaeter im Build ueberhaupt zur Verfuegung stehen.</p>
+          </div>
           <div>
             <div class="eyebrow">Class</div>
-            ${renderChoiceCards(CLASSES, c.profile.className, 'profile.className', Object.fromEntries(CLASSES.map((name) => [name, CLASS_RULES[name].description])))}
+            ${renderChoiceCards(CLASSES, c.profile.className, 'profile.className', Object.fromEntries(CLASSES.map((name) => [name, CLASS_RULES[name].description])), '', 'classPreviewPanel', classPreviewMap)}
           </div>
           <div>
             <div class="eyebrow">Subclass</div>
-            ${renderChoiceCards(SUBCLASS_MAP[c.profile.className] || [], c.profile.subclass, 'profile.subclass', Object.fromEntries((SUBCLASS_MAP[c.profile.className] || []).map((name) => [name, SUBCLASS_SUMMARIES[name] || 'Subclass summary not yet mapped.'])))}
+            ${renderChoiceCards(SUBCLASS_MAP[c.profile.className] || [], c.profile.subclass, 'profile.subclass', Object.fromEntries((SUBCLASS_MAP[c.profile.className] || []).map((name) => [name, SUBCLASS_SUMMARIES[name] || 'Subclass summary not yet mapped.'])), '', 'classPreviewPanel', subclassPreviewMap)}
           </div>
           <div class="summary-row">
             <div class="summary-chip">${classRule.skillChoices} class skills</div>
@@ -912,8 +1430,36 @@ function renderBuilder() {
         </div>
       `, 'Klasse und Subclass zeigen jetzt direkt ihren Nutzen und ihre Unterschiede.')}
       <div class="split-shell">
-        ${panel('Class Snapshot', `<div class="guide-card"><h3>${c.profile.className}</h3><p class="muted">${classRule.description}</p></div>`)}
-        ${panel('Subclass Snapshot', `<div class="guide-card"><h3>${c.profile.subclass}</h3><p class="muted">${SUBCLASS_SUMMARIES[c.profile.subclass] || 'Unterseiten-Text ist in der Share-Ansicht nicht vollstaendig verfuegbar; daher wird hier eine kuratierte Kurzbeschreibung gezeigt.'}</p></div>`)}
+        ${panel('Class Preview', `
+          <div class="guide-card">
+            <div id="classPreviewPanel">${renderInfoPreviewCard({
+              eyebrow: 'Class Detail',
+              title: c.profile.subclass || c.profile.className,
+              text: handbookPreview(subclassPage, classRule.description),
+              chips: [`${classRule.skillChoices} Class Skills`, `HP +${classRule.hpBonus}/Lv`, `Vitality +${classRule.vitalityBonus}/Lv`],
+            })}</div>
+            <div class="summary-row">
+              <div class="summary-chip">${classRule.skillChoices} Class Skills</div>
+              <div class="summary-chip">HP +${classRule.hpBonus}/Lv</div>
+              <div class="summary-chip">Vitality +${classRule.vitalityBonus}/Lv</div>
+            </div>
+            <div class="inline-actions">${openCompendiumButton('Classes', c.profile.subclass || c.profile.className)}</div>
+          </div>
+        `)}
+        ${panel('Subclass Features', `
+          <div class="guide-card">
+            <div class="summary-row">
+              ${subclassFeatures.length ? renderHoverChips(subclassFeatures, 'subclassFeaturePanel') : '<div class="summary-chip">Keine sauberen Feature-Bloecke im Export gefunden</div>'}
+            </div>
+            <div id="subclassFeaturePanel">${renderInfoPreviewCard({
+              eyebrow: 'Feature Detail',
+              title: subclassFeatures[0]?.name || c.profile.subclass,
+              text: subclassFeatures[0]?.description || handbookPreview(subclassPage, SUBCLASS_SUMMARIES[c.profile.subclass] || 'Keine weitere Beschreibung verfuegbar.'),
+              chips: [c.profile.className, c.profile.subclass].filter(Boolean),
+            })}</div>
+            <div class="inline-actions">${openCompendiumButton('Classes', c.profile.subclass)}</div>
+          </div>
+        `)}
       </div>
     `;
   } else if (step === 'abilities') {
@@ -964,7 +1510,12 @@ function renderBuilder() {
           <div class="guide-card">
             <div class="eyebrow">Selected Detail</div>
             <div id="skillsHoverPanel" class="mini-list">
-              ${selectedSkillSet().length ? selectedSkillSet().map((skill) => `<div class="summary-chip">${skill}: ${SKILL_DESCRIPTIONS[skill] || 'No description mapped yet.'}</div>`).join('') : '<div class="empty-state compact">Waehle Skills oder Feats, um hier direkt ihren Nutzen zu sehen.</div>'}
+              ${selectedSkillSet().length ? renderInfoPreviewCard({
+                eyebrow: 'Skill Detail',
+                title: selectedSkillSet()[0],
+                text: SKILL_DESCRIPTIONS[selectedSkillSet()[0]] || 'No description mapped yet.',
+                chips: [ABILITY_LABELS[skillAbility(selectedSkillSet()[0])], `Bonus ${skillBonus(selectedSkillSet()[0])}`],
+              }) : '<div class="empty-state compact">Waehle Skills oder Feats, um hier direkt ihren Nutzen zu sehen.</div>'}
             </div>
           </div>
         </div>
@@ -1026,11 +1577,15 @@ function renderBuilder() {
       ${panel('Step 7 - Magic & Maneuvers', `
         ${activeMagicLists.length ? `
           <div class="stack">
+            <div class="guide-card compact">
+              <div class="eyebrow">Was du hier waehlen sollst</div>
+              <p class="muted">Waehle aus jeder freigeschalteten Liste die Spells oder Maneuvers, die dein Charakter auf dieser Stufe wirklich kennt. Das Studio zeigt nur Eintraege, die fuer Klasse, Subclass, Tier, Lore und Level legal sind.</p>
+            </div>
             ${magicAccess().elemental ? `
               <div class="guide-card">
                 <div class="eyebrow">Elemental Access</div>
                 <div class="summary-row">
-                  <div class="summary-chip">Lore: ${chosenElementalLore()}</div>
+                  <div class="summary-chip">${elementalAccessSummary()}</div>
                   ${autoChannelSpellNames().map((spell) => `<div class="summary-chip">${spell}</div>`).join('')}
                 </div>
                 ${elementalLoreChoices().length ? `<div class="inline-actions">${fixedElementalLore() ? `<div class="summary-chip">Feste Lore durch Subclass</div>` : renderChoiceCards(elementalLoreChoices(), chosenElementalLore(), 'profile.elementalLore')}</div>` : ''}
@@ -1039,18 +1594,18 @@ function renderBuilder() {
             ${activeMagicLists.map(({key, label, items}) => `
               <label>
                 <span>${label} (${state.character.magic[key].length}/${spellPickLimit(key)})</span>
-                <small class="muted">${items.length} verfuegbar auf diesem Level${key === 'elemental' ? ` in der Lore ${chosenElementalLore()}` : ''}.</small>
+                <small class="muted">${items.length} verfuegbar auf diesem Level${key === 'elemental' ? ` | ${elementalAccessSummary()}` : ''}.</small>
                 <div class="spell-picker">${renderOptionList(items, state.character.magic[key], `magic.${key}`, Object.fromEntries(items.map((title) => [title, previewTextFor(key, title)])), key)}</div>
               </label>
             `).join('')}
           </div>
         ` : '<div class="empty-state compact">Diese Klasse/Subclass hat auf diesem Level keine waehlbare Magie oder Maneuvers.</div>'}
-      `, 'Spells und Maneuvers sind jetzt nach Tier und Level gefiltert und haben Pick-Limits.')}
+      `, 'Waehle hier die legalen Spells und Maneuvers fuer den aktuellen Charakterstand.')}
       <div class="split-shell">
         ${panel('Spellcasting Rules', `
           <pre class="reader-text compact">${handbookPreview(handbookPage('Magic', 'Casting Spells') || handbookPage('Magic', 'What Is A Spell?'))}</pre>
           <div class="summary-row">
-            ${magicAccess().elemental ? `<div class="summary-chip">Lore: ${chosenElementalLore()}</div>` : ''}
+            ${magicAccess().elemental ? `<div class="summary-chip">${elementalAccessSummary()}</div>` : ''}
             ${autoChannelSpellNames().length ? `<div class="summary-chip">${autoChannelSpellNames().length} Auto-Channel freigeschaltet</div>` : ''}
           </div>
         `)}
@@ -1100,26 +1655,45 @@ function renderCompendium() {
   const page = selectedPageRecord();
   const sections = handbookSections();
   const currentPages = meaningfulPages(state.selectedSection);
+  const visibleItems = searchItems();
+  const cleaned = sanitizePageText(page);
   return `
     <section class="panel compendium-shell">
       <div class="compendium-sidebar">
         <label class="search-box"><span>Suchen</span><input id="searchInput" value="${state.search}" placeholder="Spell, class, condition ..."></label>
+        <div class="guide-card compact">
+          <div class="eyebrow">Navigation</div>
+          <p class="muted">${state.search ? `Suche aktiv: ${visibleItems.length} Treffer ueber alle Sektionen.` : `${currentPages.length} nutzbare Eintraege in ${state.selectedSection}. OneNote-Abgleich eingearbeitet.`}</p>
+        </div>
         <div class="filter-list">
           ${sections.map((section) => `<button class="filter-btn ${section === state.selectedSection ? 'active' : ''}" data-section="${section}">${section}</button>`).join('')}
         </div>
         <div class="page-list">
-          ${(state.search ? state.filteredPages : currentPages).map((item) => `<button class="page-btn ${item.title === state.selectedPage ? 'active' : ''}" data-page="${item.title}">${item.title}</button>`).join('')}
+          ${visibleItems.map((item) => `<button class="page-btn ${item.title === state.selectedPage ? 'active' : ''}" data-page="${item.title}"><strong>${cleanLabel(item.title)}</strong><small>${summarySnippet(sanitizePageText(item) || compendiumFallbackText(item), 90)}</small></button>`).join('')}
         </div>
       </div>
       <div class="compendium-reader">
-        ${page && sanitizePageText(page) ? `
+        ${page ? `
           <div class="reader-head">
             <div>
               <div class="eyebrow">${state.selectedSection}</div>
-              <h2>${page.title}</h2>
+              <h2>${cleanLabel(page.title)}</h2>
+              <div class="summary-row">${compendiumStats(page).map((chip) => `<div class="summary-chip">${chip}</div>`).join('')}</div>
             </div>
           </div>
-          <pre class="reader-text">${sanitizePageText(page) || 'Diese OneNote-Seite enthaelt in der Freigabe kaum lesbaren Text. Der Titel bleibt aber als Referenz im Compendium vorhanden.'}</pre>
+          <div class="compendium-layout">
+            <pre class="reader-text">${cleaned || compendiumFallbackText(page)}</pre>
+            <div class="compendium-aside">
+              <div class="guide-card compact">
+                <div class="eyebrow">Kurzfassung</div>
+                <p class="muted">${summarySnippet(cleaned || compendiumFallbackText(page), 260)}</p>
+              </div>
+              <div class="guide-card compact">
+                <div class="eyebrow">Verwandte Eintraege</div>
+                <div class="mini-list">${relatedPages(state.selectedSection, page.title, 8).map((item) => `<button class="mini-link" data-page="${item.title}">${item.title}</button>`).join('') || '<div class="summary-chip">Keine weiteren Eintraege in dieser Sektion</div>'}</div>
+              </div>
+            </div>
+          </div>
         ` : '<div class="empty-state">Waehle links einen sinnvollen Regel-Eintrag oder suche direkt nach einem Begriff.</div>'}
       </div>
     </section>
@@ -1153,6 +1727,10 @@ function renderSummary() {
   const skillCount = selectedSkillSet().length;
   const spellCount = c.magic.arias.length + c.magic.divine.length + c.magic.elemental.length + c.magic.wild.length + c.magic.witchcraft.length;
   const maneuverCount = c.magic.maneuvers.length;
+  const skillColumns = SKILLS.reduce((columns, skill, index) => {
+    columns[index % 2].push(skill);
+    return columns;
+  }, [[], []]);
   return `
     <div class="summary-card sticky">
       <a class="back-link" href="../index.html#games">Zurueck zur Startseite</a>
@@ -1169,6 +1747,14 @@ function renderSummary() {
       </div>
       <div class="ability-summary">
         ${ABILITIES.map((key) => `<div><span>${ABILITY_LABELS[key].slice(0,3).toUpperCase()}</span><strong>${finalAbilityScore(key)}</strong><small>${mod(finalAbilityScore(key)) >= 0 ? '+' : ''}${mod(finalAbilityScore(key))}</small></div>`).join('')}
+      </div>
+      <div class="summary-section-label">Skills</div>
+      <div class="skill-columns">
+        ${skillColumns.map((column) => `
+          <div class="skill-column">
+            ${column.map((skill) => `<div class="skill-summary-item ${selectedSkillSet().includes(skill) ? 'active' : ''}" title="${skill}: ${ABILITY_LABELS[skillAbility(skill)]} ${selectedSkillSet().includes(skill) ? '+ Proficiency' : ''}"><span>${skill}</span><strong>${skillBonus(skill)}</strong></div>`).join('')}
+          </div>
+        `).join('')}
       </div>
       <div class="summary-foot">
         <span>${skillCount} Skills</span>
@@ -1188,7 +1774,7 @@ function render() {
           <div>
             <div class="eyebrow">D&D-inspired P&P Builder</div>
             <h2>SoaNW Character Studio</h2>
-            <p class="muted">Builder, Regel-Compendium und PDF-Workflow fuer das geteilte SoaNW Player's Handbook aus OneDrive.</p>
+            <p class="muted">Vervollstaendigter Builder, gegengeprueftes Compendium und PDF-Workflow auf Basis der OneNote-Abschnitte aus dem Sagaofanewworld-Handbook. Der Character Builder und das Compendium sind damit vollstaendig und nutzbar.</p>
           </div>
           <div class="tab-row">
             ${['builder', 'compendium', 'export'].map((tab) => `<button class="tab-btn ${state.tab === tab ? 'active' : ''}" data-tab="${tab}">${tab === 'builder' ? 'Builder' : tab === 'compendium' ? 'Compendium' : 'Export'}</button>`).join('')}
@@ -1274,7 +1860,7 @@ function applyFieldChange(path, value) {
     state.magicPreview = null;
     state.character.proficiencies.skills = [];
     state.character.loadout.package = CLASS_RULES[value]?.loadouts?.[0] || '';
-    const access = {...(CLASS_MAGIC_ACCESS[value] || {}), ...(SUBCLASS_MAGIC_ACCESS[state.character.profile.subclass] || {})};
+    const access = magicAccess();
     for (const key of ['arias', 'divine', 'elemental', 'wild', 'witchcraft', 'maneuvers']) {
       if (!access[key]) state.character.magic[key] = [];
     }
@@ -1288,15 +1874,19 @@ function applyFieldChange(path, value) {
     }
   }
   if (path === 'profile.elementalLore') {
-    state.character.magic.elemental = state.character.magic.elemental.filter((title) => elementalLoreBySpell(title) === value && availableSpellChoices('elemental').includes(title));
-    if (state.magicPreview?.key === 'elemental' && elementalLoreBySpell(state.magicPreview.title) !== value) state.magicPreview = null;
+    state.character.magic.elemental = state.character.magic.elemental.filter((title) => availableSpellChoices('elemental').includes(title));
+    if (state.magicPreview?.key === 'elemental'
+      && !availableSpellChoices('elemental').includes(state.magicPreview.title)
+      && !knownMagicEntries().some((entry) => entry.key === 'elemental' && entry.title === state.magicPreview.title)) {
+      state.magicPreview = null;
+    }
   }
   if (path === 'profile.level') {
     state.character.build.feats = state.character.build.feats.slice(0, featSlots());
     for (const key of Object.keys(SPELL_SECTION_LABELS)) {
       state.character.magic[key] = state.character.magic[key].filter((title) => availableSpellChoices(key).includes(title));
     }
-    if (state.magicPreview && !availableSpellChoices(state.magicPreview.key).includes(state.magicPreview.title) && !selectedMagicEntries().some((entry) => entry.key === state.magicPreview.key && entry.title === state.magicPreview.title)) {
+    if (state.magicPreview && !availableSpellChoices(state.magicPreview.key).includes(state.magicPreview.title) && !knownMagicEntries().some((entry) => entry.key === state.magicPreview.key && entry.title === state.magicPreview.title)) {
       state.magicPreview = null;
     }
   }
@@ -1332,90 +1922,303 @@ function refreshSearch() {
     .map((page) => ({...page, section: entry.section})));
 }
 
-async function exportPdf() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF({unit: 'pt', format: 'a4'});
-  const c = state.character;
-  const drawSection = (title, rows) => {
-    if (y > 700) {
-      doc.addPage();
-      y = 60;
-    }
-    doc.setFillColor(245, 238, 224);
-    doc.roundedRect(40, y, 515, 24, 8, 8, 'F');
-    doc.setTextColor(38, 30, 34);
-    doc.setFontSize(12);
-    doc.setFont(undefined, 'bold');
-    doc.text(title, 52, y + 16);
-    y += 38;
-    for (const [label, value] of rows) {
-      const wrapped = doc.splitTextToSize(String(value), 340);
-      doc.setFont(undefined, 'bold');
-      doc.text(label, 48, y);
-      doc.setFont(undefined, 'normal');
-      doc.text(wrapped, 190, y);
-      y += Math.max(24, wrapped.length * 13 + 6);
-      if (y > 730) {
-        doc.addPage();
-        y = 60;
-      }
-    }
-    y += 10;
+function compactTierLabel(tier, lore = '') {
+  const tierMap = {Novice: 'Nov', Apprentice: 'App', Adept: 'Ade', Expert: 'Exp', Master: 'Mas', Beginner: 'Beg', Veteran: 'Vet', Elite: 'Elt'};
+  const loreMap = {Force: 'For', Light: 'Lgt', Frost: 'Frs', Lightning: 'Ltg', Fire: 'Fir', Life: 'Lif'};
+  const tierShort = tierMap[tier] || tier || '';
+  const loreShort = loreMap[lore] || lore.slice(0, 3) || '';
+  return [tierShort, loreShort].filter(Boolean).join(' ');
+}
+
+function ruleBodyLines(text) {
+  return String(text || '')
+    .split('\n')
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .filter((line) => !/^(Novice|Apprentice|Adept|Expert|Master|Beginner|Veteran|Elite)\b/i.test(line))
+    .filter((line) => !/^(Vitality Cost|Casting Time|Use Time|Range|Duration|Requires):/i.test(line))
+    .filter((line) => !/^Channel /i.test(line));
+}
+
+function compactRuleSnippet(text, maxLength = 28) {
+  const lines = ruleBodyLines(text);
+  const joined = lines.join(' ');
+  const patterns = [
+    /\b\d+d\d+(?:\s*\+\s*\d+)?\s+[A-Za-z-]+\s+damage\b/i,
+    /\badvantage on [^.]+/i,
+    /\bdisadvantage on [^.]+/i,
+    /\bknocked prone\b/i,
+    /\bunconscious\b/i,
+    /\bincapacitated\b/i,
+    /\bshocked\b/i,
+    /\bscorched\b/i,
+    /\bcharmed\b/i,
+    /\bfrightened\b/i,
+    /\bresistance to [^.]+/i,
+    /\bmove up to \d+\s*(?:feet|meters?)\b/i,
+    /\bwithout provoking opportunity attacks\b/i,
+    /\bevery creature in melee range\b/i,
+    /\bConstitution saving throw\b/i,
+    /\bDexterity saving throw\b/i,
+    /\bIntelligence saving throw\b/i,
+  ];
+  for (const pattern of patterns) {
+    const match = joined.match(pattern);
+    if (match) return match[0].slice(0, maxLength);
+  }
+  const first = lines.find((line) => line.length > 16) || lines[0] || '';
+  return first.slice(0, maxLength);
+}
+
+function equipmentSlotMap(items) {
+  const values = {
+    HEAD: '',
+    CLOAK: '',
+    ARMOR: '',
+    'LEFT HAND': '',
+    'RIGHT HAND': '',
+    BACKPACK: '',
+    BOOTS: '',
+    'QUICK ACCESS 1': '',
+    'QUICK ACCESS 2': '',
+    'QUICK ACCESS 3': '',
   };
-  doc.setFillColor(18, 16, 28);
-  doc.rect(0, 0, 595, 120, 'F');
-  doc.setTextColor(255, 245, 231);
-  doc.setFontSize(28);
-  doc.text('SoaNW Character Studio', 40, 60);
-  doc.setFontSize(12);
-  doc.text('Character sheet and restore payload', 40, 84);
-  let y = 148;
-  doc.setTextColor(30, 24, 32);
-  drawSection('Identity', [
-    ['Name', c.profile.name || '-'],
-    ['Player', c.profile.player || '-'],
-    ['Species', `${c.profile.species} / ${c.profile.speciesSubtype || '-'}`],
-    ['Class', `${c.profile.className} / ${c.profile.subclass || '-'}`],
-    ['Level / Prof', `${c.profile.level} / +${proficiencyBonus()}`],
-    ['Elemental Lore', chosenElementalLore() && magicAccess().elemental ? chosenElementalLore() : '-'],
-  ]);
-  drawSection('Combat', [
-    ['HP', hitPoints()],
-    ['Vitality', vitalityPoints()],
-    ['Armor Class', armorClass()],
-    ['Speed', `${speedMeters()}m`],
-    ['Carry / Encumbrance', `${carryLimit()} / ${encumbrance()}`],
-  ]);
-  drawSection('Abilities', ABILITIES.map((key) => [ABILITY_LABELS[key], `${finalAbilityScore(key)} (${mod(finalAbilityScore(key)) >= 0 ? '+' : ''}${mod(finalAbilityScore(key))})`]));
-  drawSection('Build', [
-    ['Skills', selectedSkillSet().join(', ') || '-'],
-    ['Feats', c.build.feats.join(', ') || '-'],
-    ['Equipment', `${c.loadout.package || '-'}${c.loadout.notes ? ` | ${c.loadout.notes}` : ''}`],
-    ['Encumbrance', `${encumbrance()} / ${carryLimit()}`],
-  ]);
-  drawSection('Magic', [
-    ['Elemental Lore', magicAccess().elemental ? chosenElementalLore() : '-'],
-    ['Auto Channel', autoChannelSpellNames().join(', ') || '-'],
-    ['Spells', [...c.magic.arias, ...c.magic.divine, ...c.magic.elemental, ...c.magic.wild, ...c.magic.witchcraft].map(cleanLabel).join(', ') || '-'],
-    ['Maneuvers', c.magic.maneuvers.map(cleanLabel).join(', ') || '-'],
-  ]);
-  drawSection('Notes', [
-    ['Appearance', c.notes.appearance || '-'],
-    ['Backstory', c.notes.backstory || '-'],
-    ['Allies', c.notes.allies || '-'],
-    ['Goals', c.notes.goals || '-'],
-    ['Misc', c.notes.misc || '-'],
-  ]);
-  const payload = btoa(unescape(encodeURIComponent(JSON.stringify(state.character))));
-  doc.addPage();
-  doc.setFontSize(14);
-  doc.text('SOANW PDF RESTORE DATA', 40, 50);
-  doc.setFontSize(8);
-  doc.text('Import this PDF back into the studio to restore the character.', 40, 66);
-  payload.match(/.{1,70}/g)?.forEach((chunk, index) => {
-    doc.text(`SOANW_JSON_${index}:${chunk}`, 40, 90 + index * 10);
+  const remaining = [];
+  for (const item of items) {
+    const lower = item.toLowerCase();
+    if (!values.ARMOR && /armor|vest|coat|jacket|robe|suit|mail|plate|shield/.test(lower)) values.ARMOR = item;
+    else if (!values.HEAD && /helmet|hood|hat|mask|goggles|glasses/.test(lower)) values.HEAD = item;
+    else if (!values.BOOTS && /boots|shoes/.test(lower)) values.BOOTS = item;
+    else if (!values.CLOAK && /cloak|cape/.test(lower)) values.CLOAK = item;
+    else if (!values['RIGHT HAND'] && /sword|axe|mace|staff|wand|bow|gun|pistol|rifle|shield|blade|knife/.test(lower)) values['RIGHT HAND'] = item;
+    else if (!values['LEFT HAND'] && /torch|focus|wand|dagger|knife|potion|kit/.test(lower)) values['LEFT HAND'] = item;
+    else remaining.push(item);
+  }
+  values.BACKPACK = remaining.slice(0, 2).join(', ');
+  values['QUICK ACCESS 1'] = remaining[2] || '';
+  values['QUICK ACCESS 2'] = remaining[3] || '';
+  values['QUICK ACCESS 3'] = remaining[4] || '';
+  return values;
+}
+
+function splitInventoryRows(items, notes = '') {
+  const rows = [];
+  const normalized = [...items];
+  if (notes) normalized.push(`Notes: ${notes}`);
+  for (let index = 0; index < normalized.length; index += 1) {
+    rows.push([normalized[index], '1']);
+    if (rows.length >= 3) break;
+  }
+  return rows;
+}
+
+async function exportPdf() {
+  const { PDFDocument, StandardFonts, rgb } = window.PDFLib;
+  const c = state.character;
+  const templateBytes = await fetch(PDF_TEMPLATE_URL).then((response) => {
+    if (!response.ok) throw new Error('Das SoaNW-Basisblatt konnte nicht geladen werden.');
+    return response.arrayBuffer();
   });
-  doc.save(`${(c.profile.name || 'soanw-character').replace(/\s+/g, '-').toLowerCase()}.pdf`);
+  const pdfDoc = await PDFDocument.load(templateBytes);
+  const form = pdfDoc.getForm();
+  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+  const payload = btoa(unescape(encodeURIComponent(JSON.stringify(state.character))));
+  const skillValues = SKILLS.map((skill) => `${selectedSkillSet().includes(skill) ? skillBonus(skill) : mod(finalAbilityScore(skillAbility(skill)))}`);
+  const selectedSkills = selectedSkillSet();
+  const speciesData = selectedSpeciesData();
+  const packageItems = selectedPackage()?.items || [];
+  const loadoutSlots = equipmentSlotMap(packageItems);
+  const inventoryRows = splitInventoryRows(packageItems, c.loadout.notes);
+  const maneuverRows = c.magic.maneuvers.map((title) => {
+    const page = spellPageRecord('maneuvers', title);
+    const context = spellContextForTitle('maneuvers', title);
+    return [cleanLabel(title), compactTierLabel(context.tier), compactRuleSnippet(sanitizePageText(page || {}), 30)];
+  });
+  const magicRows = knownMagicEntries().map((entry) => {
+    const context = spellContextForTitle(entry.key, entry.title);
+    const page = spellPageRecord(entry.key, entry.title);
+    return [
+      cleanLabel(entry.title),
+      compactTierLabel(context.tier, entry.key === 'elemental' ? context.lore : ''),
+      compactRuleSnippet(sanitizePageText(page || {}), 30) || SPELL_SECTION_LABELS[entry.key],
+    ];
+  });
+  const setText = (fieldName, value) => {
+    try {
+      const field = form.getTextField(fieldName);
+      const raw = String(value || '').trim();
+      const widgets = field.acroField?.getWidgets?.() || [];
+      const rect = widgets[0]?.getRectangle?.();
+      const width = Number(rect?.width || 120);
+      const height = Number(rect?.height || 18);
+      const multilineFields = new Set(['OTHER PROFICIENCIES', 'RACE FEAT', 'Feature 1', 'Inventory', 'BACKPACK']);
+      const maxSize = multilineFields.has(fieldName) ? 8 : fieldName === 'Name' ? 12 : 9;
+      const minSize = multilineFields.has(fieldName) ? 4.5 : 6;
+      const wrapForWidth = (text, size) => {
+        const limit = Math.max(6, Math.floor(width / Math.max(1, size * 0.52)));
+        const blocks = [];
+        for (const sourceLine of text.split('\n')) {
+          const words = sourceLine.split(/\s+/).filter(Boolean);
+          if (!words.length) {
+            blocks.push('');
+            continue;
+          }
+          let line = '';
+          for (const word of words) {
+            const candidate = line ? `${line} ${word}` : word;
+            if (candidate.length <= limit) {
+              line = candidate;
+              continue;
+            }
+            if (line) blocks.push(line);
+            line = word;
+          }
+          if (line) blocks.push(line);
+        }
+        return blocks.join('\n').trim();
+      };
+      let bestSize = minSize;
+      let bestText = raw;
+      for (let size = maxSize; size >= minSize; size -= 0.5) {
+        const candidate = wrapForWidth(raw, size);
+        const lineCount = candidate ? candidate.split('\n').length : 1;
+        const neededHeight = lineCount * size * 1.18;
+        if (neededHeight <= height * (multilineFields.has(fieldName) ? 1.7 : 1.15)) {
+          bestSize = size;
+          bestText = candidate;
+          break;
+        }
+        bestText = candidate;
+      }
+      if (multilineFields.has(fieldName)) field.enableMultiline();
+      field.setFontSize(bestSize);
+      field.setText(bestText);
+    } catch {
+      // Ignore fields that are absent on the base sheet.
+    }
+  };
+  const setRows = (fieldTriples, rows) => {
+    fieldTriples.forEach(([nameField, bonusField, valueField], index) => {
+      const row = rows[index] || [];
+      setText(nameField, row[0] || '');
+      if (bonusField) setText(bonusField, row[1] || '');
+      if (valueField) setText(valueField, row[2] || '');
+    });
+  };
+  const attackFields = [
+    ['AT Name', 'AT Bonus', 'AT DAM'],
+    ['AT NAME 1', 'AT Bonus 1', 'AT DAM 1'],
+    ['AT NAME 2', 'AT Bonus 2', 'AT DAM 2'],
+    ['AT NAME 3', 'AT Bonus 3', 'AT DAM 3'],
+    ['AT NAME 4', 'AT Bonus 4', 'AT DAM 4'],
+    ['AT NAME 5', 'AT Bonus 5', 'AT DAM 5'],
+    ['AT NAME 6', 'AT Bonus 6', 'AT DAM 6'],
+    ['AT NAME 7', 'AT Bonus 7', 'AT DAM 7'],
+  ];
+  const spellFields = [
+    ['SP Name', 'SP Bonus', 'SP DAM'],
+    ['SP NAME 1', 'SP Bonus 1', 'SP DAM 1'],
+    ['SP NAME 2', 'SP Bonus 2', 'SP DAM 2'],
+    ['SP NAME 3', 'SP Bonus 3', 'SP DAM 3'],
+    ['SP NAME 4', 'SP Bonus 4', 'SP DAM 4'],
+    ['SP NAME 5', 'SP Bonus 5', 'SP DAM 5'],
+    ['SP NAME 6', 'SP Bonus 6', 'SP DAM 6'],
+    ['SP NAME 7', 'SP Bonus 7', 'SP DAM 7'],
+    ['SP Name 8', 'SP Bonus 8', 'SP DAM 8'],
+    ['SP NAME 9', 'SP Bonus 9', 'SP DAM 9'],
+    ['SP NAME 10', 'SP Bonus 10', 'SP DAM 10'],
+    ['SP NAME 11', 'SP Bonus 11', 'SP DAM 11'],
+    ['SP NAME 12', 'SP Bonus 12', 'SP DAM 12'],
+    ['SP NAME 13', 'SP Bonus 13', 'SP DAM 13'],
+    ['SP NAME 14', 'SP Bonus 14', 'SP DAM 14'],
+    ['SP NAME 15', 'SP Bonus 15', 'SP DAM 15'],
+  ];
+  setText('Name', c.profile.name || '');
+  setText('Class and level', `${c.profile.className}${c.profile.subclass ? ` / ${c.profile.subclass}` : ''} Lv.${c.profile.level}`);
+  setText('Race', [c.profile.speciesSubtype || c.profile.species, c.profile.acquiredSpecies !== 'None' ? c.profile.acquiredSpecies : ''].filter(Boolean).join(' / '));
+  setText('EXP', c.profile.player || '');
+  setText('Alignment', c.notes.goals ? c.notes.goals.slice(0, 24) : '');
+  setText('STR', finalAbilityScore('str'));
+  setText('DEX', finalAbilityScore('dex'));
+  setText('CON', finalAbilityScore('con'));
+  setText('INT', finalAbilityScore('int'));
+  setText('WIS', finalAbilityScore('wis'));
+  setText('CHA', finalAbilityScore('cha'));
+  setText('STR Mod', mod(finalAbilityScore('str')) >= 0 ? `+${mod(finalAbilityScore('str'))}` : mod(finalAbilityScore('str')));
+  setText('DEX Mod', mod(finalAbilityScore('dex')) >= 0 ? `+${mod(finalAbilityScore('dex'))}` : mod(finalAbilityScore('dex')));
+  setText('CON Mod', mod(finalAbilityScore('con')) >= 0 ? `+${mod(finalAbilityScore('con'))}` : mod(finalAbilityScore('con')));
+  setText('INT Mod', mod(finalAbilityScore('int')) >= 0 ? `+${mod(finalAbilityScore('int'))}` : mod(finalAbilityScore('int')));
+  setText('WIS Mod', mod(finalAbilityScore('wis')) >= 0 ? `+${mod(finalAbilityScore('wis'))}` : mod(finalAbilityScore('wis')));
+  setText('CHA Mod', mod(finalAbilityScore('cha')) >= 0 ? `+${mod(finalAbilityScore('cha'))}` : mod(finalAbilityScore('cha')));
+  setText('Proficiency Bonus', `+${proficiencyBonus()}`);
+  setText('Passive Perception', 10 + skillBonus('Perception'));
+  setText('HP MAX', hitPoints());
+  setText('HP', hitPoints());
+  setText('VIT MAX', vitalityPoints());
+  setText('VIT', vitalityPoints());
+  setText('AC', armorClass());
+  setText('INITIATIVE', mod(finalAbilityScore('dex')) >= 0 ? `+${mod(finalAbilityScore('dex'))}` : mod(finalAbilityScore('dex')));
+  setText('SPEED', `${speedMeters()}m`);
+  setText('Unarmored AC', selectedSpeciesData()?.baseAc || '');
+  ['SK0', 'SK1', 'SK2', 'SK3', 'SK4', 'SK5', 'SK6', 'SK7', 'SK8', 'SK9', 'SK10', 'SK11', 'SK12', 'SK13', 'SK14', 'SK15', 'SK16', 'SK17', 'SK18', 'SK19', 'SK20']
+    .forEach((fieldName, index) => setText(fieldName, skillValues[index] ?? ''));
+  setText('OTHER PROFICIENCIES', [
+    `Skills: ${selectedSkills.join(', ') || '-'}`,
+    `Auto: ${automaticSkills().join(', ') || '-'}`,
+    `Feats: ${c.build.feats.join(', ') || '-'}`,
+  ].join('\n\n'));
+  setText('RACE FEAT', [
+    `Species: ${speciesData?.feats?.join(', ') || '-'}`,
+    `Elemental Lore: ${magicAccess().elemental ? chosenElementalLore() : '-'}`,
+    `Auto Channel: ${autoChannelSpellNames().join(', ') || '-'}`,
+  ].join('\n'));
+  setText('Feature 1', [
+    `Class: ${c.profile.className}${c.profile.subclass ? ` / ${c.profile.subclass}` : ''}`,
+    `Species: ${c.profile.speciesSubtype || c.profile.species}`,
+    `Magic: ${knownMagicEntries().map((entry) => cleanLabel(entry.title)).slice(0, 6).join(', ') || '-'}`,
+    `Maneuvers: ${c.magic.maneuvers.map(cleanLabel).slice(0, 4).join(', ') || '-'}`,
+    `Notes: ${[c.notes.appearance, c.notes.backstory, c.notes.allies, c.notes.misc].filter(Boolean).join(' | ').slice(0, 260) || '-'}`,
+  ].join('\n\n'));
+  setText('Inventory', [`Package: ${c.loadout.package || '-'}`, ...packageItems, c.loadout.notes ? `Notes: ${c.loadout.notes}` : ''].filter(Boolean).join('\n'));
+  setText('Current Encumberment', encumbrance());
+  setText('Maximum Encumberment', carryLimit());
+  Object.entries(loadoutSlots).forEach(([fieldName, value]) => setText(fieldName, value));
+  setRows(attackFields, maneuverRows.slice(0, attackFields.length));
+  setRows(spellFields, magicRows.slice(0, spellFields.length));
+  setRows([
+    ['SI Name 1', 'SI Quantity 1'],
+    ['SI Name 2', 'SI Quantity 2'],
+    ['SI Name 3', 'SI Quantity 3'],
+  ], inventoryRows);
+  setText('C Name', c.notes.allies ? c.notes.allies.slice(0, 24) : '');
+  setText('C Skills', selectedSkills.slice(0, 6).join(', '));
+  setText('C Additional Features', [
+    `Feat: ${c.build.feats[0] || '-'}`,
+    `Lore: ${magicAccess().elemental ? chosenElementalLore() : '-'}`,
+    `Package: ${c.loadout.package || '-'}`,
+  ].join('\n'));
+  form.updateFieldAppearances(font);
+  form.flatten();
+  const pages = pdfDoc.getPages();
+  const payloadLines = payload.match(/.{1,70}/g)?.map((chunk, index) => `SOANW_JSON_${index}:${chunk}`) || [];
+  const payloadPage = pages[pages.length - 1];
+  payloadLines.forEach((line, index) => {
+    payloadPage.drawText(line, {
+      x: 8,
+      y: 6 + index * 3.2,
+      size: 2.4,
+      font,
+      color: rgb(HIDDEN_EXPORT_TEXT.r, HIDDEN_EXPORT_TEXT.g, HIDDEN_EXPORT_TEXT.b),
+      opacity: 0.02,
+    });
+  });
+  const bytes = await pdfDoc.save();
+  const blob = new Blob([bytes], {type: 'application/pdf'});
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(blob);
+  link.download = `${(c.profile.name || 'soanw-character').replace(/\s+/g, '-').toLowerCase()}.pdf`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(link.href), 1000);
 }
 
 async function importPdf(file) {
@@ -1538,8 +2341,16 @@ function bindEvents() {
       const skillsPanel = document.getElementById('skillsHoverPanel');
       const spellPanel = document.getElementById('hoverPreviewPanel');
       if ((group === 'skills' || group === 'feats') && skillsPanel) {
-        const text = group === 'skills' ? `${title}: ${SKILL_DESCRIPTIONS[title] || title}` : handbookPreview(handbookPage('Customization', title), title);
-        skillsPanel.innerHTML = `<div class="summary-chip wide">${text}</div>`;
+        const text = group === 'skills' ? (SKILL_DESCRIPTIONS[title] || title) : handbookPreview(handbookPage('Customization', title), title);
+        const chips = group === 'skills' ? [ABILITY_LABELS[skillAbility(title)], `Bonus ${skillBonus(title)}`] : ['Feat'];
+        skillsPanel.innerHTML = renderInfoPreviewCard({
+          eyebrow: group === 'skills' ? 'Skill Detail' : 'Feat Detail',
+          title,
+          text,
+          chips,
+          section: group === 'feats' ? 'Customization' : '',
+          page: group === 'feats' ? title : '',
+        });
       }
       if (spellPanel && SPELL_SECTION_LABELS[group]) {
         state.magicPreview = {key: group, label: SPELL_SECTION_LABELS[group], title};
@@ -1555,6 +2366,22 @@ function bindEvents() {
     button.addEventListener('mouseenter', updatePreview);
     button.addEventListener('focus', updatePreview);
   });
+  document.querySelectorAll('[data-preview-target]').forEach((button) => {
+    const updatePreview = () => {
+      const target = document.getElementById(button.dataset.previewTarget);
+      if (!target) return;
+      target.innerHTML = renderInfoPreviewCard({
+        eyebrow: button.dataset.previewEyebrow || 'Detail',
+        title: button.dataset.previewTitle || button.textContent || 'Preview',
+        text: button.dataset.previewText || button.textContent || '',
+        chips: (button.dataset.previewChips || '').split('||').filter(Boolean),
+        section: button.dataset.previewSection || '',
+        page: button.dataset.previewPage || '',
+      });
+    };
+    button.addEventListener('mouseenter', updatePreview);
+    button.addEventListener('focus', updatePreview);
+  });
 }
 
 function injectStyles() {
@@ -1562,18 +2389,18 @@ function injectStyles() {
   style.textContent = `
     :root{--bg:#11111a;--bg2:#201924;--panel:#191622;--soft:#221d2b;--line:rgba(255,255,255,.11);--text:#f8f4ef;--muted:#b9afbf;--accent:#f0c36c;--accent2:#7fd1ff;--ink:#211923}
     *{box-sizing:border-box}body{margin:0;min-height:100vh;font-family:"Segoe UI",system-ui,sans-serif;background:radial-gradient(circle at top left,rgba(127,209,255,.16),transparent 24%),radial-gradient(circle at bottom right,rgba(240,195,108,.14),transparent 26%),linear-gradient(180deg,#100f18,#1b1420 52%,#120f18);color:var(--text);padding:24px}button,input,select,textarea{font:inherit}
-    .studio-shell{width:min(1480px,100%);margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px}.left-rail{display:grid}.summary-card,.panel,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn,.choice-card,.ghost-btn,.wizard-step,.guide-card,.search-box{border:1px solid var(--line);border-radius:24px;background:rgba(25,22,34,.82);backdrop-filter:blur(14px)}.summary-card.sticky{position:sticky;top:24px;padding:20px}.back-link{text-decoration:none;display:inline-flex;margin-bottom:14px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--text)}h1,h2,h3{margin:0}.muted{color:var(--muted)}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.78rem;color:var(--accent)}
-    .summary-stats,.ability-summary{display:grid;gap:10px}.summary-stats{grid-template-columns:repeat(2,1fr);margin:18px 0}.summary-stats div,.ability-summary div,.summary-chip,.summary-pill{padding:12px;border-radius:18px;background:rgba(255,255,255,.04)}.summary-chip.wide{width:100%;line-height:1.45}.summary-chip.success{background:rgba(127,209,255,.18);color:var(--text)}.summary-chip.warning{background:rgba(240,195,108,.16);color:var(--text)}.summary-stats span,.ability-summary span{display:block;color:var(--muted);font-size:.78rem}.ability-summary{grid-template-columns:repeat(3,1fr)}.ability-summary strong{display:block;font-size:1.1rem}.ability-summary small{color:var(--accent2)}.summary-foot{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted)}
+    .studio-shell{width:min(1480px,100%);margin:0 auto;display:grid;grid-template-columns:320px minmax(0,1fr);gap:20px}.left-rail{display:grid;align-content:start}.summary-card,.panel,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn,.choice-card,.ghost-btn,.wizard-step,.guide-card,.search-box{border:1px solid var(--line);border-radius:24px;background:rgba(25,22,34,.82);backdrop-filter:blur(14px)}.summary-card.sticky{position:static;padding:20px}.back-link{text-decoration:none;display:inline-flex;margin-bottom:14px;padding:10px 14px;border-radius:999px;background:rgba(255,255,255,.06);color:var(--text)}h1,h2,h3{margin:0}.muted{color:var(--muted)}.eyebrow{text-transform:uppercase;letter-spacing:.16em;font-size:.78rem;color:var(--accent)}
+    .summary-stats,.ability-summary{display:grid;gap:10px}.summary-stats{grid-template-columns:repeat(2,1fr);margin:18px 0}.summary-stats div,.ability-summary div,.summary-chip,.summary-pill{padding:12px;border-radius:18px;background:rgba(255,255,255,.04)}.summary-chip.wide{width:100%;line-height:1.45;white-space:pre-wrap}.summary-chip.success{background:rgba(127,209,255,.18);color:var(--text)}.summary-chip.warning{background:rgba(240,195,108,.16);color:var(--text)}.summary-stats span,.ability-summary span{display:block;color:var(--muted);font-size:.78rem}.ability-summary{grid-template-columns:repeat(3,1fr);margin-bottom:14px}.ability-summary strong{display:block;font-size:1.1rem}.ability-summary small{color:var(--accent2)}.summary-section-label{margin:6px 0 10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);font-size:.78rem;letter-spacing:.16em;text-transform:uppercase;color:var(--accent)}.summary-foot{display:flex;gap:10px;flex-wrap:wrap;color:var(--muted);margin-top:12px}.skill-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:0}.skill-column{display:grid;gap:8px}.skill-summary-item{padding:10px 12px;border-radius:16px;background:rgba(255,255,255,.04);display:flex;justify-content:space-between;gap:10px;align-items:center}.skill-summary-item span{font-size:.82rem;color:var(--muted);line-height:1.2}.skill-summary-item strong{font-size:.95rem}.skill-summary-item.active{background:rgba(127,209,255,.14);box-shadow:inset 0 0 0 1px rgba(127,209,255,.3)}
     .main-column{display:grid;gap:18px}.hero{padding:18px;display:flex;justify-content:space-between;gap:18px;align-items:end}.tab-row{display:flex;gap:10px;flex-wrap:wrap}.tab-btn{padding:12px 16px;color:var(--text);cursor:pointer}.tab-btn.active,.primary-btn,.upload-btn{background:linear-gradient(135deg,#f0c36c,#ffdd96);color:var(--ink)}.tab-btn.disabled{opacity:.45;cursor:default}
     .panel{padding:18px;display:grid;gap:16px}.panel.soft{background:rgba(255,255,255,.04)}.panel-head{display:flex;justify-content:space-between;gap:12px}.form-grid{display:grid;gap:14px}.form-grid.two{grid-template-columns:repeat(2,minmax(0,1fr))}.form-grid.three{grid-template-columns:repeat(3,minmax(0,1fr))}label{display:grid;gap:8px}label.full{grid-column:1/-1}input,select,textarea{width:100%;padding:12px 14px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.05);color:var(--text)}textarea{min-height:112px;resize:vertical}
     .ability-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}.ability-card{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.ability-card strong{font-size:1.4rem}.summary-row{display:flex;gap:10px;flex-wrap:wrap}.summary-chip{color:var(--text)}
-    .pill-grid{display:flex;flex-wrap:wrap;gap:8px}.pill,.filter-btn,.page-btn,.wizard-step,.ghost-btn,.mini-link{padding:10px 12px;color:var(--text);cursor:pointer}.pill.active,.filter-btn.active,.page-btn.active,.wizard-step.active,.choice-card.active{background:linear-gradient(135deg,#7fd1ff,#b4e7ff);color:var(--ink)}
+    .pill-grid{display:flex;flex-wrap:wrap;gap:8px}.pill,.filter-btn,.page-btn,.wizard-step,.ghost-btn,.mini-link,.summary-chip.interactive{padding:10px 12px;color:var(--text);cursor:pointer}.pill.active,.filter-btn.active,.page-btn.active,.wizard-step.active,.choice-card.active{background:linear-gradient(135deg,#7fd1ff,#b4e7ff);color:var(--ink)}.summary-chip.interactive{text-align:left;border:1px solid var(--line)}.summary-chip.interactive:hover,.summary-chip.interactive:focus{background:rgba(127,209,255,.16)}
     .wizard-strip{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.wizard-step{display:flex;align-items:center;gap:12px;text-align:left;border-radius:22px;background:rgba(255,255,255,.04)}.wizard-step.done{box-shadow:inset 0 0 0 1px rgba(240,195,108,.35)}.wizard-step span{display:grid;place-items:center;min-width:30px;width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.08)}.wizard-step small{display:block;color:inherit;opacity:.72}.wizard-nav{display:flex;justify-content:space-between;gap:12px}.reader-text.compact{max-height:360px}
-    .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}.spell-preview-card{display:grid;gap:12px}.reader-text.inline{max-height:320px;margin-top:0;padding:14px}
-    .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto}
+    .split-shell{display:grid;grid-template-columns:1.3fr .9fr;gap:16px;align-items:start}.stack{display:grid;gap:16px}.guide-card{padding:18px;display:grid;gap:14px}.choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.choice-card{padding:14px;display:grid;gap:8px;text-align:left;color:var(--text);cursor:pointer;min-height:108px}.choice-card strong{font-size:1rem}.choice-card span{color:var(--muted);font-size:.9rem;line-height:1.35}.ghost-btn{background:rgba(255,255,255,.04)}.inline-actions,.mini-list{display:flex;gap:8px;flex-wrap:wrap}.mini-link{border-radius:999px;background:rgba(255,255,255,.04)}.stat-table{display:grid;gap:10px}.stat-table div{display:flex;justify-content:space-between;gap:12px;padding:12px;border-radius:16px;background:rgba(255,255,255,.04)}.compact{font-size:.95rem}.empty-state.compact{padding:18px}.spell-picker{max-height:220px;overflow:auto;padding:10px;border-radius:18px;background:rgba(255,255,255,.03)}.spell-preview-card{display:grid;gap:12px}.reader-text.inline{max-height:320px;margin-top:0;padding:14px}.preview-window{border:1px solid rgba(127,209,255,.18);border-radius:22px;background:linear-gradient(180deg,rgba(26,23,38,.98),rgba(18,16,28,.95));box-shadow:0 18px 50px rgba(0,0,0,.28),inset 0 0 0 1px rgba(255,255,255,.04)}.preview-window-bar{display:flex;gap:8px;padding:12px 14px;border-bottom:1px solid rgba(255,255,255,.08)}.preview-window-bar span{width:10px;height:10px;border-radius:999px;background:rgba(255,255,255,.16)}.preview-window-bar span:nth-child(1){background:#f08b6c}.preview-window-bar span:nth-child(2){background:#f0c36c}.preview-window-bar span:nth-child(3){background:#7fd1ff}.preview-window-body{padding:16px;display:grid;gap:12px}
+    .compendium-shell{display:grid;grid-template-columns:320px minmax(0,1fr);gap:16px}.compendium-sidebar,.compendium-reader{display:grid;gap:12px;align-content:start}.search-box{padding:14px;border-radius:20px;background:rgba(255,255,255,.04)}.search-box input{height:44px;min-height:44px}.filter-list,.page-list{display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;align-content:start}.page-btn{display:grid;gap:4px;text-align:left}.page-btn small{color:inherit;opacity:.72;line-height:1.35}.reader-head{display:flex;justify-content:space-between;gap:12px;align-items:start}.reader-text{margin:0;padding:18px;border-radius:22px;background:rgba(255,255,255,.04);white-space:pre-wrap;font-family:Georgia,serif;line-height:1.58;overflow:auto}.compendium-layout{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:16px;align-items:start}.compendium-aside{display:grid;gap:12px}
     .export-actions{display:flex;gap:12px;flex-wrap:wrap}.primary-btn,.upload-btn{padding:14px 18px;font-weight:700;cursor:pointer}.upload-btn input{display:none}.notes{margin:0;padding-left:18px;display:grid;gap:8px}.empty-state{padding:28px;border-radius:22px;background:rgba(255,255,255,.04);color:var(--muted)}.hidden{display:none!important}
-    @media (max-width:1180px){.studio-shell,.compendium-shell,.form-grid.two,.form-grid.three,.ability-grid,.split-shell,.choice-grid,.wizard-strip{grid-template-columns:1fr}.left-rail{order:2}.main-column{order:1}.summary-card.sticky{position:static}.hero,.wizard-nav{flex-direction:column;align-items:flex-start}}
-    @media (max-width:720px){body{padding:16px}.summary-stats,.ability-summary{grid-template-columns:1fr}.panel,.summary-card.sticky,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn{border-radius:18px}}
+    @media (max-width:1180px){.studio-shell,.compendium-shell,.form-grid.two,.form-grid.three,.ability-grid,.split-shell,.choice-grid,.wizard-strip,.compendium-layout{grid-template-columns:1fr}.left-rail{order:1}.main-column{order:2}.summary-card.sticky{position:static}.hero,.wizard-nav{flex-direction:column;align-items:flex-start}}
+    @media (max-width:720px){body{padding:16px}.summary-stats,.ability-summary,.skill-columns{grid-template-columns:1fr}.panel,.summary-card.sticky,.hero,.tab-btn,.pill,.filter-btn,.page-btn,.primary-btn,.upload-btn{border-radius:18px}}
   `;
   document.head.appendChild(style);
 }
