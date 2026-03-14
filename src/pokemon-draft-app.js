@@ -115,7 +115,7 @@ function compactMeta(parts) {
 
 function spriteTag(member, facing = 'front', size = 'md') {
   if (!member?.sprites?.[facing]) return '';
-  return `<img class="sprite ${size}" src="${member.sprites[facing]}" alt="${member.name}">`;
+  return `<img class="sprite ${size} ${facing}" src="${member.sprites[facing]}" alt="${member.name}">`;
 }
 
 function createLoadout(species) {
@@ -1180,14 +1180,14 @@ function injectStyles() {
     .battle-sprite-foe{
       position:absolute;
       top:64px;
-      right:54px;
+      right:66px;
       width:196px;
       justify-items:end;
     }
     .battle-sprite-player{
       position:absolute;
-      left:36px;
-      bottom:78px;
+      left:54px;
+      bottom:80px;
       width:196px;
       justify-items:start;
     }
@@ -1282,6 +1282,12 @@ function injectStyles() {
       height:auto;
       max-height:212px;
       filter:drop-shadow(0 10px 0 rgba(255,255,255,.18)) drop-shadow(0 18px 16px rgba(0,0,0,.18));
+    }
+    .battle-sprite-foe .sprite.battle.front{
+      transform:translateX(18px) translateY(4px);
+    }
+    .battle-sprite-player .sprite.battle.back{
+      transform:translateX(-18px) translateY(4px);
     }
     .modal-backdrop{
       position:fixed;
@@ -1383,11 +1389,11 @@ function injectStyles() {
       .battle-hp{height:12px}
       .battle-sprite-foe{
         top:40px;
-        right:10px;
+        right:12px;
         width:96px;
       }
       .battle-sprite-player{
-        left:10px;
+        left:12px;
         bottom:62px;
         width:96px;
       }
@@ -1395,6 +1401,12 @@ function injectStyles() {
       .battle-sprite-player .battle-shadow{left:4px}
       .battle-sprite-foe .battle-shadow{right:4px}
       .sprite.battle{width:min(92px,100%);max-height:92px}
+      .battle-sprite-foe .sprite.battle.front{
+        transform:translateX(8px) translateY(2px);
+      }
+      .battle-sprite-player .sprite.battle.back{
+        transform:translateX(-8px) translateY(2px);
+      }
       .battle-feed{
         left:10px;
         right:10px;
