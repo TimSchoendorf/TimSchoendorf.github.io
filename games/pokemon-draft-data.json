@@ -48,8 +48,8 @@
       "vinewhip"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/1.png",
-      "back": "../assets/pokemon-rby/red-green/back/1.png"
+      "front": "../assets/pokemon-rby-clean/red-green/1.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/1.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/001/stats"
@@ -104,8 +104,8 @@
       "vinewhip"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/2.png",
-      "back": "../assets/pokemon-rby/red-green/back/2.png"
+      "front": "../assets/pokemon-rby-clean/red-green/2.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/2.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/002/stats"
@@ -161,8 +161,8 @@
       "vinewhip"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/3.png",
-      "back": "../assets/pokemon-rby/red-green/back/3.png"
+      "front": "../assets/pokemon-rby-clean/red-green/3.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/3.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/003/stats"
@@ -224,8 +224,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/4.png",
-      "back": "../assets/pokemon-rby/red-green/back/4.png"
+      "front": "../assets/pokemon-rby-clean/red-green/4.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/4.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/004/stats"
@@ -287,8 +287,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/5.png",
-      "back": "../assets/pokemon-rby/red-green/back/5.png"
+      "front": "../assets/pokemon-rby-clean/red-green/5.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/5.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/005/stats"
@@ -355,8 +355,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/6.png",
-      "back": "../assets/pokemon-rby/red-green/back/6.png"
+      "front": "../assets/pokemon-rby-clean/red-green/6.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/6.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/006/stats"
@@ -417,8 +417,8 @@
       "withdraw"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/7.png",
-      "back": "../assets/pokemon-rby/red-green/back/7.png"
+      "front": "../assets/pokemon-rby-clean/red-green/7.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/7.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/007/stats"
@@ -479,8 +479,8 @@
       "withdraw"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/8.png",
-      "back": "../assets/pokemon-rby/red-green/back/8.png"
+      "front": "../assets/pokemon-rby-clean/red-green/8.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/8.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/008/stats"
@@ -544,8 +544,8 @@
       "withdraw"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/9.png",
-      "back": "../assets/pokemon-rby/red-green/back/9.png"
+      "front": "../assets/pokemon-rby-clean/red-green/9.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/9.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/009/stats"
@@ -578,8 +578,8 @@
       "tackle"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/10.png",
-      "back": "../assets/pokemon-rby/red-green/back/10.png"
+      "front": "../assets/pokemon-rby-clean/red-green/10.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/10.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/010/stats"
@@ -611,8 +611,8 @@
       "harden"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/11.png",
-      "back": "../assets/pokemon-rby/red-green/back/11.png"
+      "front": "../assets/pokemon-rby-clean/red-green/11.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/11.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/011/stats"
@@ -671,8 +671,8 @@
       "whirlwind"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/12.png",
-      "back": "../assets/pokemon-rby/red-green/back/12.png"
+      "front": "../assets/pokemon-rby-clean/red-green/12.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/12.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/012/stats"
@@ -706,8 +706,8 @@
       "stringshot"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/13.png",
-      "back": "../assets/pokemon-rby/red-green/back/13.png"
+      "front": "../assets/pokemon-rby-clean/red-green/13.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/13.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/013/stats"
@@ -740,8 +740,8 @@
       "harden"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/14.png",
-      "back": "../assets/pokemon-rby/red-green/back/14.png"
+      "front": "../assets/pokemon-rby-clean/red-green/14.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/14.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/014/stats"
@@ -794,8 +794,8 @@
       "twineedle"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/15.png",
-      "back": "../assets/pokemon-rby/red-green/back/15.png"
+      "front": "../assets/pokemon-rby-clean/red-green/15.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/15.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/015/stats"
@@ -848,8 +848,8 @@
       "wingattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/16.png",
-      "back": "../assets/pokemon-rby/red-green/back/16.png"
+      "front": "../assets/pokemon-rby-clean/red-green/16.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/16.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/016/stats"
@@ -902,8 +902,8 @@
       "wingattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/17.png",
-      "back": "../assets/pokemon-rby/red-green/back/17.png"
+      "front": "../assets/pokemon-rby-clean/red-green/17.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/17.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/017/stats"
@@ -957,8 +957,8 @@
       "wingattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/18.png",
-      "back": "../assets/pokemon-rby/red-green/back/18.png"
+      "front": "../assets/pokemon-rby-clean/red-green/18.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/18.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/018/stats"
@@ -1013,8 +1013,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/19.png",
-      "back": "../assets/pokemon-rby/red-green/back/19.png"
+      "front": "../assets/pokemon-rby-clean/red-green/19.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/19.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/019/stats"
@@ -1071,8 +1071,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/20.png",
-      "back": "../assets/pokemon-rby/red-green/back/20.png"
+      "front": "../assets/pokemon-rby-clean/red-green/20.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/20.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/020/stats"
@@ -1125,8 +1125,8 @@
       "whirlwind"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/21.png",
-      "back": "../assets/pokemon-rby/red-green/back/21.png"
+      "front": "../assets/pokemon-rby-clean/red-green/21.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/21.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/021/stats"
@@ -1181,8 +1181,8 @@
       "whirlwind"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/22.png",
-      "back": "../assets/pokemon-rby/red-green/back/22.png"
+      "front": "../assets/pokemon-rby-clean/red-green/22.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/22.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/022/stats"
@@ -1237,8 +1237,8 @@
       "wrap"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/23.png",
-      "back": "../assets/pokemon-rby/red-green/back/23.png"
+      "front": "../assets/pokemon-rby-clean/red-green/23.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/23.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/023/stats"
@@ -1294,8 +1294,8 @@
       "wrap"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/24.png",
-      "back": "../assets/pokemon-rby/red-green/back/24.png"
+      "front": "../assets/pokemon-rby-clean/red-green/24.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/24.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/024/stats"
@@ -1357,8 +1357,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/25.png",
-      "back": "../assets/pokemon-rby/red-green/back/25.png"
+      "front": "../assets/pokemon-rby-clean/red-green/25.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/25.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/025/stats"
@@ -1414,8 +1414,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/26.png",
-      "back": "../assets/pokemon-rby/red-green/back/26.png"
+      "front": "../assets/pokemon-rby-clean/red-green/26.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/26.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/026/stats"
@@ -1472,8 +1472,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/27.png",
-      "back": "../assets/pokemon-rby/red-green/back/27.png"
+      "front": "../assets/pokemon-rby-clean/red-green/27.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/27.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/027/stats"
@@ -1531,8 +1531,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/28.png",
-      "back": "../assets/pokemon-rby/red-green/back/28.png"
+      "front": "../assets/pokemon-rby-clean/red-green/28.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/28.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/028/stats"
@@ -1586,8 +1586,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/29.png",
-      "back": "../assets/pokemon-rby/red-green/back/29.png"
+      "front": "../assets/pokemon-rby-clean/red-green/29.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/29.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/029/stats"
@@ -1645,8 +1645,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/30.png",
-      "back": "../assets/pokemon-rby/red-green/back/30.png"
+      "front": "../assets/pokemon-rby-clean/red-green/30.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/30.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/030/stats"
@@ -1715,8 +1715,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/31.png",
-      "back": "../assets/pokemon-rby/red-green/back/31.png"
+      "front": "../assets/pokemon-rby-clean/red-green/31.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/31.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/031/stats"
@@ -1770,8 +1770,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/32.png",
-      "back": "../assets/pokemon-rby/red-green/back/32.png"
+      "front": "../assets/pokemon-rby-clean/red-green/32.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/32.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/032/stats"
@@ -1828,8 +1828,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/33.png",
-      "back": "../assets/pokemon-rby/red-green/back/33.png"
+      "front": "../assets/pokemon-rby-clean/red-green/33.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/33.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/033/stats"
@@ -1898,8 +1898,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/34.png",
-      "back": "../assets/pokemon-rby/red-green/back/34.png"
+      "front": "../assets/pokemon-rby-clean/red-green/34.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/34.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/034/stats"
@@ -1970,8 +1970,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/35.png",
-      "back": "../assets/pokemon-rby/red-green/back/35.png"
+      "front": "../assets/pokemon-rby-clean/red-green/35.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/35.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/035/stats"
@@ -2039,8 +2039,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/36.png",
-      "back": "../assets/pokemon-rby/red-green/back/36.png"
+      "front": "../assets/pokemon-rby-clean/red-green/36.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/36.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/036/stats"
@@ -2093,8 +2093,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/37.png",
-      "back": "../assets/pokemon-rby/red-green/back/37.png"
+      "front": "../assets/pokemon-rby-clean/red-green/37.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/37.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/037/stats"
@@ -2145,8 +2145,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/38.png",
-      "back": "../assets/pokemon-rby/red-green/back/38.png"
+      "front": "../assets/pokemon-rby-clean/red-green/38.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/38.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/038/stats"
@@ -2214,8 +2214,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/39.png",
-      "back": "../assets/pokemon-rby/red-green/back/39.png"
+      "front": "../assets/pokemon-rby-clean/red-green/39.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/39.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/039/stats"
@@ -2283,8 +2283,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/40.png",
-      "back": "../assets/pokemon-rby/red-green/back/40.png"
+      "front": "../assets/pokemon-rby-clean/red-green/40.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/40.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/040/stats"
@@ -2335,8 +2335,8 @@
       "wingattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/41.png",
-      "back": "../assets/pokemon-rby/red-green/back/41.png"
+      "front": "../assets/pokemon-rby-clean/red-green/41.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/41.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/041/stats"
@@ -2389,8 +2389,8 @@
       "wingattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/42.png",
-      "back": "../assets/pokemon-rby/red-green/back/42.png"
+      "front": "../assets/pokemon-rby-clean/red-green/42.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/42.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/042/stats"
@@ -2442,8 +2442,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/43.png",
-      "back": "../assets/pokemon-rby/red-green/back/43.png"
+      "front": "../assets/pokemon-rby-clean/red-green/43.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/43.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/043/stats"
@@ -2495,8 +2495,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/44.png",
-      "back": "../assets/pokemon-rby/red-green/back/44.png"
+      "front": "../assets/pokemon-rby-clean/red-green/44.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/44.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/044/stats"
@@ -2549,8 +2549,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/45.png",
-      "back": "../assets/pokemon-rby/red-green/back/45.png"
+      "front": "../assets/pokemon-rby-clean/red-green/45.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/45.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/045/stats"
@@ -2605,8 +2605,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/46.png",
-      "back": "../assets/pokemon-rby/red-green/back/46.png"
+      "front": "../assets/pokemon-rby-clean/red-green/46.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/46.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/046/stats"
@@ -2662,8 +2662,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/47.png",
-      "back": "../assets/pokemon-rby/red-green/back/47.png"
+      "front": "../assets/pokemon-rby-clean/red-green/47.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/47.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/047/stats"
@@ -2719,8 +2719,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/48.png",
-      "back": "../assets/pokemon-rby/red-green/back/48.png"
+      "front": "../assets/pokemon-rby-clean/red-green/48.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/48.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/048/stats"
@@ -2781,8 +2781,8 @@
       "whirlwind"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/49.png",
-      "back": "../assets/pokemon-rby/red-green/back/49.png"
+      "front": "../assets/pokemon-rby-clean/red-green/49.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/49.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/049/stats"
@@ -2832,8 +2832,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/50.png",
-      "back": "../assets/pokemon-rby/red-green/back/50.png"
+      "front": "../assets/pokemon-rby-clean/red-green/50.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/50.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/050/stats"
@@ -2884,8 +2884,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/51.png",
-      "back": "../assets/pokemon-rby/red-green/back/51.png"
+      "front": "../assets/pokemon-rby-clean/red-green/51.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/51.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/051/stats"
@@ -2939,8 +2939,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/52.png",
-      "back": "../assets/pokemon-rby/red-green/back/52.png"
+      "front": "../assets/pokemon-rby-clean/red-green/52.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/52.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/052/stats"
@@ -2995,8 +2995,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/53.png",
-      "back": "../assets/pokemon-rby/red-green/back/53.png"
+      "front": "../assets/pokemon-rby-clean/red-green/53.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/53.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/053/stats"
@@ -3059,8 +3059,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/54.png",
-      "back": "../assets/pokemon-rby/red-green/back/54.png"
+      "front": "../assets/pokemon-rby-clean/red-green/54.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/54.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/054/stats"
@@ -3123,8 +3123,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/55.png",
-      "back": "../assets/pokemon-rby/red-green/back/55.png"
+      "front": "../assets/pokemon-rby-clean/red-green/55.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/55.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/055/stats"
@@ -3187,8 +3187,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/56.png",
-      "back": "../assets/pokemon-rby/red-green/back/56.png"
+      "front": "../assets/pokemon-rby-clean/red-green/56.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/56.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/056/stats"
@@ -3252,8 +3252,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/57.png",
-      "back": "../assets/pokemon-rby/red-green/back/57.png"
+      "front": "../assets/pokemon-rby-clean/red-green/57.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/57.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/057/stats"
@@ -3306,8 +3306,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/58.png",
-      "back": "../assets/pokemon-rby/red-green/back/58.png"
+      "front": "../assets/pokemon-rby-clean/red-green/58.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/58.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/058/stats"
@@ -3359,8 +3359,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/59.png",
-      "back": "../assets/pokemon-rby/red-green/back/59.png"
+      "front": "../assets/pokemon-rby-clean/red-green/59.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/59.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/059/stats"
@@ -3414,8 +3414,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/60.png",
-      "back": "../assets/pokemon-rby/red-green/back/60.png"
+      "front": "../assets/pokemon-rby-clean/red-green/60.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/60.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/060/stats"
@@ -3478,8 +3478,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/61.png",
-      "back": "../assets/pokemon-rby/red-green/back/61.png"
+      "front": "../assets/pokemon-rby-clean/red-green/61.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/61.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/061/stats"
@@ -3541,8 +3541,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/62.png",
-      "back": "../assets/pokemon-rby/red-green/back/62.png"
+      "front": "../assets/pokemon-rby-clean/red-green/62.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/62.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/062/stats"
@@ -3597,8 +3597,8 @@
       "triattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/63.png",
-      "back": "../assets/pokemon-rby/red-green/back/63.png"
+      "front": "../assets/pokemon-rby-clean/red-green/63.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/63.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/063/stats"
@@ -3659,8 +3659,8 @@
       "triattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/64.png",
-      "back": "../assets/pokemon-rby/red-green/back/64.png"
+      "front": "../assets/pokemon-rby-clean/red-green/64.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/64.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/064/stats"
@@ -3722,8 +3722,8 @@
       "triattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/65.png",
-      "back": "../assets/pokemon-rby/red-green/back/65.png"
+      "front": "../assets/pokemon-rby-clean/red-green/65.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/65.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/065/stats"
@@ -3781,8 +3781,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/66.png",
-      "back": "../assets/pokemon-rby/red-green/back/66.png"
+      "front": "../assets/pokemon-rby-clean/red-green/66.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/66.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/066/stats"
@@ -3840,8 +3840,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/67.png",
-      "back": "../assets/pokemon-rby/red-green/back/67.png"
+      "front": "../assets/pokemon-rby-clean/red-green/67.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/67.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/067/stats"
@@ -3900,8 +3900,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/68.png",
-      "back": "../assets/pokemon-rby/red-green/back/68.png"
+      "front": "../assets/pokemon-rby-clean/red-green/68.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/68.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/068/stats"
@@ -3956,8 +3956,8 @@
       "wrap"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/69.png",
-      "back": "../assets/pokemon-rby/red-green/back/69.png"
+      "front": "../assets/pokemon-rby-clean/red-green/69.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/69.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/069/stats"
@@ -4012,8 +4012,8 @@
       "wrap"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/70.png",
-      "back": "../assets/pokemon-rby/red-green/back/70.png"
+      "front": "../assets/pokemon-rby-clean/red-green/70.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/70.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/070/stats"
@@ -4067,8 +4067,8 @@
       "wrap"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/71.png",
-      "back": "../assets/pokemon-rby/red-green/back/71.png"
+      "front": "../assets/pokemon-rby-clean/red-green/71.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/71.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/071/stats"
@@ -4127,8 +4127,8 @@
       "wrap"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/72.png",
-      "back": "../assets/pokemon-rby/red-green/back/72.png"
+      "front": "../assets/pokemon-rby-clean/red-green/72.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/72.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/072/stats"
@@ -4188,8 +4188,8 @@
       "wrap"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/73.png",
-      "back": "../assets/pokemon-rby/red-green/back/73.png"
+      "front": "../assets/pokemon-rby-clean/red-green/73.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/73.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/073/stats"
@@ -4248,8 +4248,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/74.png",
-      "back": "../assets/pokemon-rby/red-green/back/74.png"
+      "front": "../assets/pokemon-rby-clean/red-green/74.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/74.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/074/stats"
@@ -4308,8 +4308,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/75.png",
-      "back": "../assets/pokemon-rby/red-green/back/75.png"
+      "front": "../assets/pokemon-rby-clean/red-green/75.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/75.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/075/stats"
@@ -4370,8 +4370,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/76.png",
-      "back": "../assets/pokemon-rby/red-green/back/76.png"
+      "front": "../assets/pokemon-rby-clean/red-green/76.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/76.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/076/stats"
@@ -4423,8 +4423,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/77.png",
-      "back": "../assets/pokemon-rby/red-green/back/77.png"
+      "front": "../assets/pokemon-rby-clean/red-green/77.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/77.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/077/stats"
@@ -4478,8 +4478,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/78.png",
-      "back": "../assets/pokemon-rby/red-green/back/78.png"
+      "front": "../assets/pokemon-rby-clean/red-green/78.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/78.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/078/stats"
@@ -4546,8 +4546,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/79.png",
-      "back": "../assets/pokemon-rby/red-green/back/79.png"
+      "front": "../assets/pokemon-rby-clean/red-green/79.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/79.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/079/stats"
@@ -4621,8 +4621,8 @@
       "withdraw"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/80.png",
-      "back": "../assets/pokemon-rby/red-green/back/80.png"
+      "front": "../assets/pokemon-rby-clean/red-green/80.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/80.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/080/stats"
@@ -4674,8 +4674,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/81.png",
-      "back": "../assets/pokemon-rby/red-green/back/81.png"
+      "front": "../assets/pokemon-rby-clean/red-green/81.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/81.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/081/stats"
@@ -4728,8 +4728,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/82.png",
-      "back": "../assets/pokemon-rby/red-green/back/82.png"
+      "front": "../assets/pokemon-rby-clean/red-green/82.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/82.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/082/stats"
@@ -4785,8 +4785,8 @@
       "whirlwind"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/83.png",
-      "back": "../assets/pokemon-rby/red-green/back/83.png"
+      "front": "../assets/pokemon-rby-clean/red-green/83.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/83.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/083/stats"
@@ -4839,8 +4839,8 @@
       "whirlwind"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/84.png",
-      "back": "../assets/pokemon-rby/red-green/back/84.png"
+      "front": "../assets/pokemon-rby-clean/red-green/84.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/84.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/084/stats"
@@ -4894,8 +4894,8 @@
       "whirlwind"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/85.png",
-      "back": "../assets/pokemon-rby/red-green/back/85.png"
+      "front": "../assets/pokemon-rby-clean/red-green/85.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/85.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/085/stats"
@@ -4948,8 +4948,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/86.png",
-      "back": "../assets/pokemon-rby/red-green/back/86.png"
+      "front": "../assets/pokemon-rby-clean/red-green/86.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/86.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/086/stats"
@@ -5004,8 +5004,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/87.png",
-      "back": "../assets/pokemon-rby/red-green/back/87.png"
+      "front": "../assets/pokemon-rby-clean/red-green/87.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/87.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/087/stats"
@@ -5058,8 +5058,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/88.png",
-      "back": "../assets/pokemon-rby/red-green/back/88.png"
+      "front": "../assets/pokemon-rby-clean/red-green/88.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/88.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/088/stats"
@@ -5113,8 +5113,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/89.png",
-      "back": "../assets/pokemon-rby/red-green/back/89.png"
+      "front": "../assets/pokemon-rby-clean/red-green/89.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/89.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/089/stats"
@@ -5171,8 +5171,8 @@
       "withdraw"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/90.png",
-      "back": "../assets/pokemon-rby/red-green/back/90.png"
+      "front": "../assets/pokemon-rby-clean/red-green/90.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/90.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/090/stats"
@@ -5230,8 +5230,8 @@
       "withdraw"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/91.png",
-      "back": "../assets/pokemon-rby/red-green/back/91.png"
+      "front": "../assets/pokemon-rby-clean/red-green/91.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/91.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/091/stats"
@@ -5282,8 +5282,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/92.png",
-      "back": "../assets/pokemon-rby/red-green/back/92.png"
+      "front": "../assets/pokemon-rby-clean/red-green/92.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/92.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/092/stats"
@@ -5334,8 +5334,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/93.png",
-      "back": "../assets/pokemon-rby/red-green/back/93.png"
+      "front": "../assets/pokemon-rby-clean/red-green/93.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/93.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/093/stats"
@@ -5398,8 +5398,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/94.png",
-      "back": "../assets/pokemon-rby/red-green/back/94.png"
+      "front": "../assets/pokemon-rby-clean/red-green/94.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/94.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/094/stats"
@@ -5455,8 +5455,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/95.png",
-      "back": "../assets/pokemon-rby/red-green/back/95.png"
+      "front": "../assets/pokemon-rby-clean/red-green/95.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/95.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/095/stats"
@@ -5519,8 +5519,8 @@
       "triattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/96.png",
-      "back": "../assets/pokemon-rby/red-green/back/96.png"
+      "front": "../assets/pokemon-rby-clean/red-green/96.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/96.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/096/stats"
@@ -5584,8 +5584,8 @@
       "triattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/97.png",
-      "back": "../assets/pokemon-rby/red-green/back/97.png"
+      "front": "../assets/pokemon-rby-clean/red-green/97.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/97.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/097/stats"
@@ -5641,8 +5641,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/98.png",
-      "back": "../assets/pokemon-rby/red-green/back/98.png"
+      "front": "../assets/pokemon-rby-clean/red-green/98.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/98.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/098/stats"
@@ -5699,8 +5699,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/99.png",
-      "back": "../assets/pokemon-rby/red-green/back/99.png"
+      "front": "../assets/pokemon-rby-clean/red-green/99.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/99.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/099/stats"
@@ -5752,8 +5752,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/100.png",
-      "back": "../assets/pokemon-rby/red-green/back/100.png"
+      "front": "../assets/pokemon-rby-clean/red-green/100.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/100.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/100/stats"
@@ -5807,8 +5807,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/101.png",
-      "back": "../assets/pokemon-rby/red-green/back/101.png"
+      "front": "../assets/pokemon-rby-clean/red-green/101.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/101.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/101/stats"
@@ -5863,8 +5863,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/102.png",
-      "back": "../assets/pokemon-rby/red-green/back/102.png"
+      "front": "../assets/pokemon-rby-clean/red-green/102.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/102.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/102/stats"
@@ -5919,8 +5919,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/103.png",
-      "back": "../assets/pokemon-rby/red-green/back/103.png"
+      "front": "../assets/pokemon-rby-clean/red-green/103.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/103.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/103/stats"
@@ -5984,8 +5984,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/104.png",
-      "back": "../assets/pokemon-rby/red-green/back/104.png"
+      "front": "../assets/pokemon-rby-clean/red-green/104.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/104.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/104/stats"
@@ -6050,8 +6050,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/105.png",
-      "back": "../assets/pokemon-rby/red-green/back/105.png"
+      "front": "../assets/pokemon-rby-clean/red-green/105.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/105.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/105/stats"
@@ -6107,8 +6107,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/106.png",
-      "back": "../assets/pokemon-rby/red-green/back/106.png"
+      "front": "../assets/pokemon-rby-clean/red-green/106.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/106.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/106/stats"
@@ -6163,8 +6163,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/107.png",
-      "back": "../assets/pokemon-rby/red-green/back/107.png"
+      "front": "../assets/pokemon-rby-clean/red-green/107.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/107.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/107/stats"
@@ -6232,8 +6232,8 @@
       "wrap"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/108.png",
-      "back": "../assets/pokemon-rby/red-green/back/108.png"
+      "front": "../assets/pokemon-rby-clean/red-green/108.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/108.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/108/stats"
@@ -6281,8 +6281,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/109.png",
-      "back": "../assets/pokemon-rby/red-green/back/109.png"
+      "front": "../assets/pokemon-rby-clean/red-green/109.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/109.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/109/stats"
@@ -6331,8 +6331,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/110.png",
-      "back": "../assets/pokemon-rby/red-green/back/110.png"
+      "front": "../assets/pokemon-rby-clean/red-green/110.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/110.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/110/stats"
@@ -6389,8 +6389,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/111.png",
-      "back": "../assets/pokemon-rby/red-green/back/111.png"
+      "front": "../assets/pokemon-rby-clean/red-green/111.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/111.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/111/stats"
@@ -6459,8 +6459,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/112.png",
-      "back": "../assets/pokemon-rby/red-green/back/112.png"
+      "front": "../assets/pokemon-rby-clean/red-green/112.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/112.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/112/stats"
@@ -6535,8 +6535,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/113.png",
-      "back": "../assets/pokemon-rby/red-green/back/113.png"
+      "front": "../assets/pokemon-rby-clean/red-green/113.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/113.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/113/stats"
@@ -6592,8 +6592,8 @@
       "vinewhip"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/114.png",
-      "back": "../assets/pokemon-rby/red-green/back/114.png"
+      "front": "../assets/pokemon-rby-clean/red-green/114.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/114.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/114/stats"
@@ -6658,8 +6658,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/115.png",
-      "back": "../assets/pokemon-rby/red-green/back/115.png"
+      "front": "../assets/pokemon-rby-clean/red-green/115.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/115.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/115/stats"
@@ -6711,8 +6711,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/116.png",
-      "back": "../assets/pokemon-rby/red-green/back/116.png"
+      "front": "../assets/pokemon-rby-clean/red-green/116.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/116.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/116/stats"
@@ -6765,8 +6765,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/117.png",
-      "back": "../assets/pokemon-rby/red-green/back/117.png"
+      "front": "../assets/pokemon-rby-clean/red-green/117.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/117.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/117/stats"
@@ -6821,8 +6821,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/118.png",
-      "back": "../assets/pokemon-rby/red-green/back/118.png"
+      "front": "../assets/pokemon-rby-clean/red-green/118.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/118.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/118/stats"
@@ -6878,8 +6878,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/119.png",
-      "back": "../assets/pokemon-rby/red-green/back/119.png"
+      "front": "../assets/pokemon-rby-clean/red-green/119.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/119.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/119/stats"
@@ -6941,8 +6941,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/120.png",
-      "back": "../assets/pokemon-rby/red-green/back/120.png"
+      "front": "../assets/pokemon-rby-clean/red-green/120.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/120.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/120/stats"
@@ -7002,8 +7002,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/121.png",
-      "back": "../assets/pokemon-rby/red-green/back/121.png"
+      "front": "../assets/pokemon-rby-clean/red-green/121.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/121.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/121/stats"
@@ -7066,8 +7066,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/122.png",
-      "back": "../assets/pokemon-rby/red-green/back/122.png"
+      "front": "../assets/pokemon-rby-clean/red-green/122.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/122.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/122/stats"
@@ -7119,8 +7119,8 @@
       "wingattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/123.png",
-      "back": "../assets/pokemon-rby/red-green/back/123.png"
+      "front": "../assets/pokemon-rby-clean/red-green/123.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/123.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/123/stats"
@@ -7184,8 +7184,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/124.png",
-      "back": "../assets/pokemon-rby/red-green/back/124.png"
+      "front": "../assets/pokemon-rby-clean/red-green/124.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/124.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/124/stats"
@@ -7250,8 +7250,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/125.png",
-      "back": "../assets/pokemon-rby/red-green/back/125.png"
+      "front": "../assets/pokemon-rby-clean/red-green/125.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/125.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/125/stats"
@@ -7312,8 +7312,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/126.png",
-      "back": "../assets/pokemon-rby/red-green/back/126.png"
+      "front": "../assets/pokemon-rby-clean/red-green/126.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/126.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/126/stats"
@@ -7366,8 +7366,8 @@
       "visegrip"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/127.png",
-      "back": "../assets/pokemon-rby/red-green/back/127.png"
+      "front": "../assets/pokemon-rby-clean/red-green/127.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/127.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/127/stats"
@@ -7423,8 +7423,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/128.png",
-      "back": "../assets/pokemon-rby/red-green/back/128.png"
+      "front": "../assets/pokemon-rby-clean/red-green/128.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/128.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/128/stats"
@@ -7458,8 +7458,8 @@
       "tackle"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/129.png",
-      "back": "../assets/pokemon-rby/red-green/back/129.png"
+      "front": "../assets/pokemon-rby-clean/red-green/129.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/129.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/129/stats"
@@ -7518,8 +7518,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/130.png",
-      "back": "../assets/pokemon-rby/red-green/back/130.png"
+      "front": "../assets/pokemon-rby-clean/red-green/130.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/130.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/130/stats"
@@ -7582,8 +7582,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/131.png",
-      "back": "../assets/pokemon-rby/red-green/back/131.png"
+      "front": "../assets/pokemon-rby-clean/red-green/131.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/131.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/131/stats"
@@ -7615,8 +7615,8 @@
       "transform"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/132.png",
-      "back": "../assets/pokemon-rby/red-green/back/132.png"
+      "front": "../assets/pokemon-rby-clean/red-green/132.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/132.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/132/stats"
@@ -7667,8 +7667,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/133.png",
-      "back": "../assets/pokemon-rby/red-green/back/133.png"
+      "front": "../assets/pokemon-rby-clean/red-green/133.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/133.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/133/stats"
@@ -7728,8 +7728,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/134.png",
-      "back": "../assets/pokemon-rby/red-green/back/134.png"
+      "front": "../assets/pokemon-rby-clean/red-green/134.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/134.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/134/stats"
@@ -7786,8 +7786,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/135.png",
-      "back": "../assets/pokemon-rby/red-green/back/135.png"
+      "front": "../assets/pokemon-rby-clean/red-green/135.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/135.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/135/stats"
@@ -7843,8 +7843,8 @@
       "toxic"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/136.png",
-      "back": "../assets/pokemon-rby/red-green/back/136.png"
+      "front": "../assets/pokemon-rby-clean/red-green/136.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/136.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/136/stats"
@@ -7904,8 +7904,8 @@
       "triattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/137.png",
-      "back": "../assets/pokemon-rby/red-green/back/137.png"
+      "front": "../assets/pokemon-rby-clean/red-green/137.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/137.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/137/stats"
@@ -7958,8 +7958,8 @@
       "withdraw"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/138.png",
-      "back": "../assets/pokemon-rby/red-green/back/138.png"
+      "front": "../assets/pokemon-rby-clean/red-green/138.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/138.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/138/stats"
@@ -8017,8 +8017,8 @@
       "withdraw"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/139.png",
-      "back": "../assets/pokemon-rby/red-green/back/139.png"
+      "front": "../assets/pokemon-rby-clean/red-green/139.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/139.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/139/stats"
@@ -8072,8 +8072,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/140.png",
-      "back": "../assets/pokemon-rby/red-green/back/140.png"
+      "front": "../assets/pokemon-rby-clean/red-green/140.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/140.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/140/stats"
@@ -8135,8 +8135,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/141.png",
-      "back": "../assets/pokemon-rby/red-green/back/141.png"
+      "front": "../assets/pokemon-rby-clean/red-green/141.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/141.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/141/stats"
@@ -8190,8 +8190,8 @@
       "wingattack"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/142.png",
-      "back": "../assets/pokemon-rby/red-green/back/142.png"
+      "front": "../assets/pokemon-rby-clean/red-green/142.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/142.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/142/stats"
@@ -8261,8 +8261,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/143.png",
-      "back": "../assets/pokemon-rby/red-green/back/143.png"
+      "front": "../assets/pokemon-rby-clean/red-green/143.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/143.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/143/stats"
@@ -8317,8 +8317,8 @@
       "whirlwind"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/144.png",
-      "back": "../assets/pokemon-rby/red-green/back/144.png"
+      "front": "../assets/pokemon-rby-clean/red-green/144.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/144.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/144/stats"
@@ -8374,8 +8374,8 @@
       "whirlwind"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/145.png",
-      "back": "../assets/pokemon-rby/red-green/back/145.png"
+      "front": "../assets/pokemon-rby-clean/red-green/145.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/145.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/145/stats"
@@ -8428,8 +8428,8 @@
       "whirlwind"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/146.png",
-      "back": "../assets/pokemon-rby/red-green/back/146.png"
+      "front": "../assets/pokemon-rby-clean/red-green/146.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/146.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/146/stats"
@@ -8488,8 +8488,8 @@
       "wrap"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/147.png",
-      "back": "../assets/pokemon-rby/red-green/back/147.png"
+      "front": "../assets/pokemon-rby-clean/red-green/147.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/147.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/147/stats"
@@ -8549,8 +8549,8 @@
       "wrap"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/148.png",
-      "back": "../assets/pokemon-rby/red-green/back/148.png"
+      "front": "../assets/pokemon-rby-clean/red-green/148.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/148.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/148/stats"
@@ -8613,8 +8613,8 @@
       "wrap"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/149.png",
-      "back": "../assets/pokemon-rby/red-green/back/149.png"
+      "front": "../assets/pokemon-rby-clean/red-green/149.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/149.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/149/stats"
@@ -8686,8 +8686,8 @@
       "watergun"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/150.png",
-      "back": "../assets/pokemon-rby/red-green/back/150.png"
+      "front": "../assets/pokemon-rby-clean/red-green/150.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/150.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/150/stats"
@@ -8775,8 +8775,8 @@
       "whirlwind"
     ],
     "sprites": {
-      "front": "../assets/pokemon-rby/red-green/151.png",
-      "back": "../assets/pokemon-rby/red-green/back/151.png"
+      "front": "../assets/pokemon-rby-clean/red-green/151.png",
+      "back": "../assets/pokemon-rby-clean/red-green/back/151.png"
     },
     "sources": {
       "stats": "https://www.psypokes.com/dex/psydex/151/stats"

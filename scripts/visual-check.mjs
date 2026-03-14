@@ -22,6 +22,9 @@ for (const target of targets) {
     fullPage: true,
   });
 
+  await page.locator('[data-action="start-bot"]').click();
+  await page.waitForTimeout(250);
+
   for (let i = 0; i < 3; i += 1) {
     await page.locator('[data-draft-id]').first().click({ force: true });
     await page.waitForTimeout(100);
@@ -31,7 +34,7 @@ for (const target of targets) {
     fullPage: true,
   });
 
-  await page.locator('#startBattleBtn').click();
+  await page.locator('[data-action="start-battle"]').click();
   await page.waitForTimeout(1500);
   await page.screenshot({
     path: path.join(process.cwd(), 'screenshots', `pokemon-draft-battle-${target.name}.png`),

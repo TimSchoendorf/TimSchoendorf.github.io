@@ -169,8 +169,7 @@ function logLine(text) {
 }
 
 function pushBattleFeed(text) {
-  state.battleFeed.unshift(text);
-  state.battleFeed = state.battleFeed.slice(0, 8);
+  state.battleFeed = [text];
 }
 
 function renderRosterCard(member, reveal) {
@@ -273,13 +272,29 @@ function renderLinkPreviewStage() {
     <div class="actions"><button class="primary-btn" data-action="ready-link-battle" ${!state.link.connected ? 'disabled' : ''}>Bereit für den Kampf</button><button class="ghost-btn" data-action="link-rematch">Neu draften</button></div>`;
 }
 
-function renderCombatant(mon, label, facing, sideKey) {
-  if (!mon) return '<div class="combatant empty">Warte auf Aktivierung.</div>';
-  return `<div class="combatant ${state.flash[sideKey]}" style="background:${typeGradient(mon.types || ['Normal'])}">
-    <div class="combatant-head"><div><div class="label">${label}</div><strong>${mon.name}</strong></div><button class="info-chip" data-inspect="${mon.name}">Infos</button></div>
-    ${spriteTag(mon, facing, 'lg')}
-    <div class="tiny">${mon.condition} | ${mon.status || 'OK'}</div>
-    <div class="hp"><div class="hp-fill" style="width:${conditionToPercent(mon.condition)}%"></div></div>
+function hpTone(percent) {
+  if (percent <= 20) return 'hp-low';
+  if (percent <= 50) return 'hp-mid';
+  return 'hp-high';
+}
+
+function renderCombatant(mon, label, facing, sideKey, side) {
+  if (!mon) return `<div class="combatant combatant-${side} empty">Warte auf Aktivierung.</div>`;
+  const percent = conditionToPercent(mon.condition);
+  return `<div class="combatant combatant-${side} ${state.flash[sideKey]}">
+    <div class="battle-status battle-status-${side}">
+      <div class="battle-status-top">
+        <div><div class="label">${label}</div><strong>${mon.name}</strong></div>
+        <button class="info-chip" data-inspect="${mon.name}">Infos</button>
+      </div>
+      <div class="battle-status-meta"><span>Lv100</span><span>${mon.status || 'OK'}</span></div>
+      <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill ${hpTone(percent)}" style="width:${percent}%"></div></div></div>
+      <div class="tiny">${mon.condition}</div>
+    </div>
+    <div class="battle-sprite-wrap battle-sprite-${side}">
+      <div class="battle-shadow"></div>
+      ${spriteTag(mon, facing, 'battle')}
+    </div>
   </div>`;
 }
 
@@ -304,10 +319,16 @@ function renderChoiceButtons() {
 
 function renderBattleStage() {
   const rematch = state.playMode === 'link' && state.battleFinished ? '<button class="primary-btn" data-action="link-rematch">Revanche</button>' : '';
-  return `<section class="hero"><div><div class="label">Battle Phase</div><h2>${currentEnemyLabel()}</h2></div><p>${state.message}</p></section>
-    <section class="battle-shell"><div>${renderCombatant(ownActive(), 'Du', 'back', ownSide())}</div><div class="battle-feed">${state.battleFeed.map((line) => `<div class="feed-line">${line}</div>`).join('') || '<div class="feed-line">Der Kampf beginnt.</div>'}</div><div>${renderCombatant(foeActive(), currentEnemyLabel(), 'front', foeSide())}</div></section>
-    <section class="two-col"><div class="panel"><div class="label">Deine Reserve</div>${renderBench(ownTeamState(), true)}</div><div class="panel"><div class="label">Gegnerische Reserve</div>${renderBench(foeTeamState(), false)}</div></section>
-    <section class="panel"><div class="label">Aktionen</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn" data-action="go-menu">Zur Moduswahl</button></div></section>`;
+  const latestFeed = state.battleFeed[0] || 'Der Kampf beginnt.';
+  return `<section class="battle-ui">
+    <div class="battle-header"><div><div class="label">Battle Phase</div><h2>${currentEnemyLabel()}</h2></div><p>${state.message}</p></div>
+    <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), currentEnemyLabel(), 'front', foeSide(), 'foe')}<div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'Du', 'back', ownSide(), 'player')}</div></section>
+    <section class="battle-footer">
+      <div class="panel battle-panel"><div class="label">Deine Reserve</div>${renderBench(ownTeamState(), true)}</div>
+      <div class="panel battle-panel"><div class="label">Gegnerische Reserve</div>${renderBench(foeTeamState(), false)}</div>
+      <div class="panel battle-panel battle-actions-panel"><div class="label">Aktionen</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn" data-action="go-menu">Zur Moduswahl</button></div></div>
+    </section>
+  </section>`;
 }
 
 function renderStage() {
@@ -324,7 +345,8 @@ function render() {
   const ownTeam = state.playMode === 'link'
     ? (state.playerPreview.length ? state.playerPreview : state.playerLoadout.length ? state.playerLoadout : state.playerDraft)
     : (state.phase === 'draft' ? state.playerDraft : state.playerPreview.length ? state.playerPreview : state.playerLoadout);
-  app.innerHTML = `<div class="app-shell">
+  const battleView = state.phase === 'battle';
+  app.innerHTML = `<div class="app-shell ${battleView ? 'battle-view' : ''}">
     <aside class="side"><a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a><div class="brand"><div class="label">Pokemon Battler</div><h1>Kanto Link Arena</h1><p>Gen-1-Sprites, Level-100-Stats, RBY-Regeln und Link Battles mit verdecktem Draft.</p></div><div class="panel metrics"><span>Modus ${state.playMode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</span><span>151 Pokémon</span><span>Best Run ${state.bestRun}</span></div>${renderSidePanel('Dein Team', ownTeam, true)}${renderOpponentPanel()}</aside>
     <main class="main">${renderStage()}</main>
     <aside class="side"><div class="panel"><div class="label">Hinweise</div><div class="empty">Gen1CustomGame, Level 100, keine modernen Items oder Abilities.</div></div><div class="panel"><div class="label">Log</div>${state.logs.map((line) => `<div class="log-line">${line}</div>`).join('')}</div></aside>
@@ -722,6 +744,19 @@ function updateRosterState(sideKey, name, updater) {
   state.active[sideKey] = state.teamStates[sideKey].find((member) => member.active) || null;
 }
 
+function formatStatus(status) {
+  const labels = {
+    brn: 'Verbrennung',
+    frz: 'Eis',
+    par: 'Paralyse',
+    psn: 'Vergiftung',
+    tox: 'schwere Vergiftung',
+    slp: 'Schlaf',
+    confusion: 'Verwirrung',
+  };
+  return labels[status] || status;
+}
+
 function battleText(parts) {
   const type = parts[1];
   if (type === 'move') return `${parts[2].split(': ').pop()} setzt ${parts[3]} ein.`;
@@ -731,8 +766,44 @@ function battleText(parts) {
   if (type === '-crit') return 'Ein Volltreffer.';
   if (type === 'switch') return `${parts[2].split(': ').pop()} betritt das Feld.`;
   if (type === 'faint') return `${parts[2].split(': ').pop()} ist kampfunfähig.`;
-  if (type === '-status') return `${parts[2].split(': ').pop()} erleidet ${parts[3]}.`;
+  if (type === '-status') return `${parts[2].split(': ').pop()} erleidet ${formatStatus(parts[3])}.`;
   if (type === '-curestatus') return `${parts[2].split(': ').pop()} ist wieder fit.`;
+  if (type === 'cant') {
+    const name = parts[2].split(': ').pop();
+    const reason = parts[3];
+    if (reason === 'slp') return `${name} schlÃ¤ft tief und fest.`;
+    if (reason === 'frz') return `${name} ist eingefroren.`;
+    if (reason === 'par') return `${name} ist paralysiert und kann sich nicht bewegen.`;
+    if (reason === 'flinch') return `${name} schreckt zurÃ¼ck.`;
+    if (reason === 'recharge') return `${name} muss sich aufladen.`;
+    if (reason === 'Disable') return `${name} kann die Attacke nicht einsetzen.`;
+    return `${name} kann nicht handeln.`;
+  }
+  if (type === '-start') {
+    const name = parts[2].split(': ').pop();
+    if (parts[3] === 'confusion') return `${name} ist verwirrt.`;
+    if (parts[3] === 'Substitute') return `${name} erschafft einen Delegator.`;
+    return `${name} ist von ${parts[3]} betroffen.`;
+  }
+  if (type === '-end') {
+    const name = parts[2].split(': ').pop();
+    if (parts[3] === 'confusion') return `${name} ist nicht mehr verwirrt.`;
+    if (parts[3] === 'Substitute') return `Der Delegator von ${name} verschwindet.`;
+    return `${parts[3]} endet bei ${name}.`;
+  }
+  if (type === '-activate') {
+    const name = parts[2].split(': ').pop();
+    if (parts[3] === 'confusion') return `${name} ist verwirrt.`;
+    if (parts[3]?.startsWith('move: Bide')) return `${name} sammelt Energie.`;
+    return `${name} aktiviert ${parts[3]}.`;
+  }
+  if (type === '-boost') return `${parts[2].split(': ').pop()} steigert ${parts[3]}.`;
+  if (type === '-unboost') return `${parts[2].split(': ').pop()} verliert ${parts[3]}.`;
+  if (type === '-immune') return `${parts[2].split(': ').pop()} bleibt unbeeindruckt.`;
+  if (type === '-fail') return 'Aber es fehlschlÃ¤gt.';
+  if (type === '-mustrecharge') return `${parts[2].split(': ').pop()} muss aussetzen.`;
+  if (type === '-hitcount') return `${parts[2]} Treffer.`;
+  if (type === '-ohko') return 'Ein K.-o.-Treffer.';
   if (type === 'win') return `${parts[2]} gewinnt den Kampf.`;
   return '';
 }
@@ -751,11 +822,13 @@ function handleBattleLine(line) {
   const parts = line.split('|');
   const type = parts[1];
   const text = battleText(parts);
-  if (text) pushBattleFeed(text);
+  if (text) {
+    pushBattleFeed(text);
+    logLine(text);
+  }
   if (type === 'move') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
     state.lastMove[sideKey] = parts[3];
-    logLine(text);
     return 700;
   }
   if (type === 'switch') {
@@ -843,7 +916,520 @@ function submitChoice(choice) {
 
 function injectStyles() {
   const style = document.createElement('style');
-  style.textContent = ':root{--line:rgba(233,236,214,.14);--text:#f2f0dc;--muted:#c8ccb4}*{box-sizing:border-box}body{margin:0;min-height:100vh;padding:18px;font-family:Georgia,serif;color:var(--text);background:radial-gradient(circle at top left,rgba(212,176,79,.18),transparent 20%),linear-gradient(180deg,#111915,#0d1310 52%,#16211a)}button,input{font:inherit}.app-shell{width:min(1520px,100%);margin:0 auto;display:grid;grid-template-columns:300px minmax(0,1fr) 300px;gap:18px;align-items:start}.side,.main{background:rgba(24,36,29,.96);border:1px solid var(--line);border-radius:26px;padding:18px;display:grid;gap:14px}.brand h1{margin:.25rem 0 .5rem;font-size:clamp(2rem,4vw,4rem);line-height:.95}.brand p,.tiny,.empty,.log-line,.label,.panel span{color:var(--muted)}.label{text-transform:uppercase;letter-spacing:.14em;font-size:.75rem}.hero,.panel,.draft-card,.preview-card,.combatant,.bench-card,.mode-card,.choice-btn,.roster-card,.modal,.code-box,.ghost-btn,.primary-btn,.info-chip{border:1px solid var(--line);border-radius:20px}.hero,.panel{padding:16px;background:rgba(255,255,255,.03)}.metrics span,.synergy span{display:block}.back,.ghost-btn,.primary-btn,.choice-btn,.mini-btn,.info-chip{padding:10px 12px;border:none;cursor:pointer}.ghost-btn,.info-chip,.mini-btn{background:rgba(255,255,255,.08);color:var(--text)}.primary-btn,.choice-btn{background:linear-gradient(180deg,#f2d97b,#c6a548);color:#172017}.choice-btn.alt{background:linear-gradient(180deg,#cfdfab,#8ca85b)}.three-col,.two-col,.battle-shell,.choice-grid,.bench-grid{display:grid;gap:14px}.three-col{grid-template-columns:repeat(3,minmax(0,1fr))}.two-col{grid-template-columns:repeat(2,minmax(0,1fr))}.draft-card,.mode-card{padding:16px;color:#172017}.draft-top,.roster-head,.combatant-head,.card-actions,.preview-actions,.actions,.status-row{display:flex;gap:10px;align-items:center;justify-content:space-between}.types,.move-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.types span,.move-row span,.modal-moves span{padding:5px 8px;border-radius:999px;background:rgba(255,255,255,.34);color:#172017;font-size:.78rem}.preview-card{padding:14px;color:#172017;display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center}.battle-shell{grid-template-columns:minmax(0,300px) minmax(0,1fr) minmax(0,300px);align-items:stretch}.battle-feed{border:1px solid var(--line);border-radius:22px;padding:18px;display:grid;align-content:center;gap:10px;min-height:320px;background:radial-gradient(circle at center,rgba(212,176,79,.14),transparent 34%),rgba(255,255,255,.03)}.feed-line{padding:10px 12px;border-radius:16px;background:rgba(0,0,0,.2);text-align:center;font-size:1.05rem}.combatant{padding:18px;color:#172017;display:grid;gap:10px;justify-items:center}.combatant.flash-hit{transform:translateY(-2px)}.combatant.flash-heal{transform:scale(1.02)}.combatant.flash-faint{opacity:.45}.combatant.flash-switch{transform:translateX(4px)}.hp{height:12px;width:100%;border-radius:999px;background:rgba(0,0,0,.16);overflow:hidden}.hp-fill{height:100%;background:linear-gradient(90deg,#5fa867,#f0e58d)}.bench-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.bench-card{padding:12px;color:#172017;display:grid;gap:8px;justify-items:center}.choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.roster-card{padding:12px;color:#172017;display:grid;gap:8px}.synergy,.metrics{display:grid;gap:8px}.log-line{padding:10px 12px;border-radius:14px;background:rgba(255,255,255,.04)}.code-box{padding:12px;display:grid;place-items:center;background:rgba(255,255,255,.04)}.text-input{width:100%;padding:12px;border-radius:16px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--text)}.sprite{image-rendering:pixelated;filter:drop-shadow(0 8px 10px rgba(0,0,0,.2))}.sprite.sm{width:56px;height:56px}.sprite.md{width:78px;height:78px}.sprite.lg{width:120px;height:120px}.modal-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);display:grid;place-items:center;padding:20px}.modal{width:min(780px,100%);padding:20px;background:#16211a}.modal-head,.modal-body{display:flex;gap:16px;justify-content:space-between;align-items:flex-start}.modal-body{display:grid;grid-template-columns:180px 1fr;gap:18px}.modal-card{padding:18px;border-radius:22px;display:grid;place-items:center}.modal-stats,.modal-moves{display:grid;gap:10px}.empty{padding:14px;border-radius:16px;background:rgba(255,255,255,.04)}@media (max-width:1280px){.app-shell{grid-template-columns:1fr}.three-col,.two-col,.battle-shell,.choice-grid,.bench-grid{grid-template-columns:1fr}.preview-card{grid-template-columns:1fr}}';
+  style.textContent = `
+    :root{
+      --line:rgba(233,236,214,.14);
+      --text:#f3f1e6;
+      --muted:#c8ccb4;
+      --ink:#182117;
+      --ink-soft:#334030;
+      --panel:rgba(18,29,22,.95);
+      --panel-soft:rgba(255,255,255,.04);
+      --chip:rgba(255,255,255,.52);
+      --chip-text:#182117;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      min-height:100vh;
+      padding:18px;
+      font-family:Georgia,serif;
+      color:var(--text);
+      background:
+        radial-gradient(circle at top left,rgba(212,176,79,.18),transparent 20%),
+        radial-gradient(circle at bottom right,rgba(116,183,201,.08),transparent 24%),
+        linear-gradient(180deg,#111915,#0d1310 52%,#16211a);
+    }
+    button,input{font:inherit}
+    .app-shell{
+      width:min(1520px,100%);
+      margin:0 auto;
+      display:grid;
+      grid-template-columns:300px minmax(0,1fr) 300px;
+      gap:18px;
+      align-items:start;
+    }
+    .side,.main{
+      background:var(--panel);
+      border:1px solid var(--line);
+      border-radius:26px;
+      padding:18px;
+      display:grid;
+      gap:14px;
+      box-shadow:0 24px 60px rgba(0,0,0,.24);
+    }
+    .brand h1{margin:.25rem 0 .5rem;font-size:clamp(2rem,4vw,4rem);line-height:.95}
+    .brand p,.tiny,.empty,.log-line,.label,.panel span{color:var(--muted)}
+    .label{text-transform:uppercase;letter-spacing:.14em;font-size:.75rem}
+    .hero,.panel,.draft-card,.preview-card,.combatant,.bench-card,.mode-card,.choice-btn,.roster-card,.modal,.code-box,.ghost-btn,.primary-btn,.info-chip{
+      border:1px solid var(--line);
+      border-radius:20px;
+    }
+    .hero,.panel{
+      padding:16px;
+      background:var(--panel-soft);
+    }
+    .metrics span,.synergy span{display:block}
+    .back,.ghost-btn,.primary-btn,.choice-btn,.mini-btn,.info-chip{
+      padding:10px 12px;
+      border:none;
+      cursor:pointer;
+      transition:transform .14s ease, background .14s ease, color .14s ease;
+    }
+    .ghost-btn,.info-chip,.mini-btn{
+      background:rgba(255,255,255,.14);
+      color:var(--text);
+    }
+    .primary-btn,.choice-btn{
+      background:linear-gradient(180deg,#f2d97b,#c6a548);
+      color:var(--ink);
+      font-weight:700;
+    }
+    .choice-btn.alt{background:linear-gradient(180deg,#cfdfab,#8ca85b)}
+    .three-col,.two-col,.battle-shell,.choice-grid,.bench-grid{display:grid;gap:14px}
+    .three-col{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .two-col{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .draft-card,.mode-card,.roster-card,.preview-card,.combatant,.bench-card{
+      padding:16px;
+      color:var(--ink);
+      box-shadow:inset 0 0 0 999px rgba(255,255,255,.14);
+      overflow:hidden;
+    }
+    .draft-top,.roster-head,.combatant-head,.card-actions,.preview-actions,.actions,.status-row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .roster-head,.combatant-head{align-items:flex-start}
+    .types,.move-row{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      margin-top:8px;
+    }
+    .types span,.move-row span,.modal-moves span{
+      padding:5px 8px;
+      border-radius:999px;
+      background:var(--chip);
+      color:var(--chip-text);
+      font-size:.78rem;
+      font-weight:600;
+    }
+    .draft-card .tiny,.roster-card .tiny,.preview-card .tiny,.combatant .tiny,.bench-card .tiny{
+      color:var(--ink-soft);
+      font-weight:600;
+    }
+    .preview-card{
+      display:grid;
+      grid-template-columns:auto 1fr auto;
+      gap:12px;
+      align-items:center;
+    }
+    .preview-copy strong,.draft-card h3,.combatant strong,.roster-card strong{color:var(--ink)}
+    .battle-view{grid-template-columns:minmax(0,1fr);max-width:1120px}
+    .battle-view .side{display:none}
+    .battle-view .main{padding:4px}
+    .battle-ui{
+      display:grid;
+      gap:6px;
+      font-family:"Courier New",monospace;
+    }
+    .battle-header{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:8px;
+      padding:0 2px;
+    }
+    .battle-header h2{
+      margin:0;
+      font-size:clamp(1.25rem,2vw,1.75rem);
+      letter-spacing:.02em;
+      text-transform:uppercase;
+    }
+    .battle-header p{margin:0;max-width:420px;text-align:right;color:var(--muted)}
+    .battle-shell{display:block}
+    .battle-stage{
+      position:relative;
+      min-height:min(33vh,300px);
+      border:3px solid #151d11;
+      border-radius:10px;
+      overflow:hidden;
+      background:
+        linear-gradient(180deg,#e7f3cb 0%,#e7f3cb 54%,#cadc9a 54%,#cadc9a 100%);
+      box-shadow:inset 0 0 0 2px rgba(255,255,255,.2), 0 24px 60px rgba(0,0,0,.22);
+    }
+    .battle-stage::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 74% 34%,rgba(255,255,255,.28),transparent 26%),
+        radial-gradient(circle at 27% 78%,rgba(255,255,255,.24),transparent 24%);
+      pointer-events:none;
+    }
+    .battle-feed{
+      position:absolute;
+      left:18px;
+      right:18px;
+      bottom:12px;
+      border:3px solid #151d11;
+      border-radius:8px;
+      padding:10px 14px;
+      display:grid;
+      align-content:center;
+      min-height:56px;
+      background:#f8f5e8;
+      box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);
+      z-index:3;
+    }
+    .feed-line{
+      color:#1e2b14;
+      text-align:left;
+      font-size:1.02rem;
+      line-height:1.45;
+      font-weight:700;
+      text-transform:uppercase;
+    }
+    .combatant{
+      position:absolute;
+      inset:0;
+      display:block;
+      z-index:2;
+      pointer-events:none;
+    }
+    .combatant-foe{
+    }
+    .combatant-player{
+    }
+    .combatant.flash-hit{transform:translateY(-2px)}
+    .combatant.flash-heal{transform:scale(1.02)}
+    .combatant.flash-faint{opacity:.45}
+    .combatant.flash-switch{transform:translateX(4px)}
+    .battle-status{
+      position:absolute;
+      padding:12px 14px;
+      border:3px solid #151d11;
+      border-radius:8px;
+      background:#f8f5e8;
+      color:#1e2b14;
+      box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);
+      pointer-events:auto;
+    }
+    .battle-status-foe{
+      top:14px;
+      left:14px;
+      width:min(210px,34%);
+    }
+    .battle-status-player{
+      right:14px;
+      bottom:72px;
+      width:min(220px,36%);
+    }
+    .battle-status-top,.battle-status-meta,.battle-hp-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .battle-status-meta{
+      margin-top:4px;
+      color:#4d5b41;
+      font-size:.8rem;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.08em;
+    }
+    .battle-hp-row{margin-top:8px}
+    .hp-label{
+      color:#1e2b14;
+      font-size:.86rem;
+      font-weight:700;
+      letter-spacing:.08em;
+    }
+    .hp{
+      height:12px;
+      width:100%;
+      border-radius:999px;
+      background:#c7cbb8;
+      overflow:hidden;
+    }
+    .battle-hp{
+      height:14px;
+      border:2px solid #1e2b14;
+      background:#b7bf9c;
+    }
+    .hp-fill{height:100%;background:linear-gradient(90deg,#6eb24b,#9fd050)}
+    .hp-fill.hp-mid{background:linear-gradient(90deg,#d4bf48,#e9da79)}
+    .hp-fill.hp-low{background:linear-gradient(90deg,#b44b41,#de7c60)}
+    .battle-sprite-wrap{
+      position:relative;
+      min-height:100px;
+      display:grid;
+      align-items:end;
+    }
+    .battle-sprite-foe{
+      position:absolute;
+      top:58px;
+      right:42px;
+      width:170px;
+      justify-items:end;
+    }
+    .battle-sprite-player{
+      position:absolute;
+      left:26px;
+      bottom:72px;
+      width:170px;
+      justify-items:start;
+    }
+    .battle-shadow{
+      position:absolute;
+      bottom:10px;
+      width:92px;
+      height:18px;
+      border-radius:50%;
+      background:radial-gradient(circle,rgba(34,49,20,.38) 0%,rgba(34,49,20,.16) 58%,transparent 74%);
+    }
+    .battle-sprite-player .battle-shadow{left:22px}
+    .battle-sprite-foe .battle-shadow{right:20px}
+    .battle-footer{
+      display:grid;
+      grid-template-columns:.9fr .9fr 1.2fr;
+      gap:6px;
+    }
+    .battle-panel{
+      padding:7px;
+      gap:6px;
+      background:rgba(255,255,255,.05);
+    }
+    .battle-panel .bench-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+    .bench-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .bench-card{
+      display:grid;
+      gap:3px;
+      padding:5px 5px;
+      justify-items:center;
+      text-align:center;
+      min-height:72px;
+    }
+    .battle-panel .bench-card strong{
+      font-size:.75rem;
+      line-height:1.1;
+    }
+    .battle-panel .bench-card .tiny{
+      font-size:.67rem;
+      line-height:1.2;
+    }
+    .battle-panel .bench-card .info-chip{
+      padding:4px 6px;
+      font-size:.68rem;
+    }
+    .battle-panel .sprite.sm{width:34px;height:34px}
+    .choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .choice-btn{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:10px;
+      min-height:36px;
+      padding:6px 9px;
+      text-align:left;
+    }
+    .synergy,.metrics{display:grid;gap:8px}
+    .log-line{
+      padding:10px 12px;
+      border-radius:14px;
+      background:rgba(255,255,255,.04);
+    }
+    .code-box{
+      padding:12px;
+      display:grid;
+      place-items:center;
+      background:rgba(255,255,255,.04);
+      min-height:52px;
+      word-break:break-all;
+    }
+    .text-input{
+      width:100%;
+      padding:12px;
+      border-radius:16px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.06);
+      color:var(--text);
+    }
+    .sprite{
+      image-rendering:pixelated;
+      filter:drop-shadow(0 8px 10px rgba(0,0,0,.2));
+      flex:0 0 auto;
+    }
+    .sprite.sm{width:56px;height:56px}
+    .sprite.md{width:78px;height:78px}
+    .sprite.lg{width:120px;height:120px}
+    .sprite.battle{
+      width:min(196px,100%);
+      height:auto;
+      max-height:196px;
+      filter:drop-shadow(0 10px 0 rgba(255,255,255,.18)) drop-shadow(0 18px 16px rgba(0,0,0,.18));
+    }
+    .modal-backdrop{
+      position:fixed;
+      inset:0;
+      background:rgba(0,0,0,.55);
+      display:grid;
+      place-items:center;
+      padding:20px;
+    }
+    .modal{
+      width:min(780px,100%);
+      padding:20px;
+      background:#16211a;
+    }
+    .modal-head,.modal-body{
+      display:flex;
+      gap:16px;
+      justify-content:space-between;
+      align-items:flex-start;
+    }
+    .modal-body{
+      display:grid;
+      grid-template-columns:180px 1fr;
+      gap:18px;
+    }
+    .modal-card{
+      padding:18px;
+      border-radius:22px;
+      display:grid;
+      place-items:center;
+    }
+    .modal-stats,.modal-moves{display:grid;gap:10px}
+    .modal-stats span{display:block;color:var(--text)}
+    .empty{
+      padding:14px;
+      border-radius:16px;
+      background:rgba(255,255,255,.04);
+    }
+    .status-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+    @media (max-width:1280px){
+      .app-shell{grid-template-columns:1fr}
+      .main{order:1}
+      .side:first-of-type{order:2}
+      .side:last-of-type{order:3}
+      .three-col,.two-col,.choice-grid,.bench-grid{grid-template-columns:1fr}
+      .preview-card{grid-template-columns:1fr}
+      .battle-footer{grid-template-columns:1fr 1fr}
+      .battle-actions-panel{grid-column:1 / -1}
+    }
+    @media (max-width:720px){
+      body{padding:10px}
+      .side,.main{padding:14px;border-radius:22px}
+      .battle-view .main{padding:10px}
+      .brand h1{font-size:clamp(1.85rem,10vw,2.8rem)}
+      .hero,.panel,.draft-card,.preview-card,.combatant,.bench-card,.mode-card{padding:14px}
+      .draft-top,.roster-head,.combatant-head,.card-actions,.preview-actions,.actions{
+        flex-wrap:wrap;
+        align-items:flex-start;
+      }
+      .card-actions .primary-btn,.card-actions .ghost-btn,.actions .primary-btn,.actions .ghost-btn{
+        width:100%;
+        justify-content:center;
+      }
+      .choice-btn{
+        flex-direction:column;
+        align-items:flex-start;
+      }
+      .sprite.lg{width:104px;height:104px}
+      .battle-stage{
+        min-height:36vh;
+        border-radius:8px;
+      }
+      .battle-header{
+        align-items:flex-start;
+        flex-direction:column;
+        gap:6px;
+      }
+      .battle-header p{
+        text-align:left;
+        max-width:none;
+      }
+      .combatant{inset:0}
+      .battle-status{
+        padding:8px 10px;
+        border-width:2px;
+        border-radius:6px;
+      }
+      .battle-status-foe{top:10px;left:10px;width:min(138px,44%)}
+      .battle-status-player{right:10px;bottom:62px;width:min(148px,48%)}
+      .battle-status .info-chip{padding:6px 8px}
+      .battle-status-meta{
+        font-size:.68rem;
+        letter-spacing:.05em;
+      }
+      .battle-hp{height:12px}
+      .battle-sprite-foe{
+        top:40px;
+        right:10px;
+        width:96px;
+      }
+      .battle-sprite-player{
+        left:10px;
+        bottom:62px;
+        width:96px;
+      }
+      .battle-shadow{width:86px;height:18px}
+      .battle-sprite-player .battle-shadow{left:4px}
+      .battle-sprite-foe .battle-shadow{right:4px}
+      .sprite.battle{width:min(92px,100%);max-height:92px}
+      .battle-feed{
+        left:10px;
+        right:10px;
+        bottom:10px;
+        min-height:58px;
+        padding:8px 10px;
+        border-width:2px;
+        border-radius:6px;
+      }
+      .feed-line{font-size:.8rem}
+      .battle-footer{
+        grid-template-columns:1fr 1fr;
+        gap:6px;
+      }
+      .battle-panel{
+        padding:6px;
+        border-radius:18px;
+      }
+      .battle-panel .bench-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+      .battle-panel .bench-card{
+        min-height:70px;
+        padding:4px 3px;
+      }
+      .battle-panel .bench-card .info-chip{
+        padding:3px 5px;
+        font-size:.62rem;
+      }
+      .battle-panel .sprite.sm{width:28px;height:28px}
+      .choice-grid{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:6px;
+      }
+      .choice-btn{
+        min-height:40px;
+        padding:6px 8px;
+        gap:3px;
+      }
+      .modal{
+        padding:16px;
+        max-height:90vh;
+        overflow:auto;
+      }
+      .modal-body{grid-template-columns:1fr}
+      .status-row span{width:100%}
+    }
+  `;
   document.head.appendChild(style);
 }
 

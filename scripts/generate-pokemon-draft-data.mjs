@@ -94,8 +94,8 @@ async function build() {
       nfe: !!species.nfe,
       moveIds: Array.from(new Set(moveIds)),
       sprites: {
-        front: `../assets/pokemon-rby/red-green/${species.num}.png`,
-        back: `../assets/pokemon-rby/red-green/back/${species.num}.png`,
+        front: `../assets/pokemon-rby-clean/red-green/${species.num}.png`,
+        back: `../assets/pokemon-rby-clean/red-green/back/${species.num}.png`,
       },
       sources: {
         stats: `https://www.psypokes.com/dex/psydex/${String(species.num).padStart(3, '0')}/stats`,
