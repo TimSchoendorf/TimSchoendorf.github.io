@@ -1060,7 +1060,7 @@ function injectStyles() {
     }
     .battle-stage{
       position:relative;
-      min-height:min(37vh,330px);
+      min-height:min(39vh,354px);
       border:3px solid #151d11;
       border-radius:10px;
       overflow:hidden;
@@ -1081,13 +1081,13 @@ function injectStyles() {
       position:absolute;
       left:18px;
       right:18px;
-      bottom:12px;
+      bottom:10px;
       border:3px solid #151d11;
       border-radius:8px;
       padding:10px 14px;
       display:grid;
       align-content:center;
-      min-height:56px;
+      min-height:52px;
       background:#f8f5e8;
       box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);
       z-index:3;
@@ -1126,13 +1126,13 @@ function injectStyles() {
       pointer-events:auto;
     }
     .battle-status-foe{
-      top:18px;
+      top:20px;
       left:18px;
       width:min(228px,32%);
     }
     .battle-status-player{
       right:18px;
-      bottom:82px;
+      bottom:88px;
       width:min(236px,34%);
     }
     .battle-status-top,.battle-status-meta,.battle-hp-row{
@@ -1179,7 +1179,7 @@ function injectStyles() {
     }
     .battle-sprite-foe{
       position:absolute;
-      top:64px;
+      top:74px;
       right:66px;
       width:196px;
       justify-items:end;
@@ -1187,7 +1187,7 @@ function injectStyles() {
     .battle-sprite-player{
       position:absolute;
       left:54px;
-      bottom:80px;
+      bottom:88px;
       width:196px;
       justify-items:start;
     }
@@ -1204,14 +1204,14 @@ function injectStyles() {
     .battle-footer{
       display:grid;
       grid-template-columns:.9fr .9fr 1.2fr;
-      gap:6px;
+      gap:3px;
       max-width:940px;
       width:100%;
       margin:0 auto;
     }
     .battle-panel{
-      padding:6px;
-      gap:5px;
+      padding:5px;
+      gap:4px;
       background:rgba(255,255,255,.05);
     }
     .battle-panel .bench-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
@@ -1222,7 +1222,7 @@ function injectStyles() {
       padding:5px 5px;
       justify-items:center;
       text-align:center;
-      min-height:72px;
+      min-height:66px;
     }
     .battle-panel .bench-card strong{
       font-size:.75rem;
@@ -1243,8 +1243,8 @@ function injectStyles() {
       justify-content:space-between;
       align-items:center;
       gap:10px;
-      min-height:34px;
-      padding:5px 8px;
+      min-height:32px;
+      padding:4px 8px;
       text-align:left;
     }
     .synergy,.metrics{display:grid;gap:8px}
