@@ -1027,12 +1027,12 @@ function injectStyles() {
       align-items:center;
     }
     .preview-copy strong,.draft-card h3,.combatant strong,.roster-card strong{color:var(--ink)}
-    .battle-view{grid-template-columns:minmax(0,1fr);max-width:1120px}
+    .battle-view{grid-template-columns:minmax(0,1fr);max-width:1040px}
     .battle-view .side{display:none}
-    .battle-view .main{padding:4px}
+    .battle-view .main{padding:2px}
     .battle-ui{
       display:grid;
-      gap:6px;
+      gap:4px;
       font-family:"Courier New",monospace;
     }
     .battle-header{
@@ -1041,6 +1041,9 @@ function injectStyles() {
       justify-content:space-between;
       gap:8px;
       padding:0 2px;
+      max-width:940px;
+      width:100%;
+      margin:0 auto;
     }
     .battle-header h2{
       margin:0;
@@ -1049,10 +1052,15 @@ function injectStyles() {
       text-transform:uppercase;
     }
     .battle-header p{margin:0;max-width:420px;text-align:right;color:var(--muted)}
-    .battle-shell{display:block}
+    .battle-shell{
+      display:block;
+      max-width:940px;
+      width:100%;
+      margin:0 auto;
+    }
     .battle-stage{
       position:relative;
-      min-height:min(33vh,300px);
+      min-height:min(37vh,330px);
       border:3px solid #151d11;
       border-radius:10px;
       overflow:hidden;
@@ -1118,14 +1126,14 @@ function injectStyles() {
       pointer-events:auto;
     }
     .battle-status-foe{
-      top:14px;
-      left:14px;
-      width:min(210px,34%);
+      top:18px;
+      left:18px;
+      width:min(228px,32%);
     }
     .battle-status-player{
-      right:14px;
-      bottom:72px;
-      width:min(220px,36%);
+      right:18px;
+      bottom:82px;
+      width:min(236px,34%);
     }
     .battle-status-top,.battle-status-meta,.battle-hp-row{
       display:flex;
@@ -1171,16 +1179,16 @@ function injectStyles() {
     }
     .battle-sprite-foe{
       position:absolute;
-      top:58px;
-      right:42px;
-      width:170px;
+      top:64px;
+      right:54px;
+      width:196px;
       justify-items:end;
     }
     .battle-sprite-player{
       position:absolute;
-      left:26px;
-      bottom:72px;
-      width:170px;
+      left:36px;
+      bottom:78px;
+      width:196px;
       justify-items:start;
     }
     .battle-shadow{
@@ -1197,10 +1205,13 @@ function injectStyles() {
       display:grid;
       grid-template-columns:.9fr .9fr 1.2fr;
       gap:6px;
+      max-width:940px;
+      width:100%;
+      margin:0 auto;
     }
     .battle-panel{
-      padding:7px;
-      gap:6px;
+      padding:6px;
+      gap:5px;
       background:rgba(255,255,255,.05);
     }
     .battle-panel .bench-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
@@ -1232,8 +1243,8 @@ function injectStyles() {
       justify-content:space-between;
       align-items:center;
       gap:10px;
-      min-height:36px;
-      padding:6px 9px;
+      min-height:34px;
+      padding:5px 8px;
       text-align:left;
     }
     .synergy,.metrics{display:grid;gap:8px}
@@ -1267,9 +1278,9 @@ function injectStyles() {
     .sprite.md{width:78px;height:78px}
     .sprite.lg{width:120px;height:120px}
     .sprite.battle{
-      width:min(196px,100%);
+      width:min(212px,100%);
       height:auto;
-      max-height:196px;
+      max-height:212px;
       filter:drop-shadow(0 10px 0 rgba(255,255,255,.18)) drop-shadow(0 18px 16px rgba(0,0,0,.18));
     }
     .modal-backdrop{
