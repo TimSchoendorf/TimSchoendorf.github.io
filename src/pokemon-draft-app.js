@@ -386,6 +386,30 @@ function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, c
   </section>`;
 }
 
+function renderPreviewShell({mode, title, statusCopy, chips, actionLabel, playerPanelTitle, playerCards, asidePanel}) {
+  return `<section class="preview-shell">
+    <div class="draft-topbar">
+      <a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</span></div>
+    </div>
+    <section class="draft-hero-panel">
+      <div class="draft-hero-copy">
+        <div class="draft-kicker-row"><span class="label">${mode === 'bot' ? 'Reihenfolge' : 'Verdeckte Reihenfolge'}</span><span class="draft-status-pill">${mode === 'bot' ? currentEnemyLabel() : 'Team ordnen'}</span></div>
+        <h2>${title}</h2>
+        <p>${statusCopy}</p>
+        <div class="draft-chip-row">${chips.map((chip) => `<span>${chip}</span>`).join('')}</div>
+      </div>
+    </section>
+    <section class="preview-main-grid">
+      <section class="preview-panel">
+        <div class="draft-section-head"><div><div class="label">${playerPanelTitle}</div><h3>Ziehe dein Team in die Startreihenfolge</h3></div><p>${actionLabel}</p></div>
+        <div class="preview-card-list">${playerCards}</div>
+      </section>
+      <aside class="preview-side-panel">${asidePanel}</aside>
+    </section>
+  </section>`;
+}
+
 function renderPreviewCard(member, index, controls) {
   return `<div class="preview-card" style="background:${typeGradient(member.types)}">
     ${spriteTag(member, 'front', 'sm')}
@@ -514,9 +538,20 @@ function renderDraftStage() {
 }
 
 function renderBotPreviewStage() {
-  return `<section class="hero"><div><div class="label">Arena Preview</div><h2>${currentEnemyLabel()}</h2></div><p>${state.message}</p></section>
-    <section class="two-col"><div class="panel"><div class="label">Deine Reihenfolge</div>${state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join('')}</div><div class="panel"><div class="label">Gegnerteam</div>${state.opponentPreview.map((member, index) => renderPreviewCard(member, index, false)).join('')}</div></section>
-    <div class="actions"><button class="primary-btn" data-action="start-battle">Kampf starten</button><button class="ghost-btn" data-action="go-menu">Zur Moduswahl</button></div>`;
+  return renderPreviewShell({
+    mode: 'bot',
+    title: `Ordne dein Team für ${currentEnemyLabel()}`,
+    statusCopy: state.message,
+    chips: [currentGenerationConfig().label, '3 Pokémon gewählt', 'Startreihenfolge festlegen'],
+    actionLabel: 'Die Reihenfolge bestimmt dein Lead und deine Wechseloptionen.',
+    playerPanelTitle: 'Deine Reihenfolge',
+    playerCards: state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join(''),
+    asidePanel: `<div class="preview-panel preview-opponent-panel">
+        <div class="draft-section-head"><div><div class="label">Gegnerteam</div><h3>${currentEnemyLabel()}</h3></div><p>Das gegnerische Team steht fest. Du kannst jetzt deine Startreihenfolge festlegen.</p></div>
+        <div class="preview-card-list">${state.opponentPreview.map((member, index) => renderPreviewCard(member, index, false)).join('')}</div>
+        <div class="actions"><button class="primary-btn" data-action="start-battle">Kampf starten</button><button class="ghost-btn" data-action="go-menu">Zur Moduswahl</button></div>
+      </div>`,
+  });
 }
 
 function renderLinkSetupStage() {
@@ -538,9 +573,23 @@ function renderLinkDraftStage() {
 }
 
 function renderLinkPreviewStage() {
-  return `<section class="hero"><div><div class="label">Verdeckte Reihenfolge</div><h2>Ordne dein Team</h2></div><p>Der Gegner sieht deine Anpassungen nicht live. Erst beim Kampfstart wird aufgedeckt.</p></section>
-    <section class="two-col"><div class="panel"><div class="label">Deine Reihenfolge</div>${state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join('')}</div><div class="panel"><div class="label">Gegnerstatus</div><div class="empty">${state.link.remoteDraftCount}/3 Picks bestätigt<br>${state.link.remoteReady ? 'Bereit' : 'Noch nicht bereit'}</div></div></section>
-    <div class="actions"><button class="primary-btn" data-action="ready-link-battle" ${!state.link.connected ? 'disabled' : ''}>Bereit für den Kampf</button><button class="ghost-btn" data-action="link-rematch">Neu draften</button></div>`;
+  return renderPreviewShell({
+    mode: 'link',
+    title: 'Ordne dein Team verdeckt',
+    statusCopy: 'Der Gegner sieht deine Anpassungen nicht live. Erst beim Kampfstart wird aufgedeckt.',
+    chips: [currentGenerationConfig().label, 'Verdeckter Draft', `${state.playerPreview.length}/3 bereit`, state.link.connected ? 'Gegner verbunden' : 'Warte auf Gegner'],
+    actionLabel: 'Nutze hoch und runter, bis deine Lead-Reihenfolge passt.',
+    playerPanelTitle: 'Deine Reihenfolge',
+    playerCards: state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join(''),
+    asidePanel: `<div class="preview-panel preview-status-panel">
+        <div class="draft-section-head"><div><div class="label">Gegnerstatus</div><h3>${state.link.connected ? state.link.remoteName : 'Warte auf Gegner'}</h3></div><p>Deine Änderungen bleiben verdeckt, bis beide Seiten bereit sind.</p></div>
+        <div class="preview-status-stack">
+          <div class="empty"><strong>${state.link.remoteDraftCount}/3 Picks bestätigt</strong><div>${state.link.remoteReady ? 'Bereit für den Kampf' : 'Noch nicht bereit'}</div></div>
+          <div class="empty"><strong>${state.link.connected ? 'Verbindung steht' : 'Verbindung offen'}</strong><div>${state.link.localPickLocked ? 'Dein letzter Pick ist bestätigt' : 'Team kann noch umsortiert werden'}</div></div>
+        </div>
+        <div class="actions"><button class="primary-btn" data-action="ready-link-battle" ${!state.link.connected ? 'disabled' : ''}>Bereit für den Kampf</button><button class="ghost-btn" data-action="link-rematch">Neu draften</button></div>
+      </div>`,
+  });
 }
 
 function hpTone(percent) {
@@ -618,7 +667,7 @@ function render() {
     : (state.phase === 'draft' ? state.playerDraft : state.playerPreview.length ? state.playerPreview : state.playerLoadout);
   const battleView = state.phase === 'battle';
   const menuView = state.phase === 'menu';
-  const draftView = state.phase === 'draft' || state.phase === 'link-draft';
+  const draftView = state.phase === 'draft' || state.phase === 'link-draft' || state.phase === 'preview' || state.phase === 'link-preview';
   if (menuView) {
     app.innerHTML = `<div class="app-shell menu-view theme-${state.generation}">
       <main class="main menu-main">${renderStage()}</main>
@@ -1351,6 +1400,7 @@ function injectStyles() {
       grid-template-columns:auto 1fr auto;
       gap:12px;
       align-items:center;
+      min-height:88px;
     }
     .preview-copy strong,.draft-card h3,.combatant strong,.roster-card strong{color:var(--ink)}
     .battle-view{grid-template-columns:minmax(0,1fr)}
@@ -1377,6 +1427,11 @@ function injectStyles() {
       box-shadow:none;
     }
     .draft-shell{
+      display:grid;
+      gap:12px;
+      padding:10px 0 6px;
+    }
+    .preview-shell{
       display:grid;
       gap:12px;
       padding:10px 0 6px;
@@ -1498,6 +1553,26 @@ function injectStyles() {
       display:grid;
       gap:12px;
       min-height:0;
+    }
+    .preview-main-grid{
+      display:grid;
+      grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);
+      gap:12px;
+      align-items:start;
+    }
+    .preview-panel,.preview-side-panel{
+      border:1px solid var(--line);
+      border-radius:28px;
+      background:linear-gradient(180deg,rgba(21,31,24,.94),rgba(16,25,20,.9));
+      box-shadow:0 28px 80px rgba(0,0,0,.22);
+      padding:18px;
+      display:grid;
+      gap:12px;
+      min-height:0;
+    }
+    .preview-card-list,.preview-status-stack{
+      display:grid;
+      gap:10px;
     }
     .draft-section-head{
       display:flex;
@@ -2467,6 +2542,13 @@ function injectStyles() {
       .menu-copy h2{
         font-size:clamp(2.3rem,4.1vw,4rem);
       }
+      .preview-main-grid{
+        grid-template-columns:minmax(0,1.05fr) minmax(300px,.95fr);
+      }
+      .preview-panel,.preview-side-panel{
+        border-radius:24px;
+        padding:14px;
+      }
       .menu-showcase{
         min-height:334px;
         --menu-dialog-bottom:16px;
@@ -2621,6 +2703,10 @@ function injectStyles() {
         grid-template-rows:auto auto auto 1fr;
         overflow:hidden;
       }
+      .preview-shell{
+        gap:8px;
+        padding:4px 0 2px;
+      }
       .draft-topbar{
         display:grid;
         grid-template-columns:minmax(0,1fr) auto;
@@ -2637,6 +2723,18 @@ function injectStyles() {
       }
       .draft-hero-panel,.draft-team-panel,.draft-board{
         border-radius:20px;
+      }
+      .preview-main-grid{
+        grid-template-columns:1fr;
+        gap:8px;
+      }
+      .preview-panel,.preview-side-panel{
+        border-radius:20px;
+        padding:10px;
+        gap:8px;
+      }
+      .preview-main-grid{
+        gap:8px;
       }
       .draft-hero-panel{
         grid-template-columns:minmax(0,1fr);
@@ -2676,6 +2774,32 @@ function injectStyles() {
       .draft-team-panel,.draft-board{
         padding:10px;
         gap:8px;
+      }
+      .preview-card-list,.preview-status-stack{
+        gap:8px;
+      }
+      .preview-card{
+        grid-template-columns:1fr;
+        justify-items:center;
+        text-align:center;
+        gap:8px;
+        min-height:0;
+        padding:10px;
+      }
+      .preview-copy{
+        display:grid;
+        gap:4px;
+      }
+      .preview-actions{
+        width:100%;
+        justify-content:center;
+        flex-wrap:wrap;
+      }
+      .preview-actions .info-chip,.preview-actions .mini-btn{
+        flex:1 1 auto;
+        justify-content:center;
+        padding:6px 8px;
+        font-size:.7rem;
       }
       .draft-team-panel .label{
         display:none;
