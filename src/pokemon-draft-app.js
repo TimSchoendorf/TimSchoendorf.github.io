@@ -2914,6 +2914,16 @@ function injectStyles() {
       .draft-choice-copy .move-row span,.draft-role-row span,.draft-choice-copy .types span{
         font-size:.66rem;
         padding:4px 6px;
+        white-space:nowrap;
+      }
+      .draft-choice-copy .types{
+        flex-wrap:nowrap;
+        overflow:hidden;
+        min-height:19px;
+      }
+      .draft-choice-copy .move-row{
+        overflow:hidden;
+        max-height:44px;
       }
       .draft-role-row{display:none}
       .draft-choice-card .info-chip{
@@ -3134,6 +3144,16 @@ function injectStyles() {
       .draft-choice-copy .types span,.draft-choice-copy .move-row span{
         padding:4px 6px;
         font-size:.62rem;
+        white-space:nowrap;
+      }
+      .draft-choice-copy .types{
+        flex-wrap:nowrap;
+        overflow:hidden;
+        min-height:19px;
+      }
+      .draft-choice-copy .move-row{
+        overflow:hidden;
+        max-height:42px;
       }
       .draft-choice-copy .move-row span:nth-child(n+4){
         display:none;
