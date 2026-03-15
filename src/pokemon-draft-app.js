@@ -86,14 +86,14 @@ const MENU_SHOWCASE = {
 };
 const STARTER_ART_PATH = '../assets/firstgenstarter-cutout.png';
 const BATTLE_DECOR_ZONES = [
-  {leftMin: 1.2, leftMax: 11.5, topMin: 10, topMax: 31},
-  {leftMin: 1.2, leftMax: 12.5, topMin: 32, topMax: 55},
-  {leftMin: 87.5, leftMax: 98.8, topMin: 10, topMax: 31},
-  {leftMin: 86.8, leftMax: 98.5, topMin: 32, topMax: 55},
-  {leftMin: 1.8, leftMax: 20.5, topMin: 64, topMax: 93},
-  {leftMin: 21.5, leftMax: 36.5, topMin: 76, topMax: 95},
-  {leftMin: 63.5, leftMax: 78.5, topMin: 76, topMax: 95},
-  {leftMin: 79.5, leftMax: 98.2, topMin: 64, topMax: 93},
+  {leftMin: 0.8, leftMax: 10.8, topMin: 10, topMax: 28},
+  {leftMin: 0.8, leftMax: 11.8, topMin: 29, topMax: 48},
+  {leftMin: 0.8, leftMax: 12.2, topMin: 49, topMax: 64},
+  {leftMin: 88, leftMax: 99.2, topMin: 10, topMax: 28},
+  {leftMin: 87.4, leftMax: 99.2, topMin: 29, topMax: 48},
+  {leftMin: 87.2, leftMax: 99.2, topMin: 49, topMax: 64},
+  {leftMin: 0.8, leftMax: 24.5, topMin: 69, topMax: 94},
+  {leftMin: 75.5, leftMax: 99.2, topMin: 69, topMax: 94},
 ];
 
 const state = {
