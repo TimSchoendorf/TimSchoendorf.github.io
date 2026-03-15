@@ -1968,6 +1968,11 @@ function injectStyles() {
         padding:12px;
       }
     }
+    @media (min-width:1700px) and (min-height:1000px){
+      .menu-showcase{
+        --menu-player-shift-y:-5%;
+      }
+    }
     @media (max-width:1280px){
       .app-shell{grid-template-columns:1fr}
       .main{order:1}
@@ -2033,7 +2038,7 @@ function injectStyles() {
       .menu-stage-card-foe strong{font-size:.8rem}
       .menu-stage-card-player{display:none}
       .menu-stage-mon-foe{top:34px;right:8px;width:17%;height:18%}
-      .menu-stage-mon-player{display:grid;left:6px;width:20%;height:28%}
+      .menu-stage-mon-player{display:grid;left:10px;width:20%;height:28%}
       .menu-stage-line-bottom{
         left:12px;
         right:12px;
