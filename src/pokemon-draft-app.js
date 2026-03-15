@@ -19,9 +19,76 @@ const dex = Dex.forGen(1);
 const app = document.getElementById('app');
 const BEST_RUN_KEY = 'pokemon-battler-rby-best-run-v4';
 const ENEMY_NAMES = ['Brock', 'Misty', 'Surge', 'Erika', 'Koga', 'Sabrina', 'Blaine', 'Giovanni', 'Lorelei', 'Lance'];
+const GENERATION_CONFIG = {
+  gen1: {
+    id: 'gen1',
+    label: 'Gen 1',
+    kicker: 'Retro Arena',
+    title: 'Pokemon Battle Arena',
+    subtitle: 'Klassischer Draft, klare Fronten und eine Startseite wie der Einstieg vor einem Arena-Kampf.',
+    availability: 'Jetzt spielbar',
+    status: 'Kanto-Pool aktiv',
+    features: ['151 Kanto-Pokemon', 'Solo oder Link Battle', 'Battle-Intro im Retro-Look'],
+    steps: ['Generation wählen', 'Modus wählen', 'Draft, Reihenfolge, Kampf'],
+    modeCards: {
+      bot: {
+        eyebrow: 'Solo',
+        title: 'Bot-Serie',
+        points: ['Draft aus 3 Optionen', 'Lead und Reihenfolge setzen', 'Arena-Kampf gegen KI'],
+        enabled: true,
+        action: 'start-bot',
+        cta: 'Starten',
+      },
+      link: {
+        eyebrow: 'Online',
+        title: 'Link Battle',
+        points: ['Raum öffnen oder verbinden', 'Verdeckter Draft in 3 Runden', 'Direktes Duell gegen Spieler'],
+        enabled: true,
+        action: 'start-link',
+        cta: 'Verbinden',
+      },
+    },
+    note: 'Das Regelset richtet sich nach der aktiven Generation.',
+  },
+  gen5: {
+    id: 'gen5',
+    label: 'Gen 5',
+    kicker: 'Next Era Preview',
+    title: 'Pokemon Battle Arena',
+    subtitle: 'Eine modernere Arena-Vorschau mit eigenem Stil, vorbereitet als Basis für den späteren Gen-5-Ausbau.',
+    availability: 'Stilvorschau',
+    status: 'Naechste Erweiterung',
+    features: ['Eigener Theme-Wechsel', 'Moderneres Arena-Gefuehl', 'Vorbereitet fuer spaetere Systeme'],
+    steps: ['Generation previewen', 'Look vergleichen', 'Spielmodus spaeter aktivieren'],
+    modeCards: {
+      bot: {
+        eyebrow: 'Solo',
+        title: 'Bot-Serie',
+        points: ['Theme-Vorschau aktiv', 'Spielbarer Gen-5-Modus folgt', 'Struktur fuer Ausbau vorbereitet'],
+        enabled: false,
+        action: 'start-bot',
+        cta: 'Bald verfuegbar',
+      },
+      link: {
+        eyebrow: 'Online',
+        title: 'Link Battle',
+        points: ['Designsystem schon getrennt', 'Generationswechsel sofort sichtbar', 'Kampfmodus folgt spaeter'],
+        enabled: false,
+        action: 'start-link',
+        cta: 'Bald verfuegbar',
+      },
+    },
+    note: 'Regeltexte bleiben absichtlich generationsoffen, damit kuenftige Systeme sauber passen.',
+  },
+};
+const MENU_SHOWCASE = {
+  foe: POKEMON_POOL.find((species) => species.name === 'Mewtwo') || POKEMON_POOL[0],
+  player: POKEMON_POOL.find((species) => species.name === 'Charizard') || POKEMON_POOL[1] || POKEMON_POOL[0],
+};
 
 const state = {
   phase: 'menu',
+  generation: 'gen1',
   playMode: 'bot',
   draftedIds: new Set(),
   pack: [],
@@ -50,6 +117,10 @@ const state = {
   hostJoinCode: '',
   link: freshLinkState(),
 };
+
+function currentGenerationConfig() {
+  return GENERATION_CONFIG[state.generation] || GENERATION_CONFIG.gen1;
+}
 
 function freshLinkState() {
   return {
@@ -116,6 +187,11 @@ function compactMeta(parts) {
 function spriteTag(member, facing = 'front', size = 'md') {
   if (!member?.sprites?.[facing]) return '';
   return `<img class="sprite ${size} ${facing}" src="${member.sprites[facing]}" alt="${member.name}">`;
+}
+
+function menuSpriteTag(member, facing = 'front', slot = 'foe') {
+  if (!member?.sprites?.[facing]) return `<div class="menu-mon-placeholder menu-mon-placeholder-${slot}">${slot === 'foe' ? 'G' : 'D'}</div>`;
+  return `<img class="menu-sprite menu-sprite-${slot} ${facing}" src="${member.sprites[facing]}" alt="${member.name}">`;
 }
 
 function createLoadout(species) {
@@ -235,11 +311,78 @@ function renderInspectModal() {
 }
 
 function renderMenuStage() {
-  return `<section class="hero"><div><div class="label">Moduswahl</div><h2>Kanto Link Arena</h2></div><p>${state.message}</p></section>
-    <section class="two-col">
-      <button class="mode-card" data-action="start-bot"><span class="label">Solo</span><h3>Bot-Serie</h3><p>Draft aus 3er-Packs und Arena-Kämpfe gegen Bots.</p></button>
-      <button class="mode-card" data-action="start-link"><span class="label">Online</span><h3>Link Battle</h3><p>Zwei Spieler, verdeckter Draft aus 3er-Packs, dann Kampf.</p></button>
-    </section>`;
+  const generation = currentGenerationConfig();
+  const botCard = generation.modeCards.bot;
+  const linkCard = generation.modeCards.link;
+  const renderMenuModeCard = (card) => `
+    <button class="menu-mode-card ${card.enabled ? '' : 'locked'}" data-action="${card.action}" ${card.enabled ? '' : 'disabled'}>
+      <div class="menu-mode-head">
+        <span class="label">${card.eyebrow}</span>
+        <span class="menu-mode-state">${card.enabled ? generation.availability : 'In Vorbereitung'}</span>
+      </div>
+      <h3>${card.title}</h3>
+      <div class="menu-mode-points">${card.points.map((point) => `<span>${point}</span>`).join('')}</div>
+      <span class="menu-mode-cta">${card.cta}</span>
+    </button>`;
+  const showcase = generation.id === 'gen1'
+    ? `<div class="menu-showcase menu-showcase-gen1">
+        <div class="menu-stage-card menu-stage-card-foe">
+          <span class="label">Arena Intro</span>
+          <strong>${MENU_SHOWCASE.foe.name}</strong>
+          <span>${generation.label} aktiv</span>
+        </div>
+        <div class="menu-stage-card menu-stage-card-player">
+          <span class="label">Trainerseite</span>
+          <strong>${MENU_SHOWCASE.player.name}</strong>
+          <span>3er-Draft und Reihenfolge</span>
+        </div>
+        <div class="menu-stage-mon menu-stage-mon-foe">${menuSpriteTag(MENU_SHOWCASE.foe, 'front', 'foe')}</div>
+        <div class="menu-stage-mon menu-stage-mon-player">${menuSpriteTag(MENU_SHOWCASE.player, 'back', 'player')}</div>
+        <div class="menu-stage-line menu-stage-line-top"></div>
+        <div class="menu-stage-line menu-stage-line-bottom"></div>
+        <div class="menu-stage-text">Wähle eine Generation, entscheide den Modus und betrete die Arena.</div>
+      </div>`
+    : `<div class="menu-showcase menu-showcase-gen5">
+        <div class="menu-tech-card menu-tech-card-foe"><span class="label">Theme Shift</span><strong>Gen 5 Preview</strong><span>Eigenständiger Stil</span></div>
+        <div class="menu-tech-card menu-tech-card-player"><span class="label">Ausbau</span><strong>Next Battle Layer</strong><span>Modus folgt später</span></div>
+        <div class="menu-energy menu-energy-a"></div>
+        <div class="menu-energy menu-energy-b"></div>
+        <div class="menu-energy menu-energy-c"></div>
+        <div class="menu-stage-text">Der Umschalter trennt bereits die visuelle Sprache der Generationen.</div>
+      </div>`;
+  return `<section class="menu-shell">
+    <div class="menu-topbar">
+      <a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a>
+      <div class="menu-generation-switch" role="tablist" aria-label="Generation wählen">
+        <button class="menu-generation-btn ${state.generation === 'gen1' ? 'active' : ''}" data-action="set-generation-gen1">Gen 1</button>
+        <button class="menu-generation-btn ${state.generation === 'gen5' ? 'active' : ''}" data-action="set-generation-gen5">Gen 5</button>
+      </div>
+    </div>
+    <section class="menu-hero">
+      <div class="menu-copy">
+        <div class="menu-kicker-row"><span class="label">${generation.kicker}</span><span class="menu-status-pill">${generation.status}</span></div>
+        <h2>${generation.title}</h2>
+        <p>${generation.subtitle}</p>
+        <div class="menu-feature-row">${generation.features.map((feature) => `<span>${feature}</span>`).join('')}</div>
+      </div>
+      ${showcase}
+    </section>
+    <section class="menu-lower">
+      <div class="menu-modes">
+        <div class="menu-section-head"><div><div class="label">Moduswahl</div><h3>Wähle deine Arena</h3></div><p>${generation.note}</p></div>
+        <div class="menu-mode-grid">${renderMenuModeCard(botCard)}${renderMenuModeCard(linkCard)}</div>
+      </div>
+      <div class="menu-info-panel">
+        <div class="label">Ablauf</div>
+        <div class="menu-step-list">${generation.steps.map((step, index) => `<div class="menu-step"><span>${index + 1}</span><strong>${step}</strong></div>`).join('')}</div>
+        <div class="menu-meta-grid">
+          <div class="menu-meta-card"><span class="label">Aktive Generation</span><strong>${generation.label}</strong></div>
+          <div class="menu-meta-card"><span class="label">Best Run</span><strong>${state.bestRun}</strong></div>
+          <div class="menu-meta-card"><span class="label">Status</span><strong>${generation.availability}</strong></div>
+        </div>
+      </div>
+    </section>
+  </section>`;
 }
 
 function renderDraftStage() {
@@ -346,12 +489,20 @@ function render() {
     ? (state.playerPreview.length ? state.playerPreview : state.playerLoadout.length ? state.playerLoadout : state.playerDraft)
     : (state.phase === 'draft' ? state.playerDraft : state.playerPreview.length ? state.playerPreview : state.playerLoadout);
   const battleView = state.phase === 'battle';
-  app.innerHTML = `<div class="app-shell ${battleView ? 'battle-view' : ''}">
-    <aside class="side"><a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a><div class="brand"><div class="label">Pokemon Battler</div><h1>Kanto Link Arena</h1><p>Gen-1-Sprites, Level-100-Stats, RBY-Regeln und Link Battles mit verdecktem Draft.</p></div><div class="panel metrics"><span>Modus ${state.playMode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</span><span>151 Pokémon</span><span>Best Run ${state.bestRun}</span></div>${renderSidePanel('Dein Team', ownTeam, true)}${renderOpponentPanel()}</aside>
-    <main class="main">${renderStage()}</main>
-    <aside class="side"><div class="panel"><div class="label">Hinweise</div><div class="empty">Gen1CustomGame, Level 100, keine modernen Items oder Abilities.</div></div><div class="panel"><div class="label">Log</div>${state.logs.map((line) => `<div class="log-line">${line}</div>`).join('')}</div></aside>
-    ${renderInspectModal()}
-  </div>`;
+  const menuView = state.phase === 'menu';
+  if (menuView) {
+    app.innerHTML = `<div class="app-shell menu-view theme-${state.generation}">
+      <main class="main menu-main">${renderStage()}</main>
+      ${renderInspectModal()}
+    </div>`;
+  } else {
+    app.innerHTML = `<div class="app-shell ${battleView ? 'battle-view' : ''} theme-${state.generation}">
+      <aside class="side"><a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a><div class="brand"><div class="label">Pokemon Battler</div><h1>Kanto Link Arena</h1><p>Gen-1-Sprites, Level-100-Stats, RBY-Regeln und Link Battles mit verdecktem Draft.</p></div><div class="panel metrics"><span>Modus ${state.playMode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</span><span>151 Pokémon</span><span>Best Run ${state.bestRun}</span></div>${renderSidePanel('Dein Team', ownTeam, true)}${renderOpponentPanel()}</aside>
+      <main class="main">${renderStage()}</main>
+      <aside class="side"><div class="panel"><div class="label">Hinweise</div><div class="empty">Das Regelset folgt der aktiven Generation.</div></div><div class="panel"><div class="label">Log</div>${state.logs.map((line) => `<div class="log-line">${line}</div>`).join('')}</div></aside>
+      ${renderInspectModal()}
+    </div>`;
+  }
   bindEvents();
   if (battleView) window.scrollTo({top: 0, left: 0, behavior: 'auto'});
 }
@@ -451,6 +602,20 @@ function movePreviewMon(index, direction) {
 }
 
 function handleAction(action) {
+  if (action === 'set-generation-gen1') {
+    state.generation = 'gen1';
+    state.message = 'Wähle Bot-Serie oder Link Battle.';
+    return render();
+  }
+  if (action === 'set-generation-gen5') {
+    state.generation = 'gen5';
+    state.message = 'Die Gen-5-Erweiterung ist als Stilvorschau vorbereitet.';
+    return render();
+  }
+  if (state.generation !== 'gen1' && (action === 'start-bot' || action === 'start-link')) {
+    state.message = 'Der spielbare Gen-5-Modus folgt mit dem nächsten Ausbau.';
+    return render();
+  }
   if (action === 'start-bot') return resetDraft();
   if (action === 'start-link') {
     state.playMode = 'link';
@@ -928,6 +1093,11 @@ function injectStyles() {
       --panel-soft:rgba(255,255,255,.04);
       --chip:rgba(255,255,255,.52);
       --chip-text:#182117;
+      --menu-accent:#d6c074;
+      --menu-accent-soft:#f5e8ab;
+      --menu-glow:rgba(214,192,116,.22);
+      --menu-stage-top:#eef4d3;
+      --menu-stage-bottom:#d4e1a5;
     }
     *{box-sizing:border-box}
     body{
@@ -940,6 +1110,27 @@ function injectStyles() {
         radial-gradient(circle at top left,rgba(212,176,79,.18),transparent 20%),
         radial-gradient(circle at bottom right,rgba(116,183,201,.08),transparent 24%),
         linear-gradient(180deg,#111915,#0d1310 52%,#16211a);
+    }
+    .theme-gen1{
+      --menu-accent:#d6c074;
+      --menu-accent-soft:#f5e8ab;
+      --menu-glow:rgba(214,192,116,.22);
+      --menu-stage-top:#eef4d3;
+      --menu-stage-bottom:#d4e1a5;
+    }
+    .theme-gen5{
+      --menu-accent:#66d8ff;
+      --menu-accent-soft:#92f0ff;
+      --menu-glow:rgba(102,216,255,.24);
+      --menu-stage-top:#111a30;
+      --menu-stage-bottom:#1e2446;
+      --line:rgba(150,215,255,.18);
+      --panel:rgba(14,19,38,.94);
+      --panel-soft:rgba(255,255,255,.05);
+      --text:#edf7ff;
+      --muted:#aebfd7;
+      --chip:rgba(120,229,255,.16);
+      --chip-text:#edf7ff;
     }
     button,input{font:inherit}
     .app-shell{
@@ -1031,6 +1222,353 @@ function injectStyles() {
     .battle-view{grid-template-columns:minmax(0,1fr)}
     .battle-view .side{display:none}
     .battle-view .main{padding:0}
+    .menu-view{
+      width:min(1460px,100%);
+      grid-template-columns:minmax(0,1fr);
+    }
+    .menu-view .main{
+      padding:0;
+      background:none;
+      border:none;
+      box-shadow:none;
+    }
+    .menu-shell{
+      display:grid;
+      gap:18px;
+      padding:18px 0 10px;
+    }
+    .menu-topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+    }
+    .menu-topbar .back{
+      padding:10px 16px;
+      background:rgba(255,255,255,.1);
+    }
+    .menu-generation-switch{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px;
+      padding:8px;
+      border-radius:999px;
+      border:1px solid var(--line);
+      background:rgba(7,11,10,.4);
+      backdrop-filter:blur(10px);
+    }
+    .menu-generation-btn{
+      min-width:112px;
+      padding:10px 16px;
+      border:none;
+      border-radius:999px;
+      background:transparent;
+      color:var(--muted);
+      cursor:pointer;
+      font-weight:700;
+      letter-spacing:.04em;
+      transition:background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease;
+    }
+    .menu-generation-btn.active{
+      background:linear-gradient(180deg,var(--menu-accent-soft),var(--menu-accent));
+      color:#16211a;
+      box-shadow:0 10px 24px var(--menu-glow);
+    }
+    .menu-hero{
+      display:grid;
+      grid-template-columns:minmax(320px,1fr) minmax(380px,1.05fr);
+      gap:18px;
+      align-items:stretch;
+    }
+    .menu-copy,.menu-showcase,.menu-info-panel,.menu-modes{
+      border:1px solid var(--line);
+      border-radius:28px;
+      background:linear-gradient(180deg,rgba(21,31,24,.94),rgba(16,25,20,.9));
+      box-shadow:0 28px 80px rgba(0,0,0,.22);
+    }
+    .theme-gen5 .menu-copy,.theme-gen5 .menu-showcase,.theme-gen5 .menu-info-panel,.theme-gen5 .menu-modes{
+      background:linear-gradient(180deg,rgba(15,22,43,.94),rgba(11,16,34,.92));
+    }
+    .menu-copy{
+      padding:28px;
+      display:grid;
+      gap:16px;
+      align-content:start;
+    }
+    .menu-kicker-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .menu-status-pill{
+      padding:7px 12px;
+      border-radius:999px;
+      color:#16211a;
+      font-size:.82rem;
+      font-weight:700;
+      background:linear-gradient(180deg,var(--menu-accent-soft),var(--menu-accent));
+      box-shadow:0 10px 24px var(--menu-glow);
+    }
+    .menu-copy h2{
+      margin:0;
+      font-size:clamp(2.5rem,5vw,4.8rem);
+      line-height:.92;
+      letter-spacing:-.03em;
+    }
+    .menu-copy p,.menu-section-head p{
+      margin:0;
+      font-size:1rem;
+      line-height:1.6;
+      color:var(--muted);
+    }
+    .menu-feature-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+    .menu-feature-row span,.menu-mode-points span{
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08);
+      color:var(--text);
+      font-size:.88rem;
+    }
+    .menu-showcase{
+      position:relative;
+      min-height:398px;
+      overflow:hidden;
+      padding:20px;
+    }
+    .menu-showcase::before{
+      content:"";
+      position:absolute;
+      inset:0;
+      background:
+        radial-gradient(circle at 20% 18%,var(--menu-glow),transparent 24%),
+        radial-gradient(circle at 82% 26%,rgba(255,255,255,.12),transparent 22%);
+      pointer-events:none;
+    }
+    .menu-showcase-gen1{
+      background:
+        linear-gradient(180deg,var(--menu-stage-top) 0%,var(--menu-stage-top) 53%,var(--menu-stage-bottom) 53%,var(--menu-stage-bottom) 100%);
+    }
+    .menu-stage-card,.menu-tech-card{
+      position:absolute;
+      z-index:2;
+      min-width:210px;
+      padding:14px 16px;
+      border-radius:18px;
+      border:2px solid rgba(16,23,16,.8);
+      background:rgba(249,245,232,.92);
+      color:#1e2b14;
+      display:grid;
+      gap:4px;
+      box-shadow:0 18px 32px rgba(0,0,0,.18);
+    }
+    .menu-stage-card strong,.menu-tech-card strong{
+      font-size:1.2rem;
+    }
+    .menu-stage-card-foe{top:24px;left:24px}
+    .menu-stage-card-player{right:24px;bottom:124px}
+    .menu-stage-mon{
+      position:absolute;
+      z-index:2;
+      display:grid;
+      place-items:end center;
+    }
+    .menu-stage-mon-foe{
+      top:82px;
+      right:38px;
+      width:24%;
+      height:30%;
+    }
+    .menu-stage-mon-player{
+      left:44px;
+      bottom:116px;
+      width:28%;
+      height:38%;
+    }
+    .menu-sprite{
+      display:block;
+      width:100%;
+      height:100%;
+      object-fit:contain;
+      object-position:center bottom;
+      image-rendering:pixelated;
+      filter:drop-shadow(0 12px 0 rgba(255,255,255,.2)) drop-shadow(0 20px 18px rgba(0,0,0,.18));
+    }
+    .menu-sprite-foe.front{transform:translateX(4%)}
+    .menu-sprite-player.back{transform:translateX(-2%)}
+    .menu-mon-placeholder{
+      display:grid;
+      place-items:center;
+      width:100%;
+      height:100%;
+      border-radius:24px;
+      font-size:3rem;
+      font-weight:700;
+      color:rgba(255,255,255,.85);
+      background:rgba(255,255,255,.08);
+    }
+    .menu-stage-line{
+      position:absolute;
+      left:0;
+      right:0;
+      height:1px;
+      background:rgba(255,255,255,.28);
+      z-index:1;
+    }
+    .menu-stage-line-top{top:53%}
+    .menu-stage-line-bottom{bottom:24px;left:24px;right:24px;height:78px;border:3px solid #182117;border-radius:12px;background:rgba(249,245,232,.94)}
+    .menu-stage-text{
+      position:absolute;
+      left:44px;
+      right:44px;
+      bottom:52px;
+      z-index:3;
+      color:#213018;
+      font-size:1.04rem;
+      font-weight:700;
+      text-transform:uppercase;
+      letter-spacing:.04em;
+    }
+    .menu-showcase-gen5{
+      background:
+        radial-gradient(circle at 18% 26%,rgba(102,216,255,.18),transparent 22%),
+        radial-gradient(circle at 76% 30%,rgba(139,107,255,.2),transparent 26%),
+        linear-gradient(145deg,#11172f,#19224f 55%,#121937);
+    }
+    .menu-tech-card-foe{top:28px;left:28px;background:rgba(13,21,46,.9);border-color:rgba(102,216,255,.4);color:#edf7ff}
+    .menu-tech-card-player{right:28px;bottom:88px;background:rgba(27,21,58,.9);border-color:rgba(139,107,255,.45);color:#edf7ff}
+    .menu-energy{
+      position:absolute;
+      border-radius:50%;
+      filter:blur(2px);
+      z-index:1;
+    }
+    .menu-energy-a{width:180px;height:180px;top:106px;right:80px;border:2px solid rgba(102,216,255,.46);box-shadow:0 0 40px rgba(102,216,255,.26), inset 0 0 32px rgba(102,216,255,.12)}
+    .menu-energy-b{width:220px;height:220px;bottom:88px;left:60px;border:2px solid rgba(139,107,255,.3);box-shadow:0 0 40px rgba(139,107,255,.22), inset 0 0 36px rgba(139,107,255,.12)}
+    .menu-energy-c{width:70px;height:70px;top:148px;left:44%;background:radial-gradient(circle,var(--menu-accent-soft),transparent 70%);opacity:.9}
+    .menu-showcase-gen5 .menu-stage-text{
+      color:#eef8ff;
+      left:32px;
+      right:32px;
+      bottom:34px;
+      text-transform:none;
+      letter-spacing:.02em;
+      font-weight:600;
+      font-size:1rem;
+    }
+    .menu-lower{
+      display:grid;
+      grid-template-columns:minmax(0,1.35fr) minmax(280px,.92fr);
+      gap:18px;
+      align-items:start;
+    }
+    .menu-modes,.menu-info-panel{
+      padding:22px;
+      display:grid;
+      gap:18px;
+    }
+    .menu-section-head{
+      display:flex;
+      gap:16px;
+      justify-content:space-between;
+      align-items:flex-end;
+    }
+    .menu-section-head h3{
+      margin:.2rem 0 0;
+      font-size:1.8rem;
+    }
+    .menu-mode-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:14px;
+    }
+    .menu-mode-card{
+      display:grid;
+      gap:16px;
+      padding:22px;
+      text-align:left;
+      color:var(--text);
+      background:
+        linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,255,255,.06));
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:24px;
+      cursor:pointer;
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.08),0 20px 30px rgba(0,0,0,.14);
+      transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+    }
+    .menu-mode-card:hover:not(:disabled){
+      transform:translateY(-2px);
+      border-color:rgba(255,255,255,.2);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.12),0 28px 36px rgba(0,0,0,.18);
+    }
+    .menu-mode-card.locked{
+      opacity:.76;
+      cursor:not-allowed;
+    }
+    .menu-mode-head{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .menu-mode-card h3{
+      margin:0;
+      font-size:1.8rem;
+    }
+    .menu-mode-points{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+    .menu-mode-state,.menu-mode-cta{
+      color:var(--menu-accent-soft);
+      font-weight:700;
+    }
+    .menu-step-list{
+      display:grid;
+      gap:10px;
+    }
+    .menu-step{
+      display:grid;
+      grid-template-columns:44px 1fr;
+      gap:12px;
+      align-items:center;
+      padding:12px;
+      border-radius:18px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .menu-step span{
+      display:grid;
+      place-items:center;
+      width:44px;
+      height:44px;
+      border-radius:50%;
+      color:#16211a;
+      font-weight:700;
+      background:linear-gradient(180deg,var(--menu-accent-soft),var(--menu-accent));
+    }
+    .menu-meta-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:10px;
+    }
+    .menu-meta-card{
+      display:grid;
+      gap:6px;
+      padding:14px;
+      border-radius:18px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .menu-meta-card strong{
+      font-size:1.1rem;
+    }
     .battle-ui{
       display:grid;
       gap:8px;
@@ -1368,12 +1906,86 @@ function injectStyles() {
       .side:last-of-type{order:3}
       .three-col,.two-col,.choice-grid,.bench-grid{grid-template-columns:1fr}
       .preview-card{grid-template-columns:1fr}
+      .menu-hero,.menu-lower,.menu-mode-grid,.menu-meta-grid{grid-template-columns:1fr}
+      .menu-section-head{align-items:flex-start;flex-direction:column}
+      .menu-showcase{min-height:340px}
+      .menu-stage-mon-foe{right:34px;width:28%}
+      .menu-stage-mon-player{left:28px;width:30%}
       .battle-footer{grid-template-columns:1fr 1fr}
       .battle-actions-panel{grid-column:1 / -1}
     }
     @media (max-width:720px){
       body{padding:10px}
       .side,.main{padding:14px;border-radius:22px}
+      .menu-view .main{padding:0}
+      .menu-shell{gap:14px;padding:8px 0 10px}
+      .menu-topbar{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      .menu-generation-switch{
+        width:100%;
+      }
+      .menu-generation-btn{
+        min-width:0;
+      }
+      .menu-copy,.menu-showcase,.menu-info-panel,.menu-modes{
+        border-radius:24px;
+      }
+      .menu-copy,.menu-modes,.menu-info-panel{
+        padding:18px;
+      }
+      .menu-copy h2{
+        font-size:clamp(2.2rem,11vw,3.4rem);
+      }
+      .menu-feature-row,.menu-mode-points{
+        gap:8px;
+      }
+      .menu-showcase{
+        min-height:300px;
+        padding:14px;
+      }
+      .menu-stage-card,.menu-tech-card{
+        min-width:150px;
+        padding:10px 12px;
+      }
+      .menu-stage-card strong,.menu-tech-card strong{
+        font-size:1rem;
+      }
+      .menu-stage-card-foe{top:12px;left:12px}
+      .menu-stage-card-player{right:12px;bottom:88px}
+      .menu-stage-mon-foe{top:88px;right:12px;width:28%;height:26%}
+      .menu-stage-mon-player{left:12px;bottom:84px;width:33%;height:30%}
+      .menu-stage-line-bottom{
+        left:12px;
+        right:12px;
+        bottom:12px;
+        height:60px;
+      }
+      .menu-stage-text{
+        left:24px;
+        right:24px;
+        bottom:32px;
+        font-size:.8rem;
+      }
+      .menu-tech-card-player{right:12px;bottom:72px}
+      .menu-energy-a{width:120px;height:120px;top:112px;right:26px}
+      .menu-energy-b{width:150px;height:150px;bottom:70px;left:18px}
+      .menu-showcase-gen5 .menu-stage-text{bottom:24px;left:20px;right:20px;font-size:.88rem}
+      .menu-mode-card{
+        padding:18px;
+      }
+      .menu-mode-card h3{
+        font-size:1.45rem;
+      }
+      .menu-step{
+        grid-template-columns:38px 1fr;
+        padding:10px;
+      }
+      .menu-step span{
+        width:38px;
+        height:38px;
+      }
       .battle-view .main{padding:10px}
       .brand h1{font-size:clamp(1.85rem,10vw,2.8rem)}
       .hero,.panel,.draft-card,.preview-card,.combatant,.bench-card,.mode-card{padding:14px}
