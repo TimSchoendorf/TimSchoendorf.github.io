@@ -1435,7 +1435,7 @@ function injectStyles() {
       height:var(--menu-dialog-height);
       border:3px solid #182117;
       border-radius:12px;
-      background:rgba(249,245,232,.94);
+      background:rgb(249,245,232);
       z-index:3;
     }
     .menu-stage-text{
