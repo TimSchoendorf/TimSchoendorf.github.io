@@ -318,27 +318,27 @@ function renderDraftTeamSlots(team) {
 }
 
 function renderDraftStatusCard(mode, roundLabel) {
-  const filled = mode === 'bot' ? state.playerDraft.length : state.playerDraft.length;
+  const filled = state.playerDraft.length;
   const progress = `<div class="draft-status-progress">${Array.from({length: 3}, (_, index) => `<span class="${index < filled ? 'filled' : ''}">${index + 1}</span>`).join('')}</div>`;
   if (mode === 'bot') {
     return `<div class="draft-status-card">
-      <div class="label">Arena-Status</div>
-      <strong>${currentEnemyLabel()}</strong>
+      <div class="label">Draft-Fortschritt</div>
+      <strong>${filled}/3 gewählt</strong>
       ${progress}
       <div class="draft-status-list">
         <span>${roundLabel}</span>
-        <span>Gegner draftet parallel</span>
+        <span>${currentEnemyLabel()}</span>
         <span>Infos zeigt Werte und Attacken</span>
       </div>
     </div>`;
   }
   return `<div class="draft-status-card">
-    <div class="label">Gegnerstatus</div>
-    <strong>${state.link.connected ? state.link.remoteName : 'Warte auf Gegner'}</strong>
+    <div class="label">Draft-Fortschritt</div>
+    <strong>${filled}/3 gewählt</strong>
     ${progress}
     <div class="draft-status-list">
-      <span>${state.playerDraft.length}/3 gewählt</span>
-      <span>${state.link.remoteDraftCount}/3 bestätigt</span>
+      <span>${state.link.connected ? 'Verbindung steht' : 'Warte auf Verbindung'}</span>
+      <span>${state.link.connected ? state.link.remoteName : 'Kein Gegner verbunden'}</span>
       <span>${state.link.localPickLocked ? 'Wahl bestätigt' : 'Wähle jetzt 1 von 3'}</span>
     </div>
   </div>`;
@@ -1344,8 +1344,8 @@ function injectStyles() {
     }
     .draft-shell{
       display:grid;
-      gap:16px;
-      padding:12px 0 8px;
+      gap:12px;
+      padding:10px 0 6px;
     }
     .draft-topbar{
       display:flex;
@@ -1379,8 +1379,8 @@ function injectStyles() {
     .draft-hero-panel{
       display:grid;
       grid-template-columns:minmax(0,1.35fr) minmax(260px,.75fr);
-      gap:16px;
-      padding:22px;
+      gap:14px;
+      padding:18px;
       align-items:stretch;
     }
     .draft-hero-copy,.draft-status-card{
@@ -1453,9 +1453,10 @@ function injectStyles() {
       line-height:1;
     }
     .draft-team-panel,.draft-board{
-      padding:20px;
+      padding:18px;
       display:grid;
-      gap:16px;
+      gap:12px;
+      min-height:0;
     }
     .draft-section-head{
       display:flex;
@@ -1466,7 +1467,7 @@ function injectStyles() {
     .draft-team-strip{
       display:grid;
       grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:14px;
+      gap:12px;
     }
     .draft-team-slot{
       min-width:0;
@@ -1474,7 +1475,7 @@ function injectStyles() {
       grid-template-columns:auto auto minmax(0,1fr) auto;
       align-items:center;
       gap:12px;
-      padding:14px;
+      padding:12px;
       border-radius:22px;
       border:1px solid rgba(255,255,255,.1);
       background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));
@@ -1503,12 +1504,13 @@ function injectStyles() {
     .draft-choice-grid{
       display:grid;
       grid-template-columns:repeat(3,minmax(0,1fr));
-      gap:16px;
+      gap:14px;
+      min-height:0;
     }
     .draft-choice-card{
       display:grid;
-      gap:14px;
-      padding:18px;
+      gap:12px;
+      padding:16px;
       border-radius:26px;
       box-shadow:inset 0 0 0 999px rgba(255,255,255,.12),0 20px 34px rgba(0,0,0,.16);
     }
@@ -2329,6 +2331,13 @@ function injectStyles() {
       body{padding:10px}
       .side,.main{padding:14px;border-radius:22px}
       .menu-view .main{padding:0}
+      .draft-view{
+        height:calc(100svh - 20px);
+      }
+      .draft-view .main{
+        height:100%;
+        overflow:hidden;
+      }
       .menu-shell{gap:10px;padding:6px 0 8px}
       .menu-topbar{
         flex-direction:column;
@@ -2347,72 +2356,147 @@ function injectStyles() {
         padding:14px;
         gap:12px;
       }
-      .draft-shell{gap:10px;padding:6px 0 8px}
+      .draft-shell{
+        gap:8px;
+        padding:4px 0 2px;
+        min-height:0;
+        height:100%;
+        grid-template-rows:auto auto auto 1fr;
+        overflow:hidden;
+      }
       .draft-topbar{
-        flex-direction:column;
-        align-items:stretch;
-      }
-      .draft-topbar-meta{
-        justify-content:flex-start;
-      }
-      .draft-hero-panel,.draft-team-panel,.draft-board{
-        border-radius:24px;
-      }
-      .draft-hero-panel{
-        padding:14px;
-        gap:12px;
-      }
-      .draft-hero-copy,.draft-status-card{
-        padding:14px;
-        border-radius:20px;
-        gap:10px;
-      }
-      .draft-hero-copy h2{
-        font-size:clamp(1.85rem,9vw,2.7rem);
-      }
-      .draft-topbar-meta span,.draft-chip-row span,.draft-status-list span,.draft-role-row span{
-        padding:6px 9px;
-        font-size:.74rem;
-      }
-      .draft-status-progress{
+        display:grid;
+        grid-template-columns:minmax(0,1fr) auto;
+        align-items:center;
         gap:8px;
       }
+      .draft-topbar .back{
+        padding:8px 10px;
+        font-size:.74rem;
+      }
+      .draft-topbar-meta{
+        justify-content:flex-end;
+        gap:6px;
+      }
+      .draft-hero-panel,.draft-team-panel,.draft-board{
+        border-radius:20px;
+      }
+      .draft-hero-panel{
+        grid-template-columns:minmax(0,1fr);
+        padding:10px;
+        gap:8px;
+      }
+      .draft-status-card{
+        display:none;
+      }
+      .draft-hero-copy,.draft-status-card{
+        padding:10px;
+        border-radius:16px;
+        gap:8px;
+      }
+      .draft-hero-copy h2{
+        font-size:clamp(1.45rem,7vw,2rem);
+        line-height:.98;
+      }
+      .draft-topbar-meta span,.draft-chip-row span,.draft-status-list span,.draft-role-row span{
+        padding:5px 8px;
+        font-size:.68rem;
+      }
+      .draft-chip-row span:nth-child(n+4){display:none}
+      .draft-status-progress{
+        gap:6px;
+      }
       .draft-status-progress span{
-        min-height:36px;
+        min-height:28px;
+        border-radius:12px;
+        font-size:.74rem;
       }
       .draft-team-panel,.draft-board{
-        padding:14px;
-        gap:12px;
+        padding:10px;
+        gap:8px;
       }
-      .draft-team-strip,.draft-choice-grid{
-        gap:10px;
+      .draft-team-panel .label{
+        display:none;
       }
-      .draft-team-slot{
-        grid-template-columns:auto auto 1fr;
-        padding:12px;
-        gap:10px;
+      .draft-section-head h3{
+        font-size:.96rem;
       }
-      .draft-team-slot .info-chip{
-        grid-column:1 / -1;
-        width:100%;
-        justify-content:center;
-      }
-      .draft-choice-card{
-        padding:14px;
-        gap:12px;
-        border-radius:22px;
-      }
-      .draft-choice-head,.draft-choice-body{
-        gap:10px;
-      }
-      .draft-choice-sprite{
-        min-width:84px;
-      }
-      .draft-stat-grid{
+      .draft-section-head p,.draft-hero-copy p{display:none}
+      .draft-team-strip{
+        gap:6px;
         grid-template-columns:repeat(3,minmax(0,1fr));
       }
-      .draft-stat-cell{
+      .draft-team-slot{
+        grid-template-columns:1fr;
+        justify-items:center;
+        text-align:center;
         padding:8px 6px;
+        gap:6px;
+        border-radius:16px;
+      }
+      .draft-team-slot.empty{
+        grid-template-columns:1fr;
+      }
+      .draft-team-slot .sprite.sm{
+        width:42px;
+        height:42px;
+      }
+      .draft-team-copy strong{
+        font-size:.74rem;
+        line-height:1.1;
+      }
+      .draft-team-slot .tiny{
+        display:none;
+      }
+      .draft-team-slot .info-chip{
+        width:100%;
+        justify-content:center;
+        padding:5px 6px;
+        font-size:.66rem;
+      }
+      .draft-board{
+        grid-template-rows:auto 1fr;
+      }
+      .draft-choice-grid{
+        display:grid;
+        grid-auto-flow:column;
+        grid-auto-columns:100%;
+        grid-template-columns:none;
+        gap:10px;
+        overflow-x:auto;
+        overflow-y:hidden;
+        scroll-snap-type:x mandatory;
+        padding-bottom:2px;
+      }
+      .draft-choice-grid::-webkit-scrollbar{display:none}
+      .draft-choice-card{
+        min-height:0;
+        height:100%;
+        padding:10px;
+        gap:8px;
+        border-radius:18px;
+        scroll-snap-align:start;
+        align-content:start;
+      }
+      .draft-choice-head,.draft-choice-body{
+        gap:8px;
+      }
+      .draft-choice-sprite{
+        min-width:58px;
+      }
+      .draft-stat-grid{
+        grid-template-columns:repeat(5,minmax(0,1fr));
+        gap:6px;
+      }
+      .draft-stat-cell{
+        padding:6px 4px;
+        border-radius:12px;
+      }
+      .draft-stat-cell span{
+        font-size:.55rem;
+      }
+      .draft-stat-cell strong{
+        font-size:.72rem;
       }
       .menu-copy h2{
         font-size:clamp(1.8rem,9.4vw,2.7rem);
@@ -2500,6 +2584,30 @@ function injectStyles() {
       }
       .draft-choice-head,.draft-choice-body,.draft-topbar-meta,.draft-chip-row,.draft-status-list{
         gap:8px;
+      }
+      .draft-choice-card h3{
+        font-size:1.05rem;
+        line-height:1.05;
+      }
+      .draft-choice-copy{
+        gap:8px;
+      }
+      .draft-choice-copy .move-row{
+        gap:6px;
+        margin-top:0;
+      }
+      .draft-choice-copy .move-row span,.draft-role-row span,.draft-choice-copy .types span{
+        font-size:.66rem;
+        padding:4px 6px;
+      }
+      .draft-role-row{display:none}
+      .draft-choice-card .info-chip{
+        padding:5px 7px;
+        font-size:.66rem;
+      }
+      .draft-choice-card .card-actions .primary-btn{
+        min-height:38px;
+        padding:8px 12px;
       }
       .battle-view .main{padding:10px}
       .brand h1{font-size:clamp(1.85rem,10vw,2.8rem)}
