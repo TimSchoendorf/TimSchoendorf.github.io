@@ -698,7 +698,8 @@ function renderChoiceButtons() {
   }
   const moves = state.playerRequest.active?.[0]?.moves.map((move, index) => {
     const selected = state.selectedChoice === `move ${index + 1}` ? 'selected' : '';
-    return `<button class="choice-btn ${selected}" data-choice="move ${index + 1}" data-choice-kind="move" data-move-name="${move.move}">${move.move}<span>${move.pp}/${move.maxpp} PP</span></button>`;
+    const ppText = Number.isFinite(move.pp) && Number.isFinite(move.maxpp) ? `<span>${move.pp}/${move.maxpp} PP</span>` : '';
+    return `<button class="choice-btn ${selected}" data-choice="move ${index + 1}" data-choice-kind="move" data-move-name="${move.move}">${move.move}${ppText}</button>`;
   }).join('') || '';
   const switches = !state.playerRequest.active?.[0]?.trapped
     ? state.playerRequest.side.pokemon.map((mon, index) => ({mon, index})).filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt')).map(({mon, index}) => `<button class="choice-btn alt" ${switchDisabled} data-choice="switch ${index + 1}" data-choice-kind="switch">${mon.details.split(',')[0]}<span>Spend your turn</span></button>`).join('')
@@ -810,13 +811,17 @@ function maybeSubmitHeldMove(request = state.playerRequest) {
 
 function handleChoiceClick(choice, kind, moveName) {
   if (kind !== 'move') return submitChoice(choice);
+  if (!state.actionLocked) {
+    state.selectedChoice = '';
+    render();
+    return submitChoice(choice);
+  }
   if (state.selectedChoice === choice) {
     state.selectedChoice = '';
     return render();
   }
   state.selectedChoice = choice;
   render();
-  if (!state.actionLocked && state.playerRequest && selectedMoveChoice(state.playerRequest) === choice) submitChoice(choice);
 }
 
 function resetDraft() {
