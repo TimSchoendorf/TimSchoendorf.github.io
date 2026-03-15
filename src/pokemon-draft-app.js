@@ -430,7 +430,7 @@ function renderDraftStatusCard(mode, roundLabel) {
   </div>`;
 }
 
-function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, cards}) {
+function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, cards, showStatusCard = mode === 'link'}) {
   return `<section class="draft-shell">
     <div class="draft-topbar">
       <a class="ghost-btn back" href="../index.html#games">Back to home</a>
@@ -444,7 +444,7 @@ function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, c
         <div class="draft-chip-row">${chips.map((chip) => `<span>${chip}</span>`).join('')}</div>
       </div>
     </section>
-    ${mode === 'link' ? `<section class="draft-link-status">${renderDraftStatusCard(mode, roundLabel)}</section>` : ''}
+    ${showStatusCard ? `<section class="draft-link-status">${renderDraftStatusCard(mode, roundLabel)}</section>` : ''}
     <section class="draft-team-panel">
       <div class="draft-section-head"><div><div class="label">Your Team</div><h3>3 draft slots</h3></div><p>Your picks appear here right away. Use Info to check stats and moves before you lock one in.</p></div>
       ${renderDraftTeamSlots(state.playerDraft)}
@@ -650,10 +650,55 @@ function renderBotPreviewStage() {
   });
 }
 
+function renderLinkConnectionCard(kind) {
+  if (kind === 'host') {
+    return `<article class="link-setup-card">
+      <div class="label">Host room</div>
+      <h3>Open a room and share the code</h3>
+      <p>Create a private room code. The other player enters it and joins your hidden draft.</p>
+      <button class="primary-btn" data-action="host-link">Open room</button>
+      <div class="code-box link-code-box">${state.link.peerId || 'No code yet'}</div>
+      <div class="link-card-note">${state.link.peerId ? 'Share this code with your opponent.' : 'The code appears here after opening the room.'}</div>
+    </article>`;
+  }
+  return `<article class="link-setup-card">
+    <div class="label">Join room</div>
+    <h3>Enter a code and connect</h3>
+    <p>Use the room code from the host. Once connected, both players draft from separate 3-card packs.</p>
+    <input id="joinCodeInput" class="text-input" placeholder="Enter room code" value="${state.hostJoinCode}">
+    <button class="primary-btn" data-action="join-link">Connect</button>
+    <div class="link-card-note">${state.link.connected ? `Connected to ${state.link.remoteName}.` : 'You can only see your own draft choices during the draft.'}</div>
+  </article>`;
+}
+
 function renderLinkSetupStage() {
-  return `<section class="hero"><div><div class="label">Link Battle</div><h2>Connection</h2></div><p>${state.link.status}</p></section>
-    <section class="two-col"><div class="panel"><div class="label">Host</div><button class="primary-btn" data-action="host-link">Open room</button><div class="code-box">${state.link.peerId || 'No code yet'}</div></div><div class="panel"><div class="label">Guest</div><input id="joinCodeInput" class="text-input" placeholder="Enter room code" value="${state.hostJoinCode}"><button class="primary-btn" data-action="join-link">Connect</button></div></section>
-    <div class="actions"><button class="ghost-btn" data-action="go-menu">Back</button></div>`;
+  return `<section class="link-setup-shell">
+    <div class="draft-topbar">
+      <a class="ghost-btn back" href="../index.html#games">Back to home</a>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>Link Battle</span></div>
+    </div>
+    <section class="link-setup-hero">
+      <div class="link-setup-copy">
+        <div class="draft-kicker-row"><span class="label">Link Terminal</span><span class="draft-status-pill">${state.link.connected ? 'Connected' : 'Setup'}</span></div>
+        <h2>Connect, draft in secret, then battle.</h2>
+        <p>${state.link.status}</p>
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>Private room code</span><span>3 hidden draft rounds</span><span>Order stays hidden until battle</span></div>
+      </div>
+      <div class="link-setup-stage-card">
+        <div class="label">How it works</div>
+        <div class="link-setup-step-grid">
+          <div class="link-setup-step"><span>1</span><strong>Open or join a room</strong><div>One player hosts, one enters the code.</div></div>
+          <div class="link-setup-step"><span>2</span><strong>Draft in secret</strong><div>Each round shows only your own three options.</div></div>
+          <div class="link-setup-step"><span>3</span><strong>Lock your order</strong><div>Both teams are revealed only when battle begins.</div></div>
+        </div>
+      </div>
+    </section>
+    <section class="link-setup-grid">
+      ${renderLinkConnectionCard('host')}
+      ${renderLinkConnectionCard('guest')}
+    </section>
+    <div class="actions link-setup-actions"><button class="ghost-btn" data-action="go-menu">Mode Select</button></div>
+  </section>`;
 }
 
 function renderLinkDraftStage() {
@@ -661,31 +706,52 @@ function renderLinkDraftStage() {
     mode: 'link',
     roundLabel: `Round ${state.link.draftRound || 1} of 3`,
     title: 'Secretly pick your next Pokemon',
-    statusCopy: state.link.connected ? `Connected to ${state.link.remoteName}. Both sides pick from three options at the same time.` : 'Waiting for connection.',
-    chips: [currentGenerationConfig().label, 'Hidden draft', `${state.playerDraft.length}/3 picked`, state.link.connected ? 'Opponent connected' : 'Waiting for opponent'],
-    action: state.link.localPickLocked ? 'Your pick is locked. Wait for the other side.' : 'Only your three cards are visible. The opponent cannot see your pack.',
+    statusCopy: state.link.localPickLocked ? 'Your pick is locked. The next round appears after the other side locks in as well.' : 'You only see your own three cards. The other player never sees this selection screen.',
+    chips: [currentGenerationConfig().label, 'Hidden draft', `${state.playerDraft.length}/3 picked`, state.link.connected ? 'Room connected' : 'Waiting for connection'],
+    action: state.link.localPickLocked ? 'Waiting for the next hidden round.' : 'Pick 1 of 3. Your selection stays private until battle begins.',
     cards: state.link.localPack.map((species) => renderDraftCard(species, `data-link-draft-id="${species.id}" ${state.link.localPickLocked ? 'disabled' : ''}`)).join(''),
+    showStatusCard: false,
   });
 }
 
 function renderLinkPreviewStage() {
-  return renderPreviewShell({
-    mode: 'link',
-    title: 'Arrange your team in secret',
-    statusCopy: 'The opponent cannot see your changes live. Everything is revealed only when the battle starts.',
-    chips: [currentGenerationConfig().label, 'Hidden draft', `${state.playerPreview.length}/3 ready`, state.link.connected ? 'Opponent connected' : 'Waiting for opponent'],
-    actionLabel: 'Use up and down until your lead order looks right.',
-    playerPanelTitle: 'Your order',
-    playerCards: state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join(''),
-    asidePanel: `<div class="preview-panel preview-status-panel">
-        <div class="draft-section-head"><div><div class="label">Opponent status</div><h3>${state.link.connected ? state.link.remoteName : 'Waiting for opponent'}</h3></div><p>Your changes stay hidden until both sides are ready.</p></div>
-        <div class="preview-status-stack">
-          <div class="empty"><strong>${state.link.remoteDraftCount}/3 picks locked</strong><div>${state.link.remoteReady ? 'Ready to battle' : 'Not ready yet'}</div></div>
-          <div class="empty"><strong>${state.link.connected ? 'Connection ready' : 'Connection open'}</strong><div>${state.link.localPickLocked ? 'Your last pick is locked' : 'Your team can still be reordered'}</div></div>
+  const hiddenPlan = state.playerPreview.map((member, index) => `<div class="preview-hero-slot" style="background:${typeGradient(member.types)}">
+      <span>${index + 1}</span>
+      <strong>${member.name}</strong>
+      <div>${index === 0 ? 'Leads first' : 'Ready to switch in'}</div>
+    </div>`).join('');
+  return `<section class="link-preview-shell">
+    <div class="draft-topbar">
+      <a class="ghost-btn back" href="../index.html#games">Back to home</a>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>Link Battle</span></div>
+    </div>
+    <section class="draft-hero-panel link-preview-hero">
+      <div class="draft-hero-copy">
+        <div class="draft-kicker-row"><span class="label">Hidden Order</span><span class="draft-status-pill">Arrange team</span></div>
+        <h2>Arrange your team in secret.</h2>
+        <p>Your opponent cannot see your changes live. Only the finished lead order is revealed when the battle starts.</p>
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>Hidden draft complete</span><span>${state.playerPreview.length}/3 ready</span><span>${state.link.connected ? 'Room connected' : 'Connection open'}</span></div>
+      </div>
+      <aside class="preview-hero-guide link-preview-plan">
+        <div class="label">Hidden plan</div>
+        <div class="preview-hero-slot-grid">${hiddenPlan}</div>
+      </aside>
+    </section>
+    <section class="link-preview-main">
+      <section class="preview-panel preview-order-panel link-preview-order-panel">
+        <div class="draft-section-head"><div><div class="label">Your order</div><h3>Move your team into lead order</h3></div><p class="preview-order-note">Slot 1 leads the battle. Slots 2 and 3 become your switch options.</p></div>
+        <div class="preview-card-list">${state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join('')}</div>
+      </section>
+      <section class="preview-panel link-preview-ready-panel">
+        <div class="draft-section-head"><div><div class="label">Ready check</div><h3>Lock your hidden order</h3></div><p>Once both players confirm, the battle begins and both lead orders are revealed.</p></div>
+        <div class="link-preview-ready-notes">
+          <div class="empty"><strong>Your order stays private</strong><div>No live updates from the other side are shown here.</div></div>
+          <div class="empty"><strong>${state.link.connected ? 'Connection stable' : 'Connection needed'}</strong><div>${state.link.connected ? 'You can lock in as soon as the order looks right.' : 'Reconnect before trying to start the battle.'}</div></div>
         </div>
         <div class="actions"><button class="primary-btn" data-action="ready-link-battle" ${!state.link.connected ? 'disabled' : ''}>Ready to battle</button><button class="ghost-btn" data-action="link-rematch">Draft again</button></div>
-      </div>`,
-  });
+      </section>
+    </section>
+  </section>`;
 }
 
 function hpTone(percent) {
@@ -782,7 +848,7 @@ function render() {
     : (state.phase === 'draft' ? state.playerDraft : state.playerPreview.length ? state.playerPreview : state.playerLoadout);
   const battleView = state.phase === 'battle';
   const menuView = state.phase === 'menu';
-  const draftView = state.phase === 'draft' || state.phase === 'link-draft' || state.phase === 'preview' || state.phase === 'link-preview';
+  const draftView = state.phase === 'draft' || state.phase === 'link-setup' || state.phase === 'link-draft' || state.phase === 'preview' || state.phase === 'link-preview';
   if (menuView) {
     app.innerHTML = `<div class="app-shell menu-view theme-${state.generation}">
       <main class="main menu-main">${renderStage()}</main>
@@ -1627,6 +1693,11 @@ function injectStyles() {
       gap:12px;
       padding:10px 0 6px;
     }
+    .link-setup-shell,.link-preview-shell{
+      display:grid;
+      gap:12px;
+      padding:10px 0 6px;
+    }
     .preview-shell{
       display:grid;
       gap:12px;
@@ -1750,6 +1821,88 @@ function injectStyles() {
       gap:12px;
       min-height:0;
     }
+    .link-setup-hero,.link-setup-grid,.link-preview-main{
+      display:grid;
+      gap:12px;
+    }
+    .link-setup-hero{
+      grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);
+    }
+    .link-setup-copy,.link-setup-stage-card,.link-setup-card{
+      border:1px solid var(--line);
+      border-radius:28px;
+      background:linear-gradient(180deg,rgba(21,31,24,.94),rgba(16,25,20,.9));
+      box-shadow:0 28px 80px rgba(0,0,0,.22);
+      padding:18px;
+      display:grid;
+      gap:14px;
+      min-height:0;
+    }
+    .link-setup-copy{
+      align-content:start;
+    }
+    .link-setup-copy h2,.link-setup-card h3{
+      margin:0;
+    }
+    .link-setup-copy h2{
+      font-size:clamp(2.4rem,4.5vw,4rem);
+      line-height:.95;
+      letter-spacing:-.03em;
+    }
+    .link-setup-copy p,.link-setup-card p,.link-card-note,.link-setup-step div{
+      margin:0;
+      color:var(--muted);
+      line-height:1.5;
+    }
+    .link-setup-stage-card{
+      align-content:start;
+    }
+    .link-setup-step-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:10px;
+    }
+    .link-setup-step{
+      display:grid;
+      gap:8px;
+      padding:12px;
+      border-radius:18px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .link-setup-step span{
+      width:30px;
+      height:30px;
+      display:grid;
+      place-items:center;
+      border-radius:50%;
+      background:linear-gradient(180deg,var(--menu-accent-soft),var(--menu-accent));
+      color:#16211a;
+      font-weight:800;
+      box-shadow:0 10px 24px var(--menu-glow);
+    }
+    .link-setup-step strong{
+      color:var(--text);
+      line-height:1.1;
+    }
+    .link-setup-grid{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      align-items:stretch;
+    }
+    .link-setup-card .primary-btn{
+      justify-self:start;
+    }
+    .link-code-box{
+      min-height:64px;
+      display:grid;
+      place-items:center;
+      font-size:1rem;
+      font-weight:700;
+      letter-spacing:.01em;
+    }
+    .link-setup-actions{
+      justify-content:flex-start;
+    }
     .preview-main-grid{
       display:grid;
       grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);
@@ -1828,6 +1981,23 @@ function injectStyles() {
       background:rgba(255,255,255,.05);
       border:1px solid rgba(255,255,255,.08);
       text-align:right;
+    }
+    .link-preview-hero{
+      grid-template-columns:minmax(0,1.15fr) minmax(320px,.85fr);
+    }
+    .link-preview-main{
+      grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);
+      align-items:start;
+    }
+    .link-preview-order-panel,.link-preview-ready-panel{
+      min-height:0;
+    }
+    .link-preview-ready-panel{
+      align-content:start;
+    }
+    .link-preview-ready-notes{
+      display:grid;
+      gap:10px;
     }
     .draft-section-head{
       display:flex;
@@ -2973,9 +3143,22 @@ function injectStyles() {
       .preview-main-grid{
         grid-template-columns:minmax(0,1.05fr) minmax(300px,.95fr);
       }
+      .link-setup-hero,.link-preview-hero,.link-preview-main{
+        grid-template-columns:minmax(0,1fr) minmax(280px,.9fr);
+      }
       .preview-panel,.preview-side-panel{
         border-radius:24px;
         padding:14px;
+      }
+      .link-setup-copy,.link-setup-stage-card,.link-setup-card{
+        border-radius:24px;
+        padding:14px;
+      }
+      .link-setup-step-grid{
+        gap:8px;
+      }
+      .link-setup-step{
+        padding:10px;
       }
       .menu-showcase{
         min-height:334px;
@@ -3001,6 +3184,10 @@ function injectStyles() {
         padding:12px;
       }
       .draft-shell{
+        gap:10px;
+        padding:8px 0 4px;
+      }
+      .link-setup-shell,.link-preview-shell{
         gap:10px;
         padding:8px 0 4px;
       }
@@ -3083,7 +3270,7 @@ function injectStyles() {
       .three-col,.two-col,.choice-grid,.bench-grid{grid-template-columns:1fr}
       .preview-card{grid-template-columns:1fr}
       .menu-hero,.menu-lower,.menu-mode-grid,.menu-meta-grid{grid-template-columns:1fr}
-      .draft-hero-panel,.draft-team-strip,.draft-choice-grid{grid-template-columns:1fr}
+      .draft-hero-panel,.draft-team-strip,.draft-choice-grid,.link-setup-hero,.link-setup-grid,.link-preview-main,.link-preview-hero{grid-template-columns:1fr}
       .draft-link-status{justify-content:stretch}
       .draft-link-status .draft-status-card{width:100%}
       .draft-section-head{align-items:flex-start;flex-direction:column}
@@ -3131,7 +3318,21 @@ function injectStyles() {
         grid-template-rows:auto auto auto 1fr;
         overflow:hidden;
       }
+      .link-setup-shell{
+        gap:8px;
+        padding:4px 0 2px;
+        height:100%;
+        grid-template-rows:auto auto 1fr auto;
+        overflow:hidden;
+      }
       .preview-shell{
+        gap:8px;
+        padding:4px 0 2px;
+        height:calc(100svh - 20px);
+        grid-template-rows:auto auto 1fr;
+        overflow:hidden;
+      }
+      .link-preview-shell{
         gap:8px;
         padding:4px 0 2px;
         height:calc(100svh - 20px);
@@ -3162,6 +3363,58 @@ function injectStyles() {
         min-height:0;
         overflow:hidden;
       }
+      .link-setup-hero{
+        grid-template-columns:1fr;
+        gap:8px;
+      }
+      .link-setup-grid{
+        grid-template-columns:1fr;
+        gap:8px;
+        min-height:0;
+      }
+      .link-setup-copy,.link-setup-stage-card,.link-setup-card{
+        padding:10px;
+        gap:8px;
+        border-radius:20px;
+      }
+      .link-setup-copy h2{
+        font-size:clamp(1.5rem,7vw,2.05rem);
+        line-height:.98;
+      }
+      .link-setup-copy p,.link-setup-card p,.link-card-note,.link-setup-step div{
+        font-size:.84rem;
+        line-height:1.35;
+      }
+      .link-setup-step-grid{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:6px;
+      }
+      .link-setup-step{
+        padding:8px 6px;
+        gap:6px;
+      }
+      .link-setup-step span{
+        width:26px;
+        height:26px;
+      }
+      .link-setup-step strong{
+        font-size:.72rem;
+        line-height:1.15;
+      }
+      .link-setup-step div{
+        font-size:.64rem;
+        line-height:1.15;
+      }
+      .link-code-box{
+        min-height:46px;
+        font-size:.84rem;
+      }
+      .link-setup-actions{
+        justify-content:stretch;
+      }
+      .link-setup-actions .ghost-btn{
+        width:100%;
+      }
       .preview-panel,.preview-side-panel{
         border-radius:20px;
         padding:10px;
@@ -3169,6 +3422,10 @@ function injectStyles() {
       }
       .preview-hero-panel{
         grid-template-columns:1fr;
+      }
+      .link-preview-hero{
+        grid-template-columns:1fr;
+        gap:8px;
       }
       .preview-hero-guide{
         padding:8px;
@@ -3192,6 +3449,13 @@ function injectStyles() {
         display:none;
       }
       .preview-panel{
+        min-height:0;
+        overflow:hidden;
+      }
+      .link-preview-main{
+        grid-template-columns:1fr;
+        grid-template-rows:auto auto;
+        gap:8px;
         min-height:0;
         overflow:hidden;
       }
@@ -3291,6 +3555,46 @@ function injectStyles() {
         width:100%;
         padding:8px 10px;
         font-size:.78rem;
+      }
+      .link-preview-ready-panel .actions{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:6px;
+      }
+      .link-preview-ready-panel .actions .primary-btn,.link-preview-ready-panel .actions .ghost-btn{
+        width:100%;
+        padding:8px 10px;
+        font-size:.78rem;
+      }
+      .link-preview-ready-notes{
+        gap:8px;
+      }
+      .link-preview-order-panel .preview-card-list{
+        gap:6px;
+      }
+      .link-preview-order-panel .preview-card{
+        min-height:58px;
+        padding:6px 8px;
+      }
+      .link-preview-order-panel .preview-card .sprite.sm{
+        width:34px;
+        height:34px;
+      }
+      .link-preview-order-panel .preview-copy strong{
+        font-size:.8rem;
+      }
+      .link-preview-ready-panel{
+        padding:8px;
+        gap:6px;
+      }
+      .link-preview-ready-panel .draft-section-head p{
+        display:none;
+      }
+      .link-preview-ready-panel .empty{
+        padding:10px;
+      }
+      .link-preview-ready-notes .empty:nth-child(2){
+        display:none;
       }
       .draft-team-panel .label{
         display:none;
