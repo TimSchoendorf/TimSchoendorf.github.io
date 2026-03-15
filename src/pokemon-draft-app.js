@@ -327,9 +327,9 @@ function renderMenuStage() {
   const showcase = generation.id === 'gen1'
     ? `<div class="menu-showcase menu-showcase-gen1">
         <div class="menu-stage-card menu-stage-card-foe">
-          <span class="label">Arena Intro</span>
-          <strong>${MENU_SHOWCASE.foe.name}</strong>
-          <span>${generation.label} aktiv</span>
+          <span class="label">Kampfvorschau</span>
+          <strong>${generation.label} Arena</strong>
+          <span>So wirkt die Startszene vor dem Draft</span>
         </div>
         <div class="menu-stage-mon menu-stage-mon-foe">${menuSpriteTag(MENU_SHOWCASE.foe, 'front', 'foe')}</div>
         <div class="menu-stage-mon menu-stage-mon-player">${menuSpriteTag(MENU_SHOWCASE.player, 'back', 'player')}</div>
@@ -1385,7 +1385,7 @@ function injectStyles() {
     }
     .menu-stage-mon-player{
       left:6%;
-      bottom:27%;
+      bottom:28.5%;
       width:19%;
       height:26%;
     }
@@ -1433,12 +1433,15 @@ function injectStyles() {
       position:absolute;
       left:7%;
       right:7%;
-      bottom:11%;
+      bottom:5.5%;
+      height:23%;
       z-index:3;
+      display:flex;
+      align-items:center;
       color:#213018;
       font-size:.94rem;
       font-weight:700;
-      line-height:1.25;
+      line-height:1.1;
     }
     .menu-showcase-gen5{
       background:
@@ -1742,7 +1745,7 @@ function injectStyles() {
     .battle-sprite-player{
       position:absolute;
       left:5.5%;
-      bottom:calc(var(--battle-player-line) + 2%);
+      bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - .4%);
       width:25%;
       height:38%;
     }
@@ -1936,9 +1939,9 @@ function injectStyles() {
       }
       .menu-stage-card-foe{top:16px;left:16px;width:min(34%,200px)}
       .menu-stage-mon-foe{top:56px;right:24px;width:18%;height:26%}
-      .menu-stage-mon-player{left:20px;bottom:104px;width:18%;height:24%}
+      .menu-stage-mon-player{left:20px;bottom:88px;width:18%;height:24%}
       .menu-stage-line-bottom{left:16px;right:16px;bottom:16px;height:72px}
-      .menu-stage-text{left:26px;right:26px;bottom:34px;font-size:.82rem;line-height:1.18}
+      .menu-stage-text{left:26px;right:26px;bottom:16px;height:72px;font-size:.82rem;line-height:1.08}
       .menu-mode-card{
         padding:16px;
       }
@@ -1963,7 +1966,7 @@ function injectStyles() {
       .menu-section-head{align-items:flex-start;flex-direction:column}
       .menu-showcase{min-height:340px}
       .menu-stage-mon-foe{right:28px;width:18%;height:26%}
-      .menu-stage-mon-player{left:20px;bottom:104px;width:19%;height:24%}
+      .menu-stage-mon-player{left:20px;bottom:88px;width:19%;height:24%}
       .battle-footer{grid-template-columns:1fr 1fr}
       .battle-actions-panel{grid-column:1 / -1}
     }
@@ -2010,10 +2013,12 @@ function injectStyles() {
       .menu-stage-card strong,.menu-tech-card strong{
         font-size:.84rem;
       }
-      .menu-stage-card-foe{top:12px;left:12px}
+      .menu-stage-card-foe{top:10px;left:10px;width:98px;padding:6px 7px;gap:2px}
+      .menu-stage-card-foe strong{font-size:.8rem}
+      .menu-stage-card-foe > span:last-child{display:none}
       .menu-stage-card-player{display:none}
       .menu-stage-mon-foe{top:34px;right:8px;width:17%;height:18%}
-      .menu-stage-mon-player{display:none}
+      .menu-stage-mon-player{display:grid;left:4px;bottom:36px;width:14%;height:20%}
       .menu-stage-line-bottom{
         left:12px;
         right:12px;
@@ -2021,10 +2026,11 @@ function injectStyles() {
         height:30px;
       }
       .menu-stage-text{
-        left:16px;
+        left:58px;
         right:16px;
-        bottom:11px;
-        font-size:.62rem;
+        bottom:8px;
+        height:30px;
+        font-size:.58rem;
         letter-spacing:0;
         line-height:1.08;
       }
@@ -2127,7 +2133,7 @@ function injectStyles() {
       }
       .battle-sprite-player{
         left:7%;
-        bottom:var(--battle-player-line);
+        bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 1%);
         width:26%;
         height:30%;
       }
