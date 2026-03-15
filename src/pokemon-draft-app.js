@@ -24,17 +24,17 @@ const GENERATION_CONFIG = {
     id: 'gen1',
     label: 'Gen 1',
     kicker: 'Retro Arena',
-    title: 'Pokemon Battle Arena',
-    subtitle: 'Waehle zuerst eine Generation. Danach entscheidest du dich fuer Bot-Serie oder Link Battle und startest direkt in den Draft.',
+    title: 'Pokémon Battle Arena',
+    subtitle: 'Wähle zuerst eine Generation. Danach entscheidest du dich für Bot-Serie oder Link Battle und startest direkt in den Draft.',
     availability: 'Jetzt spielbar',
     status: 'Kanto-Pool aktiv',
-    features: ['151 Kanto-Pokemon', 'Direkt spielbar', 'Retro-Arena im Gen-1-Stil'],
-    steps: ['Generation waehlen', 'Modus starten', 'Draft, Reihenfolge, Kampf'],
+    features: ['151 Kanto-Pokémon', 'Direkt spielbar', 'Retro-Arena im Gen-1-Stil'],
+    steps: ['Generation wählen', 'Modus starten', 'Draft, Reihenfolge, Kampf'],
     modeCards: {
       bot: {
         eyebrow: 'Solo',
         title: 'Bot-Serie',
-        points: ['Immer 3 Pokemon zur Auswahl', 'Reihenfolge selbst festlegen', 'Danach gegen die KI kaempfen'],
+        points: ['Immer 3 Pokémon zur Auswahl', 'Reihenfolge selbst festlegen', 'Danach gegen die KI kämpfen'],
         enabled: true,
         action: 'start-bot',
         cta: 'Starten',
@@ -42,43 +42,43 @@ const GENERATION_CONFIG = {
       link: {
         eyebrow: 'Online',
         title: 'Link Battle',
-        points: ['Raumcode teilen oder beitreten', 'Beide draften verdeckt in 3 Runden', 'Danach direkt gegeneinander kaempfen'],
+        points: ['Raumcode teilen oder beitreten', 'Beide draften verdeckt in 3 Runden', 'Danach direkt gegeneinander kämpfen'],
         enabled: true,
         action: 'start-link',
         cta: 'Verbinden',
       },
     },
-    note: 'Die genauen Kampfregeln haengen von der gewaehlten Generation ab.',
+    note: 'Die genauen Kampfregeln hängen von der gewählten Generation ab.',
   },
   gen5: {
     id: 'gen5',
     label: 'Gen 5',
     kicker: 'Next Era Preview',
-    title: 'Pokemon Battle Arena',
-    subtitle: 'Hier siehst du bereits den eigenen Stil fuer die spaetere Gen-5-Erweiterung. Der spielbare Modus folgt danach.',
+    title: 'Pokémon Battle Arena',
+    subtitle: 'Hier siehst du bereits den eigenen Stil für die spätere Gen-5-Erweiterung. Der spielbare Modus folgt danach.',
     availability: 'Stilvorschau',
-    status: 'Naechste Erweiterung',
-    features: ['Eigenes Theme', 'Moderneres Arena-Gefuehl', 'Bereit fuer den Ausbau'],
-    steps: ['Generation ansehen', 'Stile vergleichen', 'Spaeter als Modus erweitern'],
+    status: 'Nächste Erweiterung',
+    features: ['Eigenes Theme', 'Moderneres Arena-Gefühl', 'Bereit für den Ausbau'],
+    steps: ['Generation ansehen', 'Stile vergleichen', 'Später als Modus erweitern'],
     modeCards: {
       bot: {
         eyebrow: 'Solo',
         title: 'Bot-Serie',
-        points: ['Theme-Vorschau ist schon aktiv', 'Spielbarer Gen-5-Modus folgt', 'Struktur fuer spaeteren Ausbau steht'],
+        points: ['Theme-Vorschau ist schon aktiv', 'Spielbarer Gen-5-Modus folgt', 'Struktur für späteren Ausbau steht'],
         enabled: false,
         action: 'start-bot',
-        cta: 'Bald verfuegbar',
+        cta: 'Bald verfügbar',
       },
       link: {
         eyebrow: 'Online',
         title: 'Link Battle',
-        points: ['Designsystem schon getrennt', 'Wechsel zwischen den Stilen sofort sichtbar', 'Online-Modus folgt spaeter'],
+        points: ['Designsystem schon getrennt', 'Wechsel zwischen den Stilen sofort sichtbar', 'Online-Modus folgt später'],
         enabled: false,
         action: 'start-link',
-        cta: 'Bald verfuegbar',
+        cta: 'Bald verfügbar',
       },
     },
-    note: 'Regeltexte bleiben absichtlich generationsoffen, damit kuenftige Systeme sauber passen.',
+    note: 'Regeltexte bleiben absichtlich generationsoffen, damit künftige Systeme sauber passen.',
   },
 };
 const MENU_SHOWCASE = {
@@ -492,7 +492,7 @@ function render() {
     </div>`;
   } else {
     app.innerHTML = `<div class="app-shell ${battleView ? 'battle-view' : ''} theme-${state.generation}">
-      <aside class="side"><a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a><div class="brand"><div class="label">Pokemon Battler</div><h1>Kanto Link Arena</h1><p>Gen-1-Sprites, Level-100-Stats, RBY-Regeln und Link Battles mit verdecktem Draft.</p></div><div class="panel metrics"><span>Modus ${state.playMode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</span><span>151 Pokémon</span><span>Best Run ${state.bestRun}</span></div>${renderSidePanel('Dein Team', ownTeam, true)}${renderOpponentPanel()}</aside>
+      <aside class="side"><a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a><div class="brand"><div class="label">Pokémon Battler</div><h1>Kanto Link Arena</h1><p>Gen-1-Sprites, Level-100-Stats, RBY-Regeln und Link Battles mit verdecktem Draft.</p></div><div class="panel metrics"><span>Modus ${state.playMode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</span><span>151 Pokémon</span><span>Best Run ${state.bestRun}</span></div>${renderSidePanel('Dein Team', ownTeam, true)}${renderOpponentPanel()}</aside>
       <main class="main">${renderStage()}</main>
       <aside class="side"><div class="panel"><div class="label">Hinweise</div><div class="empty">Das Regelset folgt der aktiven Generation.</div></div><div class="panel"><div class="label">Log</div>${state.logs.map((line) => `<div class="log-line">${line}</div>`).join('')}</div></aside>
       ${renderInspectModal()}
@@ -932,10 +932,10 @@ function battleText(parts) {
   if (type === 'cant') {
     const name = parts[2].split(': ').pop();
     const reason = parts[3];
-    if (reason === 'slp') return `${name} schlÃ¤ft tief und fest.`;
+    if (reason === 'slp') return `${name} schläft tief und fest.`;
     if (reason === 'frz') return `${name} ist eingefroren.`;
     if (reason === 'par') return `${name} ist paralysiert und kann sich nicht bewegen.`;
-    if (reason === 'flinch') return `${name} schreckt zurÃ¼ck.`;
+    if (reason === 'flinch') return `${name} schreckt zurück.`;
     if (reason === 'recharge') return `${name} muss sich aufladen.`;
     if (reason === 'Disable') return `${name} kann die Attacke nicht einsetzen.`;
     return `${name} kann nicht handeln.`;
@@ -961,7 +961,7 @@ function battleText(parts) {
   if (type === '-boost') return `${parts[2].split(': ').pop()} steigert ${parts[3]}.`;
   if (type === '-unboost') return `${parts[2].split(': ').pop()} verliert ${parts[3]}.`;
   if (type === '-immune') return `${parts[2].split(': ').pop()} bleibt unbeeindruckt.`;
-  if (type === '-fail') return 'Aber es fehlschlÃ¤gt.';
+  if (type === '-fail') return 'Aber es fehlschlägt.';
   if (type === '-mustrecharge') return `${parts[2].split(': ').pop()} muss aussetzen.`;
   if (type === '-hitcount') return `${parts[2]} Treffer.`;
   if (type === '-ohko') return 'Ein K.-o.-Treffer.';
