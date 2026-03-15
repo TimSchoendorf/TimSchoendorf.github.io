@@ -327,9 +327,7 @@ function renderMenuStage() {
   const showcase = generation.id === 'gen1'
     ? `<div class="menu-showcase menu-showcase-gen1">
         <div class="menu-stage-card menu-stage-card-foe">
-          <span class="label">Kampfvorschau</span>
           <strong>${generation.label} Arena</strong>
-          <span>So wirkt die Startszene vor dem Draft</span>
         </div>
         <div class="menu-stage-mon menu-stage-mon-foe">${menuSpriteTag(MENU_SHOWCASE.foe, 'front', 'foe')}</div>
         <div class="menu-stage-mon menu-stage-mon-player">${menuSpriteTag(MENU_SHOWCASE.player, 'back', 'player')}</div>
@@ -1369,6 +1367,12 @@ function injectStyles() {
       top:6%;
       left:4%;
       width:min(32%,220px);
+      min-height:64px;
+      place-items:center;
+      text-align:center;
+    }
+    .menu-stage-card-foe strong{
+      line-height:1;
     }
     .menu-stage-card-player{display:none}
     .menu-stage-mon{
@@ -1939,7 +1943,7 @@ function injectStyles() {
       .menu-showcase{
         min-height:334px;
       }
-      .menu-stage-card-foe{top:16px;left:16px;width:min(34%,200px)}
+      .menu-stage-card-foe{top:16px;left:16px;width:min(34%,200px);min-height:60px}
       .menu-stage-mon-foe{top:56px;right:24px;width:18%;height:26%}
       .menu-stage-mon-player{left:24px;bottom:88px;width:22%;height:30%}
       .menu-stage-line-bottom{left:16px;right:16px;bottom:16px;height:72px}
@@ -2015,9 +2019,8 @@ function injectStyles() {
       .menu-stage-card strong,.menu-tech-card strong{
         font-size:.84rem;
       }
-      .menu-stage-card-foe{top:10px;left:10px;width:98px;padding:6px 7px;gap:2px}
+      .menu-stage-card-foe{top:10px;left:10px;width:98px;min-height:42px;padding:6px 7px;gap:0}
       .menu-stage-card-foe strong{font-size:.8rem}
-      .menu-stage-card-foe > span:last-child{display:none}
       .menu-stage-card-player{display:none}
       .menu-stage-mon-foe{top:34px;right:8px;width:17%;height:18%}
       .menu-stage-mon-player{display:grid;left:6px;bottom:54px;width:20%;height:28%}
