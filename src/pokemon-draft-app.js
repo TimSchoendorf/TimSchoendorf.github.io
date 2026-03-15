@@ -115,11 +115,13 @@ const state = {
   enemyName: '',
   battle: null,
   playerRequest: null,
+  pendingPlayerRequest: null,
   logs: [],
   battleFeed: [],
   message: 'Choose Bot Run or Link Battle.',
   actionLocked: false,
   selectedChoice: '',
+  battleAnimating: false,
   battleFinished: false,
   teamStates: {p1: [], p2: []},
   active: {p1: null, p2: null},
@@ -785,8 +787,10 @@ function bindEvents() {
 function resetBattleState() {
   state.battle = null;
   state.playerRequest = null;
+  state.pendingPlayerRequest = null;
   state.actionLocked = false;
   state.selectedChoice = '';
+  state.battleAnimating = false;
   state.battleFinished = false;
   state.teamStates = {p1: [], p2: []};
   state.active = {p1: null, p2: null};
@@ -808,10 +812,25 @@ function maybeSubmitHeldMove(request = state.playerRequest) {
     if (state.selectedChoice) state.selectedChoice = '';
     return false;
   }
-  if (state.actionLocked) return false;
+  if (state.actionLocked || state.battleAnimating || !state.playerRequest) return false;
   state.selectedChoice = '';
   submitChoice(choice);
   return true;
+}
+
+function applyPendingPlayerRequest() {
+  if (!state.pendingPlayerRequest || state.battleFinished || state.battleAnimating) return false;
+  state.playerRequest = state.pendingPlayerRequest;
+  state.pendingPlayerRequest = null;
+  updateTeamStateFromRequest(ownSide(), state.playerRequest);
+  state.actionLocked = false;
+  if (!maybeSubmitHeldMove(state.playerRequest)) render();
+  return true;
+}
+
+function queuePlayerRequest(request) {
+  state.pendingPlayerRequest = request;
+  if (!state.battleAnimating) applyPendingPlayerRequest();
 }
 
 function handleChoiceClick(choice, kind, moveName) {
@@ -1096,10 +1115,7 @@ function handleLinkMessage(message) {
     render();
   }
   if (message.type === 'battle-request') {
-    state.playerRequest = message.request;
-    state.actionLocked = false;
-    updateTeamStateFromRequest(ownSide(), message.request);
-    if (!maybeSubmitHeldMove(message.request)) render();
+    queuePlayerRequest(message.request);
   }
   if (message.type === 'battle-choice' && state.link.role === 'host' && state.battle) state.battle.streams.p2.write(message.choice);
   if (message.type === 'battle-chunk') void animateBattleChunk(message.chunk);
@@ -1162,10 +1178,7 @@ async function startBattleSimulation({p1Team, p2Team, p1Name, p2Name, localSide,
         if (!line.startsWith('|request|')) continue;
         const request = JSON.parse(line.slice(9));
         if (ownSide() === 'p1') {
-          state.playerRequest = request;
-          state.actionLocked = false;
-          updateTeamStateFromRequest('p1', request);
-          if (!maybeSubmitHeldMove(request)) render();
+          queuePlayerRequest(request);
         }
       }
     }
@@ -1364,18 +1377,24 @@ function handleBattleLine(line) {
 }
 
 async function animateBattleChunk(chunk) {
+  state.battleAnimating = true;
   for (const line of chunk.split('\n').filter(Boolean)) {
     const delay = handleBattleLine(line);
     render();
     if (delay) await sleep(delay);
   }
+  state.battleAnimating = false;
+  applyPendingPlayerRequest();
 }
 
 async function finishBattle(winner) {
   if (state.battleFinished) return;
   state.battleFinished = true;
   state.playerRequest = null;
+  state.pendingPlayerRequest = null;
   state.actionLocked = true;
+  state.selectedChoice = '';
+  state.battleAnimating = false;
   const localWon = winner === 'You';
   if (state.playMode === 'bot') {
     if (localWon) {
