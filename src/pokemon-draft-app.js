@@ -2020,7 +2020,7 @@ function injectStyles() {
       .menu-stage-card-foe > span:last-child{display:none}
       .menu-stage-card-player{display:none}
       .menu-stage-mon-foe{top:34px;right:8px;width:17%;height:18%}
-      .menu-stage-mon-player{display:grid;left:6px;bottom:38px;width:20%;height:28%}
+      .menu-stage-mon-player{display:grid;left:6px;bottom:42px;width:20%;height:28%}
       .menu-stage-line-bottom{
         left:12px;
         right:12px;
