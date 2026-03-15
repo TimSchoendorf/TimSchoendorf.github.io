@@ -2819,26 +2819,25 @@ function injectStyles() {
         padding:8px 6px;
         gap:6px;
         border-radius:16px;
+        min-height:72px;
+        align-content:center;
       }
       .draft-team-slot.empty{
         grid-template-columns:1fr;
       }
       .draft-team-slot .sprite.sm{
-        width:42px;
-        height:42px;
+        width:34px;
+        height:34px;
       }
       .draft-team-copy strong{
-        font-size:.74rem;
+        font-size:.68rem;
         line-height:1.1;
       }
       .draft-team-slot .tiny{
         display:none;
       }
       .draft-team-slot .info-chip{
-        width:100%;
-        justify-content:center;
-        padding:5px 6px;
-        font-size:.66rem;
+        display:none;
       }
       .draft-board{
         grid-template-rows:auto auto 1fr;
@@ -3210,13 +3209,14 @@ function injectStyles() {
       .draft-team-slot{
         padding:6px 4px;
         gap:4px;
+        min-height:64px;
       }
       .draft-team-index{
         width:28px;
         height:28px;
       }
       .draft-team-slot.empty strong,.draft-team-copy strong{
-        font-size:.68rem;
+        font-size:.64rem;
       }
       .draft-section-head h3{
         font-size:.88rem;
