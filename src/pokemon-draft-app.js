@@ -1970,7 +1970,7 @@ function injectStyles() {
     }
     @media (min-width:1700px) and (min-height:1000px){
       .menu-showcase{
-        --menu-player-shift-y:-5%;
+        --menu-player-shift-y:-2%;
       }
     }
     @media (max-width:1280px){
