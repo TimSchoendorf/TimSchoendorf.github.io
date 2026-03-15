@@ -243,28 +243,6 @@ function inspectMoveDetails(member) {
   return moveIds.map((moveId) => dex.moves.get(moveId)).filter((move) => move?.exists);
 }
 
-const GEN1_TYPE_NAMES = ['Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon'];
-
-function inspectTypeMultiplier(attackingType, defendingTypes = []) {
-  return defendingTypes.reduce((multiplier, defendingType) => {
-    const effect = dex.types.get(defendingType)?.damageTaken?.[attackingType];
-    if (effect === 1) return multiplier * 2;
-    if (effect === 2) return multiplier * 0.5;
-    if (effect === 3) return multiplier * 0;
-    return multiplier;
-  }, 1);
-}
-
-function inspectTypeInsights(member) {
-  return GEN1_TYPE_NAMES.reduce((chart, attackingType) => {
-    const multiplier = inspectTypeMultiplier(attackingType, member.types);
-    if (multiplier === 0) chart.immune.push(attackingType);
-    else if (multiplier > 1) chart.weak.push(`${attackingType} x${multiplier}`);
-    else if (multiplier < 1) chart.resist.push(`${attackingType} x${multiplier}`);
-    return chart;
-  }, {weak: [], resist: [], immune: []});
-}
-
 function formatMoveAccuracy(move) {
   return move.accuracy === true ? '--' : `${move.accuracy}`;
 }
@@ -281,10 +259,10 @@ function renderInspectMoveCard(move) {
       <div class="inspect-move-tags"><span>${move.type}</span><span>${move.category}</span></div>
     </div>
     <div class="inspect-move-stats">
-      <div><span>Stärke</span><strong>${formatMovePower(move)}</strong></div>
-      <div><span>Genauigkeit</span><strong>${formatMoveAccuracy(move)}</strong></div>
+      <div><span>STK</span><strong>${formatMovePower(move)}</strong></div>
+      <div><span>GEN</span><strong>${formatMoveAccuracy(move)}</strong></div>
       <div><span>PP</span><strong>${move.pp || '--'}</strong></div>
-      <div><span>Priorität</span><strong>${move.priority || 0}</strong></div>
+      <div><span>PRIO</span><strong>${move.priority || 0}</strong></div>
     </div>
     <p><span>Effekt</span>${effectText}</p>
   </article>`;
@@ -420,45 +398,30 @@ function renderInspectModal() {
   if (!state.inspecting) return '';
   const member = state.inspecting;
   const moves = inspectMoveDetails(member);
-  const typeInsights = inspectTypeInsights(member);
-  const totalBase = member.baseStats.hp + member.baseStats.atk + member.baseStats.def + member.baseStats.spc + member.baseStats.spe;
-  const totalBattle = member.battleStats.hp + member.battleStats.atk + member.battleStats.def + member.battleStats.spc + member.battleStats.spe;
-  const renderInsight = (label, values, tone = '') => `<div class="inspect-profile-row ${tone}"><span>${label}</span><div>${values.length ? values.map((value) => `<em>${value}</em>`).join('') : '<strong>Keine</strong>'}</div></div>`;
   return `<div class="modal-backdrop" data-close-inspect="1">
     <div class="modal" onclick="event.stopPropagation()">
       <div class="modal-head"><div><div class="label">Pokémon-Infos</div><h3>${member.name}</h3></div><button class="ghost-btn" data-close-inspect="1">Schließen</button></div>
       <div class="modal-body">
-        <div class="modal-card inspect-summary" style="background:${typeGradient(member.types)}">
-          ${spriteTag(member, 'front', 'lg')}
-          <div class="inspect-summary-meta">
-            <div class="inspect-summary-head"><span>#${member.num}</span><strong>${member.name}</strong></div>
-            <div class="types">${member.types.map((type) => `<span>${type}</span>`).join('')}</div>
-            <div class="inspect-summary-grid">
-              <div><span>Basis gesamt</span><strong>${totalBase}</strong></div>
-              <div><span>Lv100 gesamt</span><strong>${totalBattle}</strong></div>
+        <div class="inspect-sidebar">
+          <div class="modal-card inspect-summary" style="background:${typeGradient(member.types)}">
+            ${spriteTag(member, 'front', 'lg')}
+            <div class="inspect-summary-meta">
+              <div class="inspect-summary-head"><span>#${member.num}</span><strong>${member.name}</strong></div>
+              <div class="types">${member.types.map((type) => `<span>${type}</span>`).join('')}</div>
+            </div>
+          </div>
+          <div class="modal-stats inspect-stat-panel">
+            <strong>Level 100 Werte</strong>
+            <div class="inspect-stat-grid">
+              <div><span>KP</span><strong>${member.battleStats.hp}</strong></div>
+              <div><span>ANG</span><strong>${member.battleStats.atk}</strong></div>
+              <div><span>VER</span><strong>${member.battleStats.def}</strong></div>
+              <div><span>SPC</span><strong>${member.battleStats.spc}</strong></div>
+              <div><span>INIT</span><strong>${member.battleStats.spe}</strong></div>
             </div>
           </div>
         </div>
         <div class="inspect-details">
-          <div class="modal-stats inspect-stat-panel">
-            <strong>Werte</strong>
-            <div class="inspect-stat-grid">
-              <div><span>KP</span><strong>${member.baseStats.hp}</strong><em>${member.battleStats.hp}</em></div>
-              <div><span>ANG</span><strong>${member.baseStats.atk}</strong><em>${member.battleStats.atk}</em></div>
-              <div><span>VER</span><strong>${member.baseStats.def}</strong><em>${member.battleStats.def}</em></div>
-              <div><span>SPC</span><strong>${member.baseStats.spc}</strong><em>${member.battleStats.spc}</em></div>
-              <div><span>INIT</span><strong>${member.baseStats.spe}</strong><em>${member.battleStats.spe}</em></div>
-            </div>
-            <div class="inspect-stat-legend"><span>oben: Base</span><span>unten: Level 100</span></div>
-          </div>
-          <div class="modal-card inspect-profile-panel">
-            <strong>Typ-Profil</strong>
-            <div class="inspect-profile-grid">
-              ${renderInsight('Schwach gegen', typeInsights.weak, 'danger')}
-              ${renderInsight('Resistent gegen', typeInsights.resist, 'good')}
-              ${renderInsight('Immun gegen', typeInsights.immune)}
-            </div>
-          </div>
           <div class="modal-moves inspect-move-panel">
             <strong>Attacken</strong>
             <div class="inspect-move-list">${moves.map((move) => renderInspectMoveCard(move)).join('')}</div>
@@ -1371,7 +1334,7 @@ function injectStyles() {
       flex-wrap:wrap;
       margin-top:8px;
     }
-    .types span,.move-row span,.modal-moves span{
+    .types span,.move-row span{
       padding:5px 8px;
       border-radius:999px;
       background:var(--chip);
@@ -2324,11 +2287,17 @@ function injectStyles() {
     }
     .modal-body{
       display:grid;
-      grid-template-columns:240px 1fr;
+      grid-template-columns:280px minmax(0,1fr);
       gap:18px;
       min-height:0;
       overflow:auto;
       padding-right:4px;
+    }
+    .inspect-sidebar{
+      display:grid;
+      gap:16px;
+      align-content:start;
+      min-width:0;
     }
     .modal-card{
       padding:18px;
@@ -2356,19 +2325,14 @@ function injectStyles() {
       letter-spacing:.08em;
       text-transform:uppercase;
     }
-    .inspect-summary-grid{
-      display:grid;
-      grid-template-columns:repeat(2,minmax(0,1fr));
-      gap:10px;
-    }
-    .inspect-summary-grid div,.inspect-stat-grid div,.inspect-move-stats div{
+    .inspect-stat-grid div,.inspect-move-stats div{
       padding:10px;
       border-radius:16px;
       background:rgba(255,255,255,.14);
       display:grid;
       gap:4px;
     }
-    .inspect-summary-grid span,.inspect-stat-grid span,.inspect-move-stats span{
+    .inspect-stat-grid span,.inspect-move-stats span{
       color:var(--ink-soft);
       font-size:.72rem;
       font-weight:700;
@@ -2377,11 +2341,11 @@ function injectStyles() {
     }
     .inspect-details{
       display:grid;
-      gap:16px;
+      gap:0;
       min-width:0;
       align-content:start;
     }
-    .inspect-stat-panel,.inspect-move-panel,.inspect-profile-panel{
+    .inspect-stat-panel,.inspect-move-panel{
       display:grid;
       gap:12px;
       padding:16px;
@@ -2393,65 +2357,6 @@ function injectStyles() {
       display:grid;
       grid-template-columns:repeat(5,minmax(0,1fr));
       gap:10px;
-    }
-    .inspect-stat-grid em{
-      color:var(--text);
-      font-style:normal;
-      font-size:.86rem;
-      font-weight:700;
-      opacity:.9;
-    }
-    .inspect-stat-legend{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      color:var(--muted);
-      font-size:.8rem;
-    }
-    .inspect-profile-grid{
-      display:grid;
-      gap:10px;
-    }
-    .inspect-profile-row{
-      display:grid;
-      gap:8px;
-      padding:12px;
-      border-radius:18px;
-      background:rgba(255,255,255,.05);
-      border:1px solid rgba(255,255,255,.08);
-    }
-    .inspect-profile-row.good{
-      border-color:rgba(156,214,159,.24);
-      background:rgba(88,135,93,.12);
-    }
-    .inspect-profile-row.danger{
-      border-color:rgba(231,154,138,.24);
-      background:rgba(124,66,59,.16);
-    }
-    .inspect-profile-row > span{
-      color:var(--muted);
-      font-size:.78rem;
-      font-weight:700;
-      letter-spacing:.06em;
-      text-transform:uppercase;
-    }
-    .inspect-profile-row div{
-      display:flex;
-      flex-wrap:wrap;
-      gap:8px;
-    }
-    .inspect-profile-row em{
-      padding:5px 8px;
-      border-radius:999px;
-      background:var(--chip);
-      color:var(--chip-text);
-      font-style:normal;
-      font-size:.76rem;
-      font-weight:700;
-    }
-    .inspect-profile-row strong{
-      color:var(--text);
-      font-size:.92rem;
     }
     .inspect-move-list{
       display:grid;
@@ -2492,12 +2397,15 @@ function injectStyles() {
     .inspect-move-card p{
       margin:0;
       color:var(--text);
-      line-height:1.45;
-      font-size:.92rem;
+      line-height:1.42;
+      font-size:.88rem;
       display:grid;
       gap:6px;
     }
     .inspect-move-card p span{
+      display:block;
+      width:100%;
+      min-width:0;
       color:var(--muted);
       font-size:.72rem;
       font-weight:700;
@@ -2917,6 +2825,9 @@ function injectStyles() {
         gap:14px;
         padding-right:0;
       }
+      .inspect-sidebar{
+        gap:14px;
+      }
       .inspect-summary{
         grid-template-columns:72px 1fr;
         align-items:center;
@@ -2925,15 +2836,9 @@ function injectStyles() {
         width:72px;
         height:72px;
       }
-      .inspect-summary-grid{
-        grid-template-columns:repeat(2,minmax(0,1fr));
-      }
       .inspect-stat-grid{
         grid-template-columns:repeat(3,minmax(0,1fr));
         gap:8px;
-      }
-      .inspect-profile-row{
-        padding:10px;
       }
       .inspect-move-list{
         grid-template-columns:1fr;
