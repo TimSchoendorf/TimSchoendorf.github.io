@@ -86,10 +86,14 @@ const MENU_SHOWCASE = {
 };
 const STARTER_ART_PATH = '../assets/firstgenstarter-cutout.png';
 const BATTLE_DECOR_ZONES = [
-  {leftMin: 1.2, leftMax: 12.8, topMin: 12, topMax: 53},
-  {leftMin: 87.2, leftMax: 98.8, topMin: 12, topMax: 53},
-  {leftMin: 1.8, leftMax: 14.5, topMin: 64, topMax: 92},
-  {leftMin: 85.5, leftMax: 98.2, topMin: 64, topMax: 92},
+  {leftMin: 1.2, leftMax: 11.5, topMin: 10, topMax: 31},
+  {leftMin: 1.2, leftMax: 12.5, topMin: 32, topMax: 55},
+  {leftMin: 87.5, leftMax: 98.8, topMin: 10, topMax: 31},
+  {leftMin: 86.8, leftMax: 98.5, topMin: 32, topMax: 55},
+  {leftMin: 1.8, leftMax: 20.5, topMin: 64, topMax: 93},
+  {leftMin: 21.5, leftMax: 36.5, topMin: 76, topMax: 95},
+  {leftMin: 63.5, leftMax: 78.5, topMin: 76, topMax: 95},
+  {leftMin: 79.5, leftMax: 98.2, topMin: 64, topMax: 93},
 ];
 
 const state = {
@@ -206,9 +210,9 @@ function renderBattleDecor() {
     const zone = BATTLE_DECOR_ZONES[index % BATTLE_DECOR_ZONES.length];
     const left = zone.leftMin + (zone.leftMax - zone.leftMin) * seededUnit(index + 11);
     const top = zone.topMin + (zone.topMax - zone.topMin) * seededUnit(index + 97);
-    const size = 10 + Math.round(seededUnit(index + 173) * 12);
+    const size = 20 + Math.round(seededUnit(index + 173) * 24);
     const rotation = -10 + seededUnit(index + 241) * 20;
-    const opacity = 0.12 + seededUnit(index + 311) * 0.13;
+    const opacity = 0.1 + seededUnit(index + 311) * 0.12;
     return `<img class="battle-decor-sprite" src="${member.sprites.front}" alt="" style="left:${left.toFixed(2)}%;top:${top.toFixed(2)}%;width:${size}px;height:${size}px;opacity:${opacity.toFixed(2)};transform:translate(-50%,-50%) rotate(${rotation.toFixed(2)}deg);">`;
   }).join('')}</div>`;
 }
