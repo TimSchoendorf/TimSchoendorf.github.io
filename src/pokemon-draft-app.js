@@ -1385,7 +1385,7 @@ function injectStyles() {
     }
     .menu-stage-mon-player{
       left:8%;
-      bottom:17%;
+      bottom:28.5%;
       width:20%;
       height:31%;
     }
@@ -1399,7 +1399,7 @@ function injectStyles() {
       filter:drop-shadow(0 12px 0 rgba(255,255,255,.2)) drop-shadow(0 20px 18px rgba(0,0,0,.18));
     }
     .menu-sprite-foe.front{transform:translateX(1%)}
-    .menu-sprite-player.back{transform:translateX(-1%) translateY(30%)}
+    .menu-sprite-player.back{transform:translateX(-1%) translateY(0)}
     .menu-mon-placeholder{
       display:grid;
       place-items:center;
@@ -1428,6 +1428,7 @@ function injectStyles() {
       border:3px solid #182117;
       border-radius:12px;
       background:rgba(249,245,232,.94);
+      z-index:3;
     }
     .menu-stage-text{
       position:absolute;
@@ -1435,7 +1436,7 @@ function injectStyles() {
       right:7%;
       bottom:5.5%;
       height:23%;
-      z-index:3;
+      z-index:4;
       display:flex;
       align-items:center;
       padding-left:clamp(110px,11vw,154px);
@@ -1940,7 +1941,7 @@ function injectStyles() {
       }
       .menu-stage-card-foe{top:16px;left:16px;width:min(34%,200px)}
       .menu-stage-mon-foe{top:56px;right:24px;width:18%;height:26%}
-      .menu-stage-mon-player{left:24px;bottom:28px;width:22%;height:30%}
+      .menu-stage-mon-player{left:24px;bottom:88px;width:22%;height:30%}
       .menu-stage-line-bottom{left:16px;right:16px;bottom:16px;height:72px}
       .menu-stage-text{left:26px;right:26px;bottom:16px;height:72px;padding-left:116px;font-size:.82rem;line-height:1.08}
       .menu-mode-card{
@@ -1967,7 +1968,7 @@ function injectStyles() {
       .menu-section-head{align-items:flex-start;flex-direction:column}
       .menu-showcase{min-height:340px}
       .menu-stage-mon-foe{right:28px;width:18%;height:26%}
-      .menu-stage-mon-player{left:24px;bottom:28px;width:22%;height:30%}
+      .menu-stage-mon-player{left:24px;bottom:88px;width:22%;height:30%}
       .battle-footer{grid-template-columns:1fr 1fr}
       .battle-actions-panel{grid-column:1 / -1}
     }
@@ -2019,7 +2020,7 @@ function injectStyles() {
       .menu-stage-card-foe > span:last-child{display:none}
       .menu-stage-card-player{display:none}
       .menu-stage-mon-foe{top:34px;right:8px;width:17%;height:18%}
-      .menu-stage-mon-player{display:grid;left:6px;bottom:18px;width:20%;height:28%}
+      .menu-stage-mon-player{display:grid;left:6px;bottom:38px;width:20%;height:28%}
       .menu-stage-line-bottom{
         left:12px;
         right:12px;
@@ -2036,7 +2037,7 @@ function injectStyles() {
         letter-spacing:0;
         line-height:1.08;
       }
-      .menu-stage-mon-player .menu-sprite-player.back{transform:translateX(-2%) translateY(12%)}
+      .menu-stage-mon-player .menu-sprite-player.back{transform:translateX(-2%) translateY(0)}
       .menu-tech-card-player{display:none}
       .menu-energy-a{width:82px;height:82px;top:54px;right:22px}
       .menu-energy-b{width:90px;height:90px;bottom:34px;left:14px}
