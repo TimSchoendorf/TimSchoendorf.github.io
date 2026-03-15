@@ -331,16 +331,11 @@ function renderMenuStage() {
           <strong>${MENU_SHOWCASE.foe.name}</strong>
           <span>${generation.label} aktiv</span>
         </div>
-        <div class="menu-stage-card menu-stage-card-player">
-          <span class="label">Trainerseite</span>
-          <strong>${MENU_SHOWCASE.player.name}</strong>
-          <span>3er-Draft und Reihenfolge</span>
-        </div>
         <div class="menu-stage-mon menu-stage-mon-foe">${menuSpriteTag(MENU_SHOWCASE.foe, 'front', 'foe')}</div>
         <div class="menu-stage-mon menu-stage-mon-player">${menuSpriteTag(MENU_SHOWCASE.player, 'back', 'player')}</div>
         <div class="menu-stage-line menu-stage-line-top"></div>
         <div class="menu-stage-line menu-stage-line-bottom"></div>
-        <div class="menu-stage-text">Wähle eine Generation, entscheide den Modus und betrete die Arena.</div>
+        <div class="menu-stage-text">Generation wählen, Modus starten, dann Draft und Kampf.</div>
       </div>`
     : `<div class="menu-showcase menu-showcase-gen5">
         <div class="menu-tech-card menu-tech-card-foe"><span class="label">Theme Shift</span><strong>Gen 5 Preview</strong><span>Eigenständiger Stil</span></div>
@@ -1337,7 +1332,7 @@ function injectStyles() {
     }
     .menu-showcase{
       position:relative;
-      min-height:378px;
+      min-height:386px;
       overflow:hidden;
       padding:18px;
     }
@@ -1357,8 +1352,8 @@ function injectStyles() {
     .menu-stage-card,.menu-tech-card{
       position:absolute;
       z-index:2;
-      min-width:210px;
-      padding:14px 16px;
+      min-width:0;
+      padding:13px 15px;
       border-radius:18px;
       border:2px solid rgba(16,23,16,.8);
       background:rgba(249,245,232,.92);
@@ -1370,8 +1365,12 @@ function injectStyles() {
     .menu-stage-card strong,.menu-tech-card strong{
       font-size:1.2rem;
     }
-    .menu-stage-card-foe{top:24px;left:24px}
-    .menu-stage-card-player{right:24px;bottom:124px}
+    .menu-stage-card-foe{
+      top:6%;
+      left:4%;
+      width:min(32%,220px);
+    }
+    .menu-stage-card-player{display:none}
     .menu-stage-mon{
       position:absolute;
       z-index:2;
@@ -1379,16 +1378,16 @@ function injectStyles() {
       place-items:end center;
     }
     .menu-stage-mon-foe{
-      top:82px;
-      right:38px;
-      width:24%;
-      height:30%;
+      top:12%;
+      right:6%;
+      width:19%;
+      height:31%;
     }
     .menu-stage-mon-player{
-      left:44px;
-      bottom:116px;
-      width:28%;
-      height:38%;
+      left:6%;
+      bottom:27%;
+      width:19%;
+      height:26%;
     }
     .menu-sprite{
       display:block;
@@ -1399,8 +1398,8 @@ function injectStyles() {
       image-rendering:pixelated;
       filter:drop-shadow(0 12px 0 rgba(255,255,255,.2)) drop-shadow(0 20px 18px rgba(0,0,0,.18));
     }
-    .menu-sprite-foe.front{transform:translateX(4%)}
-    .menu-sprite-player.back{transform:translateX(-2%)}
+    .menu-sprite-foe.front{transform:translateX(1%)}
+    .menu-sprite-player.back{transform:translateX(-3%)}
     .menu-mon-placeholder{
       display:grid;
       place-items:center;
@@ -1421,18 +1420,25 @@ function injectStyles() {
       z-index:1;
     }
     .menu-stage-line-top{top:53%}
-    .menu-stage-line-bottom{bottom:24px;left:24px;right:24px;height:78px;border:3px solid #182117;border-radius:12px;background:rgba(249,245,232,.94)}
+    .menu-stage-line-bottom{
+      bottom:5.5%;
+      left:3.8%;
+      right:3.8%;
+      height:23%;
+      border:3px solid #182117;
+      border-radius:12px;
+      background:rgba(249,245,232,.94);
+    }
     .menu-stage-text{
       position:absolute;
-      left:44px;
-      right:44px;
-      bottom:52px;
+      left:7%;
+      right:7%;
+      bottom:11%;
       z-index:3;
       color:#213018;
-      font-size:1.04rem;
+      font-size:.94rem;
       font-weight:700;
-      text-transform:uppercase;
-      letter-spacing:.04em;
+      line-height:1.25;
     }
     .menu-showcase-gen5{
       background:
@@ -1664,7 +1670,7 @@ function injectStyles() {
     .combatant.flash-switch{transform:translateX(4px)}
     .battle-status{
       position:absolute;
-      padding:2.05% 2.35%;
+      padding:2.4% 2.8%;
       border:3px solid #151d11;
       border-radius:8px;
       background:#f8f5e8;
@@ -1693,12 +1699,12 @@ function injectStyles() {
     .battle-status-meta{
       margin-top:4px;
       color:#4d5b41;
-      font-size:.76rem;
+      font-size:.8rem;
       font-weight:700;
       text-transform:uppercase;
       letter-spacing:.08em;
     }
-    .battle-hp-row{margin-top:6px}
+    .battle-hp-row{margin-top:8px}
     .hp-label{
       color:#1e2b14;
       font-size:.86rem;
@@ -1713,7 +1719,7 @@ function injectStyles() {
       overflow:hidden;
     }
     .battle-hp{
-      height:13px;
+      height:14px;
       border:2px solid #1e2b14;
       background:#b7bf9c;
     }
@@ -1889,29 +1895,25 @@ function injectStyles() {
         margin:0 auto;
       }
       .battle-stage{
-        --battle-pad-top:4.5%;
-        --battle-feed-height:15.8%;
-        --battle-foe-line:7%;
-        --battle-player-line:20%;
+        --battle-foe-line:11.5%;
+        --battle-player-line:20.5%;
       }
       .battle-status-foe{
-        width:20.5%;
+        width:22%;
       }
       .battle-status-player{
-        width:20.5%;
-        bottom:20%;
+        width:22%;
+        bottom:calc(var(--battle-player-line) + .5%);
       }
       .battle-sprite-foe{
-        top:8%;
-        right:8.5%;
-        width:16%;
-        height:19%;
+        top:calc(var(--battle-foe-line) + .5%);
+        right:7.5%;
+        width:19%;
+        height:24%;
       }
       .battle-sprite-player{
-        left:7%;
-        bottom:23%;
-        width:21%;
-        height:31%;
+        width:24%;
+        height:35%;
       }
     }
     @media (max-height:950px) and (min-width:721px){
@@ -1930,14 +1932,13 @@ function injectStyles() {
         font-size:clamp(2.3rem,4.1vw,4rem);
       }
       .menu-showcase{
-        min-height:340px;
+        min-height:334px;
       }
-      .menu-stage-card-foe{top:18px;left:18px}
-      .menu-stage-card-player{right:18px;bottom:108px}
-      .menu-stage-mon-foe{top:74px;right:32px;width:22%;height:26%}
-      .menu-stage-mon-player{left:28px;bottom:98px;width:25%;height:34%}
-      .menu-stage-line-bottom{left:18px;right:18px;bottom:18px;height:68px}
-      .menu-stage-text{left:32px;right:32px;bottom:40px;font-size:.94rem}
+      .menu-stage-card-foe{top:16px;left:16px;width:min(34%,200px)}
+      .menu-stage-mon-foe{top:56px;right:24px;width:18%;height:26%}
+      .menu-stage-mon-player{left:20px;bottom:104px;width:18%;height:24%}
+      .menu-stage-line-bottom{left:16px;right:16px;bottom:16px;height:72px}
+      .menu-stage-text{left:26px;right:26px;bottom:34px;font-size:.82rem;line-height:1.18}
       .menu-mode-card{
         padding:16px;
       }
@@ -1961,8 +1962,8 @@ function injectStyles() {
       .menu-hero,.menu-lower,.menu-mode-grid,.menu-meta-grid{grid-template-columns:1fr}
       .menu-section-head{align-items:flex-start;flex-direction:column}
       .menu-showcase{min-height:340px}
-      .menu-stage-mon-foe{right:34px;width:28%}
-      .menu-stage-mon-player{left:28px;width:30%}
+      .menu-stage-mon-foe{right:28px;width:18%;height:26%}
+      .menu-stage-mon-player{left:20px;bottom:104px;width:19%;height:24%}
       .battle-footer{grid-template-columns:1fr 1fr}
       .battle-actions-panel{grid-column:1 / -1}
     }
@@ -1999,33 +2000,33 @@ function injectStyles() {
       .menu-feature-row span:nth-child(n+3),
       .menu-mode-points span:nth-child(3){display:none}
       .menu-showcase{
-        min-height:164px;
+        min-height:146px;
         padding:10px;
       }
       .menu-stage-card,.menu-tech-card{
-        min-width:120px;
-        padding:7px 9px;
+        min-width:108px;
+        padding:6px 8px;
       }
       .menu-stage-card strong,.menu-tech-card strong{
-        font-size:.92rem;
+        font-size:.84rem;
       }
       .menu-stage-card-foe{top:12px;left:12px}
       .menu-stage-card-player{display:none}
-      .menu-stage-mon-foe{top:46px;right:10px;width:18%;height:16%}
-      .menu-stage-mon-player{left:8px;bottom:42px;width:20%;height:18%}
+      .menu-stage-mon-foe{top:34px;right:8px;width:17%;height:18%}
+      .menu-stage-mon-player{display:none}
       .menu-stage-line-bottom{
         left:12px;
         right:12px;
         bottom:8px;
-        height:34px;
+        height:30px;
       }
       .menu-stage-text{
-        left:18px;
-        right:18px;
-        bottom:13px;
-        font-size:.56rem;
+        left:16px;
+        right:16px;
+        bottom:11px;
+        font-size:.62rem;
         letter-spacing:0;
-        line-height:1.15;
+        line-height:1.08;
       }
       .menu-tech-card-player{display:none}
       .menu-energy-a{width:82px;height:82px;top:54px;right:22px}
@@ -2106,74 +2107,74 @@ function injectStyles() {
       }
       .combatant{inset:0}
       .battle-status{
-        padding:6px 8px;
+        padding:8px 10px;
         border-width:2px;
         border-radius:6px;
       }
-      .battle-status-foe{top:3%;left:3%;width:33%;max-width:none}
-      .battle-status-player{right:3%;bottom:22%;width:34%;max-width:none}
+      .battle-status-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:36%;max-width:none}
+      .battle-status-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:38%;max-width:none}
       .battle-status .info-chip{padding:6px 8px}
       .battle-status-meta{
-        font-size:.6rem;
-        letter-spacing:.04em;
+        font-size:.68rem;
+        letter-spacing:.05em;
       }
-      .battle-hp{height:11px}
+      .battle-hp{height:12px}
       .battle-sprite-foe{
-        top:11%;
-        right:10%;
-        width:20%;
-        height:18%;
+        top:var(--battle-foe-line);
+        right:8%;
+        width:26%;
+        height:32%;
       }
       .battle-sprite-player{
-        left:8%;
-        bottom:28%;
-        width:22%;
-        height:22%;
+        left:7%;
+        bottom:var(--battle-player-line);
+        width:26%;
+        height:30%;
       }
-      .battle-shadow{width:64%;height:12%;bottom:4%}
+      .battle-shadow{width:72%;height:14%;bottom:6%}
       .sprite.battle{width:100%;height:100%}
       .battle-sprite-foe .sprite.battle.front{
-        transform:translateX(2%) translateY(0);
+        transform:translateX(4%) translateY(0);
       }
       .battle-sprite-player .sprite.battle.back{
-        transform:translateX(-1%) translateY(0);
+        transform:translateX(-4%) translateY(0);
       }
       .battle-feed{
         left:3%;
         right:3%;
         bottom:var(--battle-feed-bottom);
-        min-height:15%;
-        padding:1.8% 2.2%;
+        min-height:var(--battle-feed-height);
+        padding:2% 2.4%;
         border-width:2px;
         border-radius:6px;
       }
-      .feed-line{font-size:.75rem;line-height:1.3}
+      .feed-line{font-size:.8rem}
       .battle-footer{
         grid-template-columns:1fr 1fr;
-        gap:4px;
+        gap:6px;
       }
       .battle-panel{
-        padding:5px;
-        border-radius:16px;
+        padding:6px;
+        border-radius:18px;
       }
       .battle-panel .bench-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
       .battle-panel .bench-card{
-        min-height:58px;
-        padding:3px;
+        min-height:70px;
+        padding:4px 3px;
       }
       .battle-panel .bench-card .info-chip{
-        padding:2px 4px;
-        font-size:.58rem;
+        padding:3px 5px;
+        font-size:.62rem;
       }
-      .battle-panel .sprite.sm{width:24px;height:24px}
+      .battle-panel .sprite.sm{width:28px;height:28px}
       .choice-grid{
         grid-template-columns:repeat(2,minmax(0,1fr));
-        gap:4px;
+        gap:6px;
       }
       .choice-btn{
-        min-height:34px;
-        padding:5px 7px;
-        gap:2px;
+        min-height:40px;
+        padding:6px 8px;
+        gap:3px;
       }
       .modal{
         padding:16px;
