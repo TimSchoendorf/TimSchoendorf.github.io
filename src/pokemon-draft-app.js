@@ -14,7 +14,39 @@ import {
   shuffle,
 } from './pokemon-draft-core.js';
 
-const dex = Dex.forGen(1);
+const GEN1_BATTLER_MOD = 'gen1battler';
+
+function ensureGen1BattleDex() {
+  if (!Dex.dexes[GEN1_BATTLER_MOD]) {
+    Dex.mod(GEN1_BATTLER_MOD, {
+      Scripts: {inherit: 'gen1', gen: 1},
+      Conditions: {
+        slp: {
+          inherit: true,
+          onStart(target, source, sourceEffect) {
+            if (sourceEffect && sourceEffect.effectType === 'Move') {
+              this.add('-status', target, 'slp', `[from] move: ${sourceEffect.name}`);
+            } else {
+              this.add('-status', target, 'slp');
+            }
+            // Modern RBY research found a 1-turn sleep happens twice as often as 2-7 turns.
+            const raw = this.random(0, 8);
+            this.effectState.startTime = raw === 0 ? 1 : raw;
+            this.effectState.time = this.effectState.startTime;
+            if (target.removeVolatile('nightmare')) {
+              this.add('-end', target, 'Nightmare', '[silent]');
+            }
+          },
+        },
+      },
+    });
+  }
+  const format = Dex.formats.get('gen1customgame');
+  if (format.mod !== GEN1_BATTLER_MOD) format.mod = GEN1_BATTLER_MOD;
+  return Dex.mod(GEN1_BATTLER_MOD);
+}
+
+const dex = ensureGen1BattleDex();
 const app = document.getElementById('app');
 const BEST_RUN_KEY = 'pokemon-battler-rby-best-run-v4';
 const ENEMY_NAMES = ['Brock', 'Misty', 'Surge', 'Erika', 'Koga', 'Sabrina', 'Blaine', 'Giovanni', 'Lorelei', 'Lance'];
