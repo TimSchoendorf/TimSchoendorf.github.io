@@ -3415,6 +3415,15 @@ function injectStyles() {
       .link-setup-actions .ghost-btn{
         width:100%;
       }
+      .link-setup-shell .draft-topbar{
+        grid-template-columns:minmax(0,1fr);
+      }
+      .link-setup-shell .draft-topbar-meta{
+        display:none;
+      }
+      .link-setup-shell .link-setup-actions{
+        display:none;
+      }
       .preview-panel,.preview-side-panel{
         border-radius:20px;
         padding:10px;
