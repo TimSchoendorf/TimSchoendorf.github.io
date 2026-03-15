@@ -547,9 +547,11 @@ function renderBotPreviewStage() {
     playerPanelTitle: 'Deine Reihenfolge',
     playerCards: state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join(''),
     asidePanel: `<div class="preview-panel preview-opponent-panel">
-        <div class="draft-section-head"><div><div class="label">Gegnerteam</div><h3>${currentEnemyLabel()}</h3></div><p>Das gegnerische Team steht fest. Du kannst jetzt deine Startreihenfolge festlegen.</p></div>
-        <div class="preview-mobile-summary">${state.opponentPreview.map((member, index) => `<span>${index + 1}. ${member.name}</span>`).join('')}</div>
-        <div class="preview-card-list">${state.opponentPreview.map((member, index) => renderPreviewCard(member, index, false)).join('')}</div>
+        <div class="draft-section-head"><div><div class="label">Arena bereit</div><h3>${currentEnemyLabel()}</h3></div><p>Das Gegnerteam bleibt verborgen. Du legst jetzt nur deine eigene Startreihenfolge fest.</p></div>
+        <div class="preview-status-stack">
+          <div class="empty"><strong>Gegnerteam verborgen</strong><div>Die gegnerischen Pokémon werden erst im Kampf nach und nach sichtbar.</div></div>
+          <div class="empty"><strong>Dein Team steht</strong><div>Ordne jetzt Lead und Wechselreihenfolge für den Start.</div></div>
+        </div>
         <div class="actions"><button class="primary-btn" data-action="start-battle">Kampf starten</button><button class="ghost-btn" data-action="go-menu">Zur Moduswahl</button></div>
       </div>`,
   });
@@ -646,7 +648,6 @@ function renderBattleStage() {
     <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), currentEnemyLabel(), 'front', foeSide(), 'foe')}<div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'Du', 'back', ownSide(), 'player')}</div></section>
     <section class="battle-footer">
       <div class="panel battle-panel"><div class="label">Deine Reserve</div>${renderBench(ownTeamState(), true)}</div>
-      <div class="panel battle-panel"><div class="label">Gegnerische Reserve</div>${renderBench(foeTeamState(), false)}</div>
       <div class="panel battle-panel battle-actions-panel"><div class="label">Aktionen</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn" data-action="go-menu">Zur Moduswahl</button></div></div>
     </section>
   </section>`;
@@ -1575,19 +1576,6 @@ function injectStyles() {
       display:grid;
       gap:10px;
     }
-    .preview-mobile-summary{
-      display:none;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-    .preview-mobile-summary span{
-      padding:6px 10px;
-      border-radius:999px;
-      background:rgba(255,255,255,.08);
-      color:var(--text);
-      font-size:.78rem;
-      font-weight:700;
-    }
     .draft-section-head{
       display:flex;
       align-items:flex-end;
@@ -2262,7 +2250,7 @@ function injectStyles() {
     }
     .battle-footer{
       display:grid;
-      grid-template-columns:.92fr .92fr 1.16fr;
+      grid-template-columns:.92fr 1.18fr;
       gap:6px;
       max-width:none;
       width:100%;
@@ -2835,12 +2823,6 @@ function injectStyles() {
         justify-content:center;
         padding:6px 8px;
         font-size:.66rem;
-      }
-      .preview-opponent-panel .preview-card-list{
-        display:none;
-      }
-      .preview-mobile-summary{
-        display:flex;
       }
       .preview-side-panel .actions{
         display:grid;
