@@ -1333,7 +1333,7 @@ function injectStyles() {
       min-height:386px;
       --menu-dialog-bottom:5.5%;
       --menu-dialog-height:23%;
-      --menu-player-shift-y:15%;
+      --menu-player-shift-y:0%;
       overflow:hidden;
       padding:18px;
     }
@@ -1948,7 +1948,7 @@ function injectStyles() {
         min-height:334px;
         --menu-dialog-bottom:16px;
         --menu-dialog-height:72px;
-        --menu-player-shift-y:15%;
+        --menu-player-shift-y:0%;
       }
       .menu-stage-card-foe{top:16px;left:16px;width:min(34%,200px);min-height:60px}
       .menu-stage-mon-foe{top:56px;right:24px;width:18%;height:26%}
@@ -2019,7 +2019,7 @@ function injectStyles() {
         min-height:146px;
         --menu-dialog-bottom:8px;
         --menu-dialog-height:30px;
-        --menu-player-shift-y:13%;
+        --menu-player-shift-y:5%;
         padding:10px;
       }
       .menu-stage-card,.menu-tech-card{
