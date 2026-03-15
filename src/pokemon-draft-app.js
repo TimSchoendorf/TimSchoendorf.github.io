@@ -87,14 +87,14 @@ const MENU_SHOWCASE = {
 };
 const STARTER_ART_PATH = '../assets/firstgenstarter-cutout.png';
 const BATTLE_DECOR_ZONES = [
-  {leftMin: 0.8, leftMax: 10.8, topMin: 10, topMax: 28},
-  {leftMin: 0.8, leftMax: 11.8, topMin: 29, topMax: 48},
-  {leftMin: 0.8, leftMax: 12.2, topMin: 49, topMax: 64},
-  {leftMin: 88, leftMax: 99.2, topMin: 10, topMax: 28},
-  {leftMin: 87.4, leftMax: 99.2, topMin: 29, topMax: 48},
-  {leftMin: 87.2, leftMax: 99.2, topMin: 49, topMax: 64},
-  {leftMin: 0.8, leftMax: 24.5, topMin: 69, topMax: 94},
-  {leftMin: 75.5, leftMax: 99.2, topMin: 69, topMax: 94},
+  {leftMin: 1.2, leftMax: 7.4, topMin: 9.5, topMax: 26},
+  {leftMin: 1.2, leftMax: 8.2, topMin: 27, topMax: 44},
+  {leftMin: 1.2, leftMax: 8.6, topMin: 45, topMax: 62},
+  {leftMin: 91.6, leftMax: 98.2, topMin: 9.5, topMax: 26},
+  {leftMin: 90.8, leftMax: 98.2, topMin: 27, topMax: 44},
+  {leftMin: 90.4, leftMax: 98.2, topMin: 45, topMax: 62},
+  {leftMin: 1.2, leftMax: 12.6, topMin: 69.5, topMax: 95},
+  {leftMin: 87.4, leftMax: 98.2, topMin: 69.5, topMax: 95},
 ];
 
 const state = {
@@ -119,6 +119,7 @@ const state = {
   battleFeed: [],
   message: 'Choose Bot Run or Link Battle.',
   actionLocked: false,
+  selectedChoice: '',
   battleFinished: false,
   teamStates: {p1: [], p2: []},
   active: {p1: null, p2: null},
@@ -195,6 +196,12 @@ function compactMeta(parts) {
   return parts.filter(Boolean).join(' | ');
 }
 
+function statusFromCondition(condition = '') {
+  if (!condition || condition.endsWith(' fnt')) return condition.endsWith(' fnt') ? 'fainted' : '';
+  const match = condition.match(/\b(brn|frz|par|psn|tox|slp)\b/i);
+  return match ? match[1].toLowerCase() : '';
+}
+
 function spriteTag(member, facing = 'front', size = 'md') {
   if (!member?.sprites?.[facing]) return '';
   return `<img class="sprite ${size} ${facing}" src="${member.sprites[facing]}" alt="${member.name}">`;
@@ -211,7 +218,7 @@ function renderBattleDecor() {
     const zone = BATTLE_DECOR_ZONES[index % BATTLE_DECOR_ZONES.length];
     const left = zone.leftMin + (zone.leftMax - zone.leftMin) * seededUnit(index + 11);
     const top = zone.topMin + (zone.topMax - zone.topMin) * seededUnit(index + 97);
-    const size = 20 + Math.round(seededUnit(index + 173) * 24);
+    const size = 18 + Math.round(seededUnit(index + 173) * 20);
     const rotation = -10 + seededUnit(index + 241) * 20;
     const opacity = 0.1 + seededUnit(index + 311) * 0.12;
     return `<img class="battle-decor-sprite" src="${member.sprites.front}" alt="" style="left:${left.toFixed(2)}%;top:${top.toFixed(2)}%;width:${size}px;height:${size}px;opacity:${opacity.toFixed(2)};transform:translate(-50%,-50%) rotate(${rotation.toFixed(2)}deg);">`;
@@ -685,13 +692,16 @@ function renderBench(team, own) {
 
 function renderChoiceButtons() {
   if (!state.playerRequest) return '<div class="empty">Waiting for the next request.</div>';
-  const disabled = state.actionLocked ? 'disabled' : '';
+  const switchDisabled = state.actionLocked ? 'disabled' : '';
   if (state.playerRequest.forceSwitch) {
-    return `<div class="choice-grid">${state.playerRequest.side.pokemon.map((mon, index) => ({mon, index})).filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt')).map(({mon, index}) => `<button class="choice-btn" ${disabled} data-choice="switch ${index + 1}">${mon.details.split(',')[0]}<span>Forced switch</span></button>`).join('')}</div>`;
+    return `<div class="choice-grid">${state.playerRequest.side.pokemon.map((mon, index) => ({mon, index})).filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt')).map(({mon, index}) => `<button class="choice-btn" ${switchDisabled} data-choice="switch ${index + 1}" data-choice-kind="switch">${mon.details.split(',')[0]}<span>Forced switch</span></button>`).join('')}</div>`;
   }
-  const moves = state.playerRequest.active?.[0]?.moves.map((move, index) => `<button class="choice-btn" ${disabled} data-choice="move ${index + 1}">${move.move}<span>${move.pp}/${move.maxpp} PP</span></button>`).join('') || '';
+  const moves = state.playerRequest.active?.[0]?.moves.map((move, index) => {
+    const selected = state.selectedChoice === `move ${index + 1}` ? 'selected' : '';
+    return `<button class="choice-btn ${selected}" data-choice="move ${index + 1}" data-choice-kind="move" data-move-name="${move.move}">${move.move}<span>${move.pp}/${move.maxpp} PP</span></button>`;
+  }).join('') || '';
   const switches = !state.playerRequest.active?.[0]?.trapped
-    ? state.playerRequest.side.pokemon.map((mon, index) => ({mon, index})).filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt')).map(({mon, index}) => `<button class="choice-btn alt" ${disabled} data-choice="switch ${index + 1}">${mon.details.split(',')[0]}<span>Spend your turn</span></button>`).join('')
+    ? state.playerRequest.side.pokemon.map((mon, index) => ({mon, index})).filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt')).map(({mon, index}) => `<button class="choice-btn alt" ${switchDisabled} data-choice="switch ${index + 1}" data-choice-kind="switch">${mon.details.split(',')[0]}<span>Spend your turn</span></button>`).join('')
     : '';
   return `<div class="choice-grid">${moves}${switches}</div>`;
 }
@@ -765,7 +775,7 @@ function bindEvents() {
   document.querySelectorAll('[data-draft-id]').forEach((button) => button.addEventListener('click', () => draftSpecies(button.dataset.draftId)));
   document.querySelectorAll('[data-link-draft-id]').forEach((button) => button.addEventListener('click', () => pickLinkDraft(button.dataset.linkDraftId)));
   document.querySelectorAll('[data-move-index]').forEach((button) => button.addEventListener('click', () => movePreviewMon(Number(button.dataset.moveIndex), Number(button.dataset.moveDir))));
-  document.querySelectorAll('[data-choice]').forEach((button) => button.addEventListener('click', () => submitChoice(button.dataset.choice)));
+  document.querySelectorAll('[data-choice]').forEach((button) => button.addEventListener('click', () => handleChoiceClick(button.dataset.choice, button.dataset.choiceKind || '', button.dataset.moveName || '')));
   document.querySelectorAll('[data-inspect]').forEach((button) => button.addEventListener('click', () => openInspect(button.dataset.inspect)));
   document.querySelectorAll('[data-close-inspect]').forEach((button) => button.addEventListener('click', closeInspect));
   document.getElementById('joinCodeInput')?.addEventListener('input', (event) => { state.hostJoinCode = event.target.value.trim(); });
@@ -775,12 +785,38 @@ function resetBattleState() {
   state.battle = null;
   state.playerRequest = null;
   state.actionLocked = false;
+  state.selectedChoice = '';
   state.battleFinished = false;
   state.teamStates = {p1: [], p2: []};
   state.active = {p1: null, p2: null};
   state.lastMove = {p1: '', p2: ''};
   state.flash = {p1: '', p2: ''};
   state.battleFeed = [];
+}
+
+function selectedMoveChoice(request = state.playerRequest) {
+  if (!request || request.forceSwitch || !state.selectedChoice?.startsWith('move ')) return '';
+  const slot = Number(state.selectedChoice.split(' ')[1]) - 1;
+  const move = request.active?.[0]?.moves?.[slot];
+  return move && !move.disabled && move.pp > 0 ? state.selectedChoice : '';
+}
+
+function maybeSubmitHeldMove(request = state.playerRequest) {
+  const choice = selectedMoveChoice(request);
+  if (!choice || state.actionLocked) return false;
+  submitChoice(choice);
+  return true;
+}
+
+function handleChoiceClick(choice, kind, moveName) {
+  if (kind !== 'move') return submitChoice(choice);
+  if (state.selectedChoice === choice) {
+    state.selectedChoice = '';
+    return render();
+  }
+  state.selectedChoice = choice;
+  render();
+  if (!state.actionLocked && state.playerRequest && selectedMoveChoice(state.playerRequest) === choice) submitChoice(choice);
 }
 
 function resetDraft() {
@@ -1053,7 +1089,7 @@ function handleLinkMessage(message) {
     state.playerRequest = message.request;
     state.actionLocked = false;
     updateTeamStateFromRequest(ownSide(), message.request);
-    render();
+    if (!maybeSubmitHeldMove(message.request)) render();
   }
   if (message.type === 'battle-choice' && state.link.role === 'host' && state.battle) state.battle.streams.p2.write(message.choice);
   if (message.type === 'battle-chunk') void animateBattleChunk(message.chunk);
@@ -1119,7 +1155,7 @@ async function startBattleSimulation({p1Team, p2Team, p1Name, p2Name, localSide,
           state.playerRequest = request;
           state.actionLocked = false;
           updateTeamStateFromRequest('p1', request);
-          render();
+          if (!maybeSubmitHeldMove(request)) render();
         }
       }
     }
@@ -1149,10 +1185,17 @@ async function startBattleSimulation({p1Team, p2Team, p1Name, p2Name, localSide,
 }
 
 function updateTeamStateFromRequest(sideKey, request) {
-  state.teamStates[sideKey] = request.side.pokemon.map((mon) => {
+  state.teamStates[sideKey] = request.side.pokemon.map((mon, index) => {
     const name = mon.details.split(',')[0];
+    const existing = state.teamStates[sideKey]?.[index];
     const original = resolveMember(name);
-    return {...(original || {name, types: ['Normal'], sprites: {}}), condition: mon.condition, active: mon.active, status: mon.status || (mon.condition.endsWith(' fnt') ? 'fainted' : '')};
+    return {
+      ...(original || {name, types: ['Normal'], sprites: {}}),
+      ...(existing?.name === name ? existing : {}),
+      condition: mon.condition,
+      active: mon.active,
+      status: mon.status || statusFromCondition(mon.condition),
+    };
   });
   state.active[sideKey] = state.teamStates[sideKey].find((member) => member.active) || null;
 }
@@ -1187,6 +1230,7 @@ function battleText(parts) {
   if (type === 'faint') return `${parts[2].split(': ').pop()} fainted.`;
   if (type === '-status') return `${parts[2].split(': ').pop()} is afflicted with ${formatStatus(parts[3])}.`;
   if (type === '-curestatus') return `${parts[2].split(': ').pop()} recovered.`;
+  if (type === '-clearstatus') return `${parts[2].split(': ').pop()} is cured.`;
   if (type === 'cant') {
     const name = parts[2].split(': ').pop();
     const reason = parts[3];
@@ -1216,8 +1260,20 @@ function battleText(parts) {
     if (parts[3]?.startsWith('move: Bide')) return `${name} is storing energy.`;
     return `${name} activates ${parts[3]}.`;
   }
+  if (type === '-sidestart') return `${parts[2].startsWith('p1') ? 'One side' : 'The other side'} gained ${parts[3]}.`;
+  if (type === '-sideend') return `${parts[3]} wore off.`;
+  if (type === '-fieldstart') return `${parts[2]} began.`;
+  if (type === '-fieldend') return `${parts[2]} ended.`;
+  if (type === '-prepare') return `${parts[2].split(': ').pop()} is getting ready for ${parts[3]}.`;
+  if (type === '-singleturn') return `${parts[2].split(': ').pop()} is affected by ${parts[3]}.`;
+  if (type === '-singlemove') return `${parts[2].split(': ').pop()} gained ${parts[3]}.`;
   if (type === '-boost') return `${parts[2].split(': ').pop()} boosts ${parts[3]}.`;
   if (type === '-unboost') return `${parts[2].split(': ').pop()} loses ${parts[3]}.`;
+  if (type === '-clearboost') return `${parts[2].split(': ').pop()}'s stat boosts were cleared.`;
+  if (type === '-clearallboost') return 'All stat changes were cleared.';
+  if (type === '-clearpositiveboost') return `${parts[2].split(': ').pop()}'s positive boosts were removed.`;
+  if (type === '-clearnegativeboost') return `${parts[2].split(': ').pop()}'s negative boosts were removed.`;
+  if (type === '-setboost') return `${parts[2].split(': ').pop()}'s ${parts[3]} changed.`;
   if (type === '-immune') return `${parts[2].split(': ').pop()} is unaffected.`;
   if (type === '-fail') return 'But it failed.';
   if (type === '-mustrecharge') return `${parts[2].split(': ').pop()} must wait this turn.`;
@@ -1256,6 +1312,7 @@ function handleBattleLine(line) {
     updateRosterState(sideKey, name, (target, team) => {
       team.forEach((entry) => { entry.active = entry.name === name; });
       target.condition = parts[4];
+      target.status = statusFromCondition(parts[4]) || target.status || '';
       target.active = true;
     });
     flashSide(sideKey, 'flash-switch');
@@ -1263,11 +1320,14 @@ function handleBattleLine(line) {
   }
   if (type === '-damage' || type === '-heal') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
-    updateRosterState(sideKey, parts[2].split(': ').pop(), (target) => { target.condition = parts[3]; });
+    updateRosterState(sideKey, parts[2].split(': ').pop(), (target) => {
+      target.condition = parts[3];
+      target.status = statusFromCondition(parts[3]) || target.status || '';
+    });
     flashSide(sideKey, type === '-damage' ? 'flash-hit' : 'flash-heal');
     return 550;
   }
-  if (type === '-status' || type === '-curestatus') {
+  if (type === '-status' || type === '-curestatus' || type === '-clearstatus') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
     updateRosterState(sideKey, parts[2].split(': ').pop(), (target) => { target.status = type === '-status' ? parts[3] : ''; });
     return 650;
@@ -2511,6 +2571,29 @@ function injectStyles() {
       min-height:24px;
       padding:3px 8px;
       text-align:left;
+      border:2px solid transparent;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+    }
+    .choice-btn:hover:not(:disabled){
+      border-color:rgba(135,211,255,.88);
+      box-shadow:0 0 0 1px rgba(135,211,255,.28), inset 0 0 0 1px rgba(255,255,255,.16);
+    }
+    .choice-btn.selected{
+      border-color:#1e56a8;
+      background:linear-gradient(180deg,#3e79d6,#234c9d);
+      color:#f4f8ff;
+      box-shadow:0 0 0 1px rgba(21,49,97,.85), inset 0 0 0 1px rgba(255,255,255,.08);
+    }
+    .choice-btn.selected span{
+      color:#dbeaff;
+    }
+    .choice-btn.alt.selected{
+      border-color:transparent;
+      background:linear-gradient(180deg,#cfdfab,#8ca85b);
+      color:var(--ink);
+    }
+    .choice-btn:disabled{
+      opacity:.82;
     }
     .synergy,.metrics{display:grid;gap:8px}
     .log-line{
@@ -2760,7 +2843,6 @@ function injectStyles() {
         width:min(34vw,430px);
         height:auto;
         display:block;
-        mix-blend-mode:multiply;
         filter:drop-shadow(0 18px 24px rgba(0,0,0,.18));
       }
       .preview-shell .draft-hero-copy h2{
