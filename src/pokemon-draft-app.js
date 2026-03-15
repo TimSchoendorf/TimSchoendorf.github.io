@@ -661,7 +661,7 @@ function hpTone(percent) {
 }
 
 function renderCombatant(mon, label, facing, sideKey, side) {
-  if (!mon) return `<div class="combatant combatant-${side} empty">Waiting for the active Pokemon.</div>`;
+  if (!mon) return `<div class="combatant combatant-${side} empty"></div>`;
   const percent = conditionToPercent(mon.condition);
   return `<div class="combatant combatant-${side} ${state.flash[sideKey]}">
     <div class="battle-status battle-status-${side}">
@@ -804,7 +804,12 @@ function selectedMoveChoice(request = state.playerRequest) {
 
 function maybeSubmitHeldMove(request = state.playerRequest) {
   const choice = selectedMoveChoice(request);
-  if (!choice || state.actionLocked) return false;
+  if (!choice) {
+    if (state.selectedChoice) state.selectedChoice = '';
+    return false;
+  }
+  if (state.actionLocked) return false;
+  state.selectedChoice = '';
   submitChoice(choice);
   return true;
 }
