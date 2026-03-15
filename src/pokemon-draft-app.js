@@ -7,7 +7,6 @@ import {
   conditionToPercent,
   draftSynergy,
   drawPack,
-  estimateRole,
   generateSet,
   pickOpponentDraft,
   previewMoves,
@@ -239,6 +238,58 @@ function closeInspect() {
   render();
 }
 
+function inspectMoveDetails(member) {
+  const moveIds = member.set?.moves || generateSet(member, dex).moves;
+  return moveIds.map((moveId) => dex.moves.get(moveId)).filter((move) => move?.exists);
+}
+
+const GEN1_TYPE_NAMES = ['Normal', 'Fire', 'Water', 'Electric', 'Grass', 'Ice', 'Fighting', 'Poison', 'Ground', 'Flying', 'Psychic', 'Bug', 'Rock', 'Ghost', 'Dragon'];
+
+function inspectTypeMultiplier(attackingType, defendingTypes = []) {
+  return defendingTypes.reduce((multiplier, defendingType) => {
+    const effect = dex.types.get(defendingType)?.damageTaken?.[attackingType];
+    if (effect === 1) return multiplier * 2;
+    if (effect === 2) return multiplier * 0.5;
+    if (effect === 3) return multiplier * 0;
+    return multiplier;
+  }, 1);
+}
+
+function inspectTypeInsights(member) {
+  return GEN1_TYPE_NAMES.reduce((chart, attackingType) => {
+    const multiplier = inspectTypeMultiplier(attackingType, member.types);
+    if (multiplier === 0) chart.immune.push(attackingType);
+    else if (multiplier > 1) chart.weak.push(`${attackingType} x${multiplier}`);
+    else if (multiplier < 1) chart.resist.push(`${attackingType} x${multiplier}`);
+    return chart;
+  }, {weak: [], resist: [], immune: []});
+}
+
+function formatMoveAccuracy(move) {
+  return move.accuracy === true ? '--' : `${move.accuracy}`;
+}
+
+function formatMovePower(move) {
+  return move.category === 'Status' ? '--' : `${move.basePower || 0}`;
+}
+
+function renderInspectMoveCard(move) {
+  const effectText = move.desc && move.desc !== 'No additional effect.' ? move.desc : move.shortDesc && move.shortDesc !== 'No additional effect.' ? move.shortDesc : 'Kein zusätzlicher Effekt.';
+  return `<article class="inspect-move-card">
+    <div class="inspect-move-head">
+      <strong>${move.name}</strong>
+      <div class="inspect-move-tags"><span>${move.type}</span><span>${move.category}</span></div>
+    </div>
+    <div class="inspect-move-stats">
+      <div><span>Stärke</span><strong>${formatMovePower(move)}</strong></div>
+      <div><span>Genauigkeit</span><strong>${formatMoveAccuracy(move)}</strong></div>
+      <div><span>PP</span><strong>${move.pp || '--'}</strong></div>
+      <div><span>Priorität</span><strong>${move.priority || 0}</strong></div>
+    </div>
+    <p><span>Effekt</span>${effectText}</p>
+  </article>`;
+}
+
 function logLine(text) {
   state.logs.unshift(text);
   state.logs = state.logs.slice(0, 100);
@@ -251,7 +302,6 @@ function pushBattleFeed(text) {
 function renderRosterCard(member, reveal) {
   return `<div class="roster-card" style="background:${typeGradient(member.types)}">
     <div class="roster-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="tiny">#${member.num} | ${member.types.join(' / ')}</div></div><button class="info-chip" data-inspect="${member.name}">Infos</button></div>
-    <div class="tiny">${compactMeta([estimateRole(member), member.archetype])}</div>
     <div class="tiny">${reveal ? `L100 ${member.battleStats.hp}/${member.battleStats.atk}/${member.battleStats.def}/${member.battleStats.spc}/${member.battleStats.spe}` : 'Daten verborgen'}</div>
   </div>`;
 }
@@ -260,7 +310,7 @@ function renderSidePanel(title, team, reveal) {
   const synergy = team.length ? draftSynergy(team) : null;
   return `<div class="panel"><div class="label">${title}</div>
     ${team.length ? team.map((member) => renderRosterCard(member, reveal)).join('') : '<div class="empty">Noch keine Auswahl.</div>'}
-    ${synergy ? `<div class="synergy"><span>Typen ${synergy.typeCoverage}</span><span>Rollen ${synergy.roleCoverage}</span><span>Control ${synergy.control}</span></div>` : ''}
+    ${synergy ? `<div class="synergy"><span>Typen ${synergy.typeCoverage}</span><span>Profile ${synergy.roleCoverage}</span><span>Control ${synergy.control}</span></div>` : ''}
   </div>`;
 }
 
@@ -293,7 +343,6 @@ function renderDraftCard(species, pickAttr) {
       <div class="draft-choice-sprite">${spriteTag(species, 'front', 'lg')}</div>
       <div class="draft-choice-copy">
         <div class="types">${species.types.map((type) => `<span>${type}</span>`).join('')}</div>
-        <div class="draft-role-row"><span>${estimateRole(species)}</span><span>${species.archetype}</span></div>
         <div class="move-row">${previewMoves(species, dex).map((move) => `<span>${move}</span>`).join('')}</div>
       </div>
     </div>
@@ -353,6 +402,7 @@ function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, c
     </section>
     <section class="draft-board">
       <div class="draft-section-head"><div><div class="label">Auswahl</div><h3>Wähle 1 von 3 Pokémon</h3></div><p>${action}</p></div>
+      <div class="draft-mobile-swipe-hint"><span>←</span><strong>Wischen für die nächste Karte</strong><em>● ● ●</em></div>
       <section class="draft-choice-grid">${cards}</section>
     </section>
   </section>`;
@@ -369,18 +419,51 @@ function renderPreviewCard(member, index, controls) {
 function renderInspectModal() {
   if (!state.inspecting) return '';
   const member = state.inspecting;
+  const moves = inspectMoveDetails(member);
+  const typeInsights = inspectTypeInsights(member);
+  const totalBase = member.baseStats.hp + member.baseStats.atk + member.baseStats.def + member.baseStats.spc + member.baseStats.spe;
+  const totalBattle = member.battleStats.hp + member.battleStats.atk + member.battleStats.def + member.battleStats.spc + member.battleStats.spe;
+  const renderInsight = (label, values, tone = '') => `<div class="inspect-profile-row ${tone}"><span>${label}</span><div>${values.length ? values.map((value) => `<em>${value}</em>`).join('') : '<strong>Keine</strong>'}</div></div>`;
   return `<div class="modal-backdrop" data-close-inspect="1">
     <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-head"><div><div class="label">Pokémon Details</div><h3>${member.name}</h3></div><button class="ghost-btn" data-close-inspect="1">Schließen</button></div>
+      <div class="modal-head"><div><div class="label">Pokémon-Infos</div><h3>${member.name}</h3></div><button class="ghost-btn" data-close-inspect="1">Schließen</button></div>
       <div class="modal-body">
-        <div class="modal-card" style="background:${typeGradient(member.types)}">${spriteTag(member, 'front', 'lg')}</div>
-        <div class="modal-stats">
-          <div><strong>Typen</strong><span>${member.types.join(' / ')}</span></div>
-          <div><strong>Base</strong><span>${member.baseStats.hp}/${member.baseStats.atk}/${member.baseStats.def}/${member.baseStats.spc}/${member.baseStats.spe}</span></div>
-          <div><strong>Level 100</strong><span>${member.battleStats.hp}/${member.battleStats.atk}/${member.battleStats.def}/${member.battleStats.spc}/${member.battleStats.spe}</span></div>
-          <div><strong>Rolle</strong><span>${member.archetype}</span></div>
+        <div class="modal-card inspect-summary" style="background:${typeGradient(member.types)}">
+          ${spriteTag(member, 'front', 'lg')}
+          <div class="inspect-summary-meta">
+            <div class="inspect-summary-head"><span>#${member.num}</span><strong>${member.name}</strong></div>
+            <div class="types">${member.types.map((type) => `<span>${type}</span>`).join('')}</div>
+            <div class="inspect-summary-grid">
+              <div><span>Basis gesamt</span><strong>${totalBase}</strong></div>
+              <div><span>Lv100 gesamt</span><strong>${totalBattle}</strong></div>
+            </div>
+          </div>
         </div>
-        <div class="modal-moves"><strong>Moveset</strong>${member.moveNames.map((move) => `<span>${move}</span>`).join('')}</div>
+        <div class="inspect-details">
+          <div class="modal-stats inspect-stat-panel">
+            <strong>Werte</strong>
+            <div class="inspect-stat-grid">
+              <div><span>KP</span><strong>${member.baseStats.hp}</strong><em>${member.battleStats.hp}</em></div>
+              <div><span>ANG</span><strong>${member.baseStats.atk}</strong><em>${member.battleStats.atk}</em></div>
+              <div><span>VER</span><strong>${member.baseStats.def}</strong><em>${member.battleStats.def}</em></div>
+              <div><span>SPC</span><strong>${member.baseStats.spc}</strong><em>${member.battleStats.spc}</em></div>
+              <div><span>INIT</span><strong>${member.baseStats.spe}</strong><em>${member.battleStats.spe}</em></div>
+            </div>
+            <div class="inspect-stat-legend"><span>oben: Base</span><span>unten: Level 100</span></div>
+          </div>
+          <div class="modal-card inspect-profile-panel">
+            <strong>Typ-Profil</strong>
+            <div class="inspect-profile-grid">
+              ${renderInsight('Schwach gegen', typeInsights.weak, 'danger')}
+              ${renderInsight('Resistent gegen', typeInsights.resist, 'good')}
+              ${renderInsight('Immun gegen', typeInsights.immune)}
+            </div>
+          </div>
+          <div class="modal-moves inspect-move-panel">
+            <strong>Attacken</strong>
+            <div class="inspect-move-list">${moves.map((move) => renderInspectMoveCard(move)).join('')}</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>`;
@@ -1502,6 +1585,29 @@ function injectStyles() {
       gap:14px;
       min-height:0;
     }
+    .draft-mobile-swipe-hint{
+      display:none;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      padding:10px 12px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      color:var(--muted);
+    }
+    .draft-mobile-swipe-hint strong{
+      font-size:.78rem;
+      line-height:1.2;
+      letter-spacing:.03em;
+    }
+    .draft-mobile-swipe-hint span,.draft-mobile-swipe-hint em{
+      color:var(--menu-accent-soft);
+      font-style:normal;
+      font-weight:800;
+      letter-spacing:.16em;
+      white-space:nowrap;
+    }
     .draft-choice-card{
       display:grid;
       gap:12px;
@@ -2194,13 +2300,19 @@ function injectStyles() {
     .modal-backdrop{
       position:fixed;
       inset:0;
-      background:rgba(0,0,0,.55);
+      background:rgba(4,8,7,.78);
+      backdrop-filter:blur(4px);
       display:grid;
       place-items:center;
       padding:20px;
+      z-index:40;
     }
     .modal{
-      width:min(780px,100%);
+      width:min(980px,100%);
+      max-height:min(88svh,920px);
+      overflow:hidden;
+      display:grid;
+      grid-template-rows:auto minmax(0,1fr);
       padding:20px;
       background:#16211a;
     }
@@ -2212,16 +2324,186 @@ function injectStyles() {
     }
     .modal-body{
       display:grid;
-      grid-template-columns:180px 1fr;
+      grid-template-columns:240px 1fr;
       gap:18px;
+      min-height:0;
+      overflow:auto;
+      padding-right:4px;
     }
     .modal-card{
       padding:18px;
       border-radius:22px;
       display:grid;
-      place-items:center;
+      align-content:start;
+      gap:14px;
     }
     .modal-stats,.modal-moves{display:grid;gap:10px}
+    .inspect-summary .sprite.lg{
+      justify-self:center;
+    }
+    .inspect-summary-meta{
+      display:grid;
+      gap:12px;
+    }
+    .inspect-summary-head{
+      display:grid;
+      gap:4px;
+    }
+    .inspect-summary-head span{
+      color:var(--ink-soft);
+      font-size:.82rem;
+      font-weight:700;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+    }
+    .inspect-summary-grid{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+    }
+    .inspect-summary-grid div,.inspect-stat-grid div,.inspect-move-stats div{
+      padding:10px;
+      border-radius:16px;
+      background:rgba(255,255,255,.14);
+      display:grid;
+      gap:4px;
+    }
+    .inspect-summary-grid span,.inspect-stat-grid span,.inspect-move-stats span{
+      color:var(--ink-soft);
+      font-size:.72rem;
+      font-weight:700;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+    }
+    .inspect-details{
+      display:grid;
+      gap:16px;
+      min-width:0;
+      align-content:start;
+    }
+    .inspect-stat-panel,.inspect-move-panel,.inspect-profile-panel{
+      display:grid;
+      gap:12px;
+      padding:16px;
+      border-radius:22px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .inspect-stat-grid{
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:10px;
+    }
+    .inspect-stat-grid em{
+      color:var(--text);
+      font-style:normal;
+      font-size:.86rem;
+      font-weight:700;
+      opacity:.9;
+    }
+    .inspect-stat-legend{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      color:var(--muted);
+      font-size:.8rem;
+    }
+    .inspect-profile-grid{
+      display:grid;
+      gap:10px;
+    }
+    .inspect-profile-row{
+      display:grid;
+      gap:8px;
+      padding:12px;
+      border-radius:18px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .inspect-profile-row.good{
+      border-color:rgba(156,214,159,.24);
+      background:rgba(88,135,93,.12);
+    }
+    .inspect-profile-row.danger{
+      border-color:rgba(231,154,138,.24);
+      background:rgba(124,66,59,.16);
+    }
+    .inspect-profile-row > span{
+      color:var(--muted);
+      font-size:.78rem;
+      font-weight:700;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+    }
+    .inspect-profile-row div{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .inspect-profile-row em{
+      padding:5px 8px;
+      border-radius:999px;
+      background:var(--chip);
+      color:var(--chip-text);
+      font-style:normal;
+      font-size:.76rem;
+      font-weight:700;
+    }
+    .inspect-profile-row strong{
+      color:var(--text);
+      font-size:.92rem;
+    }
+    .inspect-move-list{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:12px;
+    }
+    .inspect-move-card{
+      display:grid;
+      gap:10px;
+      padding:14px;
+      border-radius:18px;
+      background:rgba(255,255,255,.07);
+      border:1px solid rgba(255,255,255,.08);
+      min-width:0;
+    }
+    .inspect-move-head{
+      display:grid;
+      gap:8px;
+    }
+    .inspect-move-tags{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .inspect-move-tags span{
+      padding:5px 8px;
+      border-radius:999px;
+      background:var(--chip);
+      color:var(--chip-text);
+      font-size:.76rem;
+      font-weight:700;
+    }
+    .inspect-move-stats{
+      display:grid;
+      grid-template-columns:repeat(4,minmax(0,1fr));
+      gap:8px;
+    }
+    .inspect-move-card p{
+      margin:0;
+      color:var(--text);
+      line-height:1.45;
+      font-size:.92rem;
+      display:grid;
+      gap:6px;
+    }
+    .inspect-move-card p span{
+      color:var(--muted);
+      font-size:.72rem;
+      font-weight:700;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+    }
     .modal-stats span{display:block;color:var(--text)}
     .empty{
       padding:14px;
@@ -2469,6 +2751,11 @@ function injectStyles() {
         font-size:.68rem;
       }
       .draft-chip-row span:nth-child(n+4){display:none}
+      .draft-mobile-swipe-hint{
+        display:flex;
+        padding:8px 10px;
+        border-radius:14px;
+      }
       .draft-status-progress{
         gap:6px;
       }
@@ -2526,12 +2813,13 @@ function injectStyles() {
       .draft-choice-grid{
         display:grid;
         grid-auto-flow:column;
-        grid-auto-columns:100%;
+        grid-auto-columns:84%;
         grid-template-columns:none;
         gap:10px;
         overflow-x:auto;
         overflow-y:hidden;
         scroll-snap-type:x mandatory;
+        padding-right:18%;
         padding-bottom:2px;
       }
       .draft-choice-grid::-webkit-scrollbar{display:none}
@@ -2550,6 +2838,7 @@ function injectStyles() {
       .draft-choice-sprite{
         min-width:58px;
       }
+      .draft-role-row{display:none}
       .draft-stat-grid{
         grid-template-columns:repeat(5,minmax(0,1fr));
         gap:6px;
@@ -2605,6 +2894,60 @@ function injectStyles() {
         font-size:.56rem;
         letter-spacing:0;
         line-height:1.08;
+      }
+      .modal-backdrop{
+        padding:8px;
+      }
+      .modal{
+        width:100%;
+        height:calc(100svh - 16px);
+        max-height:none;
+        padding:14px;
+        border-radius:24px;
+      }
+      .modal-head{
+        position:sticky;
+        top:0;
+        z-index:1;
+        background:#16211a;
+        padding-bottom:8px;
+      }
+      .modal-body{
+        grid-template-columns:1fr;
+        gap:14px;
+        padding-right:0;
+      }
+      .inspect-summary{
+        grid-template-columns:72px 1fr;
+        align-items:center;
+      }
+      .inspect-summary .sprite.lg{
+        width:72px;
+        height:72px;
+      }
+      .inspect-summary-grid{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+      .inspect-stat-grid{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:8px;
+      }
+      .inspect-profile-row{
+        padding:10px;
+      }
+      .inspect-move-list{
+        grid-template-columns:1fr;
+      }
+      .inspect-move-stats{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+      }
+      .inspect-move-card{
+        padding:12px;
+        gap:8px;
+      }
+      .inspect-move-card p{
+        font-size:.86rem;
+        line-height:1.35;
       }
       .menu-stage-mon-player .menu-sprite-player.back{transform:translateX(-2%) translateY(var(--menu-player-shift-y))}
       .menu-tech-card-player{display:none}
