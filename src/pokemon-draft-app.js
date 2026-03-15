@@ -2811,6 +2811,7 @@ function injectStyles() {
       .draft-team-strip{
         gap:6px;
         grid-template-columns:repeat(3,minmax(0,1fr));
+        min-height:72px;
       }
       .draft-team-slot{
         grid-template-columns:1fr;
@@ -2820,6 +2821,7 @@ function injectStyles() {
         gap:6px;
         border-radius:16px;
         min-height:72px;
+        height:72px;
         align-content:center;
       }
       .draft-team-slot.empty{
@@ -2830,8 +2832,7 @@ function injectStyles() {
         height:34px;
       }
       .draft-team-copy strong{
-        font-size:.68rem;
-        line-height:1.1;
+        display:none;
       }
       .draft-team-slot .tiny{
         display:none;
@@ -3205,18 +3206,20 @@ function injectStyles() {
       }
       .draft-team-strip{
         gap:5px;
+        min-height:64px;
       }
       .draft-team-slot{
         padding:6px 4px;
         gap:4px;
         min-height:64px;
+        height:64px;
       }
       .draft-team-index{
         width:28px;
         height:28px;
       }
       .draft-team-slot.empty strong,.draft-team-copy strong{
-        font-size:.64rem;
+        display:none;
       }
       .draft-section-head h3{
         font-size:.88rem;
