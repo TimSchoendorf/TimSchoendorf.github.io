@@ -548,6 +548,7 @@ function renderBotPreviewStage() {
     playerCards: state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join(''),
     asidePanel: `<div class="preview-panel preview-opponent-panel">
         <div class="draft-section-head"><div><div class="label">Gegnerteam</div><h3>${currentEnemyLabel()}</h3></div><p>Das gegnerische Team steht fest. Du kannst jetzt deine Startreihenfolge festlegen.</p></div>
+        <div class="preview-mobile-summary">${state.opponentPreview.map((member, index) => `<span>${index + 1}. ${member.name}</span>`).join('')}</div>
         <div class="preview-card-list">${state.opponentPreview.map((member, index) => renderPreviewCard(member, index, false)).join('')}</div>
         <div class="actions"><button class="primary-btn" data-action="start-battle">Kampf starten</button><button class="ghost-btn" data-action="go-menu">Zur Moduswahl</button></div>
       </div>`,
@@ -1573,6 +1574,19 @@ function injectStyles() {
     .preview-card-list,.preview-status-stack{
       display:grid;
       gap:10px;
+    }
+    .preview-mobile-summary{
+      display:none;
+      gap:8px;
+      flex-wrap:wrap;
+    }
+    .preview-mobile-summary span{
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-size:.78rem;
+      font-weight:700;
     }
     .draft-section-head{
       display:flex;
@@ -2706,6 +2720,9 @@ function injectStyles() {
       .preview-shell{
         gap:8px;
         padding:4px 0 2px;
+        height:calc(100svh - 20px);
+        grid-template-rows:auto 1fr;
+        overflow:hidden;
       }
       .draft-topbar{
         display:grid;
@@ -2726,15 +2743,19 @@ function injectStyles() {
       }
       .preview-main-grid{
         grid-template-columns:1fr;
+        grid-template-rows:minmax(0,1fr) auto;
         gap:8px;
+        min-height:0;
+        overflow:hidden;
       }
       .preview-panel,.preview-side-panel{
         border-radius:20px;
         padding:10px;
         gap:8px;
       }
-      .preview-main-grid{
-        gap:8px;
+      .preview-panel{
+        min-height:0;
+        overflow:hidden;
       }
       .draft-hero-panel{
         grid-template-columns:minmax(0,1fr);
@@ -2779,27 +2800,57 @@ function injectStyles() {
         gap:8px;
       }
       .preview-card{
-        grid-template-columns:1fr;
-        justify-items:center;
-        text-align:center;
+        grid-template-columns:46px 1fr auto;
+        justify-items:stretch;
+        text-align:left;
+        align-items:center;
         gap:8px;
-        min-height:0;
-        padding:10px;
+        min-height:72px;
+        padding:8px;
+      }
+      .preview-card .sprite.sm{
+        width:42px;
+        height:42px;
       }
       .preview-copy{
         display:grid;
         gap:4px;
+        min-width:0;
+      }
+      .preview-copy .tiny{
+        display:none;
+      }
+      .preview-copy strong{
+        font-size:.92rem;
+        line-height:1.15;
       }
       .preview-actions{
-        width:100%;
-        justify-content:center;
-        flex-wrap:wrap;
+        width:auto;
+        display:grid;
+        grid-template-columns:repeat(3,minmax(0,auto));
+        justify-content:end;
+        gap:4px;
       }
       .preview-actions .info-chip,.preview-actions .mini-btn{
-        flex:1 1 auto;
         justify-content:center;
         padding:6px 8px;
-        font-size:.7rem;
+        font-size:.66rem;
+      }
+      .preview-opponent-panel .preview-card-list{
+        display:none;
+      }
+      .preview-mobile-summary{
+        display:flex;
+      }
+      .preview-side-panel .actions{
+        display:grid;
+        grid-template-columns:1fr 1fr;
+        gap:6px;
+      }
+      .preview-side-panel .actions .primary-btn,.preview-side-panel .actions .ghost-btn{
+        width:100%;
+        padding:8px 10px;
+        font-size:.78rem;
       }
       .draft-team-panel .label{
         display:none;
