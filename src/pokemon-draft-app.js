@@ -25,16 +25,16 @@ const GENERATION_CONFIG = {
     label: 'Gen 1',
     kicker: 'Retro Arena',
     title: 'Pokemon Battle Arena',
-    subtitle: 'Klassischer Draft, klare Fronten und eine Startseite wie der Einstieg vor einem Arena-Kampf.',
+    subtitle: 'Waehle zuerst eine Generation. Danach entscheidest du dich fuer Bot-Serie oder Link Battle und startest direkt in den Draft.',
     availability: 'Jetzt spielbar',
     status: 'Kanto-Pool aktiv',
-    features: ['151 Kanto-Pokemon', 'Solo oder Link Battle', 'Battle-Intro im Retro-Look'],
-    steps: ['Generation wählen', 'Modus wählen', 'Draft, Reihenfolge, Kampf'],
+    features: ['151 Kanto-Pokemon', 'Direkt spielbar', 'Retro-Arena im Gen-1-Stil'],
+    steps: ['Generation waehlen', 'Modus starten', 'Draft, Reihenfolge, Kampf'],
     modeCards: {
       bot: {
         eyebrow: 'Solo',
         title: 'Bot-Serie',
-        points: ['Draft aus 3 Optionen', 'Lead und Reihenfolge setzen', 'Arena-Kampf gegen KI'],
+        points: ['Immer 3 Pokemon zur Auswahl', 'Reihenfolge selbst festlegen', 'Danach gegen die KI kaempfen'],
         enabled: true,
         action: 'start-bot',
         cta: 'Starten',
@@ -42,29 +42,29 @@ const GENERATION_CONFIG = {
       link: {
         eyebrow: 'Online',
         title: 'Link Battle',
-        points: ['Raum öffnen oder verbinden', 'Verdeckter Draft in 3 Runden', 'Direktes Duell gegen Spieler'],
+        points: ['Raumcode teilen oder beitreten', 'Beide draften verdeckt in 3 Runden', 'Danach direkt gegeneinander kaempfen'],
         enabled: true,
         action: 'start-link',
         cta: 'Verbinden',
       },
     },
-    note: 'Das Regelset richtet sich nach der aktiven Generation.',
+    note: 'Die genauen Kampfregeln haengen von der gewaehlten Generation ab.',
   },
   gen5: {
     id: 'gen5',
     label: 'Gen 5',
     kicker: 'Next Era Preview',
     title: 'Pokemon Battle Arena',
-    subtitle: 'Eine modernere Arena-Vorschau mit eigenem Stil, vorbereitet als Basis für den späteren Gen-5-Ausbau.',
+    subtitle: 'Hier siehst du bereits den eigenen Stil fuer die spaetere Gen-5-Erweiterung. Der spielbare Modus folgt danach.',
     availability: 'Stilvorschau',
     status: 'Naechste Erweiterung',
-    features: ['Eigener Theme-Wechsel', 'Moderneres Arena-Gefuehl', 'Vorbereitet fuer spaetere Systeme'],
-    steps: ['Generation previewen', 'Look vergleichen', 'Spielmodus spaeter aktivieren'],
+    features: ['Eigenes Theme', 'Moderneres Arena-Gefuehl', 'Bereit fuer den Ausbau'],
+    steps: ['Generation ansehen', 'Stile vergleichen', 'Spaeter als Modus erweitern'],
     modeCards: {
       bot: {
         eyebrow: 'Solo',
         title: 'Bot-Serie',
-        points: ['Theme-Vorschau aktiv', 'Spielbarer Gen-5-Modus folgt', 'Struktur fuer Ausbau vorbereitet'],
+        points: ['Theme-Vorschau ist schon aktiv', 'Spielbarer Gen-5-Modus folgt', 'Struktur fuer spaeteren Ausbau steht'],
         enabled: false,
         action: 'start-bot',
         cta: 'Bald verfuegbar',
@@ -72,7 +72,7 @@ const GENERATION_CONFIG = {
       link: {
         eyebrow: 'Online',
         title: 'Link Battle',
-        points: ['Designsystem schon getrennt', 'Generationswechsel sofort sichtbar', 'Kampfmodus folgt spaeter'],
+        points: ['Designsystem schon getrennt', 'Wechsel zwischen den Stilen sofort sichtbar', 'Online-Modus folgt spaeter'],
         enabled: false,
         action: 'start-link',
         cta: 'Bald verfuegbar',
@@ -1234,8 +1234,8 @@ function injectStyles() {
     }
     .menu-shell{
       display:grid;
-      gap:18px;
-      padding:18px 0 10px;
+      gap:16px;
+      padding:12px 0 8px;
     }
     .menu-topbar{
       display:flex;
@@ -1277,7 +1277,7 @@ function injectStyles() {
     .menu-hero{
       display:grid;
       grid-template-columns:minmax(320px,1fr) minmax(380px,1.05fr);
-      gap:18px;
+      gap:16px;
       align-items:stretch;
     }
     .menu-copy,.menu-showcase,.menu-info-panel,.menu-modes{
@@ -1290,9 +1290,9 @@ function injectStyles() {
       background:linear-gradient(180deg,rgba(15,22,43,.94),rgba(11,16,34,.92));
     }
     .menu-copy{
-      padding:28px;
+      padding:24px;
       display:grid;
-      gap:16px;
+      gap:14px;
       align-content:start;
     }
     .menu-kicker-row{
@@ -1337,9 +1337,9 @@ function injectStyles() {
     }
     .menu-showcase{
       position:relative;
-      min-height:398px;
+      min-height:378px;
       overflow:hidden;
-      padding:20px;
+      padding:18px;
     }
     .menu-showcase::before{
       content:"";
@@ -1464,13 +1464,13 @@ function injectStyles() {
     .menu-lower{
       display:grid;
       grid-template-columns:minmax(0,1.35fr) minmax(280px,.92fr);
-      gap:18px;
+      gap:16px;
       align-items:start;
     }
     .menu-modes,.menu-info-panel{
-      padding:22px;
+      padding:20px;
       display:grid;
-      gap:18px;
+      gap:16px;
     }
     .menu-section-head{
       display:flex;
@@ -1489,8 +1489,8 @@ function injectStyles() {
     }
     .menu-mode-card{
       display:grid;
-      gap:16px;
-      padding:22px;
+      gap:14px;
+      padding:20px;
       text-align:left;
       color:var(--text);
       background:
@@ -1518,7 +1518,7 @@ function injectStyles() {
     }
     .menu-mode-card h3{
       margin:0;
-      font-size:1.8rem;
+      font-size:1.65rem;
     }
     .menu-mode-points{
       display:flex;
@@ -1571,7 +1571,7 @@ function injectStyles() {
     }
     .battle-ui{
       display:grid;
-      gap:8px;
+      gap:6px;
       font-family:"Courier New",monospace;
     }
     .battle-header{
@@ -1599,7 +1599,7 @@ function injectStyles() {
     }
     .battle-stage{
       position:relative;
-      height:clamp(360px,30vw,460px);
+      height:clamp(352px,28vw,430px);
       min-height:0;
       aspect-ratio:auto;
       --battle-pad-x:4.5%;
@@ -1753,13 +1753,13 @@ function injectStyles() {
     .battle-footer{
       display:grid;
       grid-template-columns:.92fr .92fr 1.16fr;
-      gap:8px;
+      gap:6px;
       max-width:none;
       width:100%;
       margin:0 auto;
     }
     .battle-panel{
-      padding:4px;
+      padding:3px;
       gap:4px;
       background:rgba(255,255,255,.05);
     }
@@ -1771,7 +1771,7 @@ function injectStyles() {
       padding:4px;
       justify-items:center;
       text-align:center;
-      min-height:60px;
+      min-height:56px;
     }
     .battle-panel .bench-card strong{
       font-size:.75rem;
@@ -1792,7 +1792,7 @@ function injectStyles() {
       justify-content:space-between;
       align-items:center;
       gap:8px;
-      min-height:26px;
+      min-height:24px;
       padding:3px 8px;
       text-align:left;
     }
@@ -1889,14 +1889,62 @@ function injectStyles() {
         margin:0 auto;
       }
       .battle-stage{
-        --battle-foe-line:12.5%;
-        --battle-player-line:21%;
+        --battle-foe-line:11.5%;
+        --battle-player-line:20.5%;
       }
       .battle-status-foe{
         width:22%;
       }
       .battle-status-player{
-        width:23%;
+        width:22%;
+        bottom:calc(var(--battle-player-line) + .5%);
+      }
+      .battle-sprite-foe{
+        top:calc(var(--battle-foe-line) + .5%);
+        right:7.5%;
+        width:19%;
+        height:24%;
+      }
+      .battle-sprite-player{
+        width:24%;
+        height:35%;
+      }
+    }
+    @media (max-height:950px) and (min-width:721px){
+      .menu-shell{
+        gap:12px;
+        padding:8px 0 6px;
+      }
+      .menu-hero,.menu-lower{
+        gap:12px;
+      }
+      .menu-copy,.menu-modes,.menu-info-panel{
+        padding:18px;
+        gap:14px;
+      }
+      .menu-copy h2{
+        font-size:clamp(2.3rem,4.1vw,4rem);
+      }
+      .menu-showcase{
+        min-height:340px;
+      }
+      .menu-stage-card-foe{top:18px;left:18px}
+      .menu-stage-card-player{right:18px;bottom:108px}
+      .menu-stage-mon-foe{top:74px;right:32px;width:22%;height:26%}
+      .menu-stage-mon-player{left:28px;bottom:98px;width:25%;height:34%}
+      .menu-stage-line-bottom{left:18px;right:18px;bottom:18px;height:68px}
+      .menu-stage-text{left:32px;right:32px;bottom:40px;font-size:.94rem}
+      .menu-mode-card{
+        padding:16px;
+      }
+      .menu-mode-card h3{
+        font-size:1.5rem;
+      }
+      .menu-step{
+        padding:10px;
+      }
+      .menu-meta-card{
+        padding:12px;
       }
     }
     @media (max-width:1280px){
@@ -1942,7 +1990,7 @@ function injectStyles() {
         gap:8px;
       }
       .menu-showcase{
-        min-height:300px;
+        min-height:286px;
         padding:14px;
       }
       .menu-stage-card,.menu-tech-card{
@@ -1954,8 +2002,8 @@ function injectStyles() {
       }
       .menu-stage-card-foe{top:12px;left:12px}
       .menu-stage-card-player{right:12px;bottom:88px}
-      .menu-stage-mon-foe{top:88px;right:12px;width:28%;height:26%}
-      .menu-stage-mon-player{left:12px;bottom:84px;width:33%;height:30%}
+      .menu-stage-mon-foe{top:86px;right:12px;width:25%;height:22%}
+      .menu-stage-mon-player{left:12px;bottom:84px;width:30%;height:26%}
       .menu-stage-line-bottom{
         left:12px;
         right:12px;
@@ -1973,10 +2021,11 @@ function injectStyles() {
       .menu-energy-b{width:150px;height:150px;bottom:70px;left:18px}
       .menu-showcase-gen5 .menu-stage-text{bottom:24px;left:20px;right:20px;font-size:.88rem}
       .menu-mode-card{
-        padding:18px;
+        padding:16px;
+        gap:12px;
       }
       .menu-mode-card h3{
-        font-size:1.45rem;
+        font-size:1.35rem;
       }
       .menu-step{
         grid-template-columns:38px 1fr;
