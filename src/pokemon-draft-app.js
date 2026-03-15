@@ -1385,9 +1385,9 @@ function injectStyles() {
     }
     .menu-stage-mon-player{
       left:6%;
-      bottom:28.5%;
-      width:19%;
-      height:26%;
+      bottom:24.5%;
+      width:21%;
+      height:30%;
     }
     .menu-sprite{
       display:block;
@@ -1399,7 +1399,7 @@ function injectStyles() {
       filter:drop-shadow(0 12px 0 rgba(255,255,255,.2)) drop-shadow(0 20px 18px rgba(0,0,0,.18));
     }
     .menu-sprite-foe.front{transform:translateX(1%)}
-    .menu-sprite-player.back{transform:translateX(-3%)}
+    .menu-sprite-player.back{transform:translateX(-3%) translateY(12%)}
     .menu-mon-placeholder{
       display:grid;
       place-items:center;
@@ -1438,6 +1438,7 @@ function injectStyles() {
       z-index:3;
       display:flex;
       align-items:center;
+      padding-left:clamp(72px,8vw,108px);
       color:#213018;
       font-size:.94rem;
       font-weight:700;
@@ -1745,7 +1746,7 @@ function injectStyles() {
     .battle-sprite-player{
       position:absolute;
       left:5.5%;
-      bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - .4%);
+      bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 3.2%);
       width:25%;
       height:38%;
     }
@@ -1847,7 +1848,7 @@ function injectStyles() {
       transform:translateX(2%) translateY(0);
     }
     .battle-sprite-player .sprite.battle.back{
-      transform:translateX(-2%) translateY(0);
+      transform:translateX(-2%) translateY(12%);
     }
     .modal-backdrop{
       position:fixed;
@@ -1939,9 +1940,9 @@ function injectStyles() {
       }
       .menu-stage-card-foe{top:16px;left:16px;width:min(34%,200px)}
       .menu-stage-mon-foe{top:56px;right:24px;width:18%;height:26%}
-      .menu-stage-mon-player{left:20px;bottom:88px;width:18%;height:24%}
+      .menu-stage-mon-player{left:18px;bottom:62px;width:20%;height:28%}
       .menu-stage-line-bottom{left:16px;right:16px;bottom:16px;height:72px}
-      .menu-stage-text{left:26px;right:26px;bottom:16px;height:72px;font-size:.82rem;line-height:1.08}
+      .menu-stage-text{left:26px;right:26px;bottom:16px;height:72px;padding-left:82px;font-size:.82rem;line-height:1.08}
       .menu-mode-card{
         padding:16px;
       }
@@ -1966,7 +1967,7 @@ function injectStyles() {
       .menu-section-head{align-items:flex-start;flex-direction:column}
       .menu-showcase{min-height:340px}
       .menu-stage-mon-foe{right:28px;width:18%;height:26%}
-      .menu-stage-mon-player{left:20px;bottom:88px;width:19%;height:24%}
+      .menu-stage-mon-player{left:18px;bottom:62px;width:21%;height:28%}
       .battle-footer{grid-template-columns:1fr 1fr}
       .battle-actions-panel{grid-column:1 / -1}
     }
@@ -2018,7 +2019,7 @@ function injectStyles() {
       .menu-stage-card-foe > span:last-child{display:none}
       .menu-stage-card-player{display:none}
       .menu-stage-mon-foe{top:34px;right:8px;width:17%;height:18%}
-      .menu-stage-mon-player{display:grid;left:4px;bottom:36px;width:14%;height:20%}
+      .menu-stage-mon-player{display:grid;left:2px;bottom:24px;width:19%;height:28%}
       .menu-stage-line-bottom{
         left:12px;
         right:12px;
@@ -2026,10 +2027,11 @@ function injectStyles() {
         height:30px;
       }
       .menu-stage-text{
-        left:58px;
+        left:76px;
         right:16px;
         bottom:8px;
         height:30px;
+        padding-left:0;
         font-size:.58rem;
         letter-spacing:0;
         line-height:1.08;
@@ -2133,7 +2135,7 @@ function injectStyles() {
       }
       .battle-sprite-player{
         left:7%;
-        bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 1%);
+        bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 4%);
         width:26%;
         height:30%;
       }
@@ -2143,7 +2145,7 @@ function injectStyles() {
         transform:translateX(4%) translateY(0);
       }
       .battle-sprite-player .sprite.battle.back{
-        transform:translateX(-4%) translateY(0);
+        transform:translateX(-4%) translateY(14%);
       }
       .battle-feed{
         left:3%;
