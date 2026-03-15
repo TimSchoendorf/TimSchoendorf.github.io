@@ -18,66 +18,67 @@ const dex = Dex.forGen(1);
 const app = document.getElementById('app');
 const BEST_RUN_KEY = 'pokemon-battler-rby-best-run-v4';
 const ENEMY_NAMES = ['Brock', 'Misty', 'Surge', 'Erika', 'Koga', 'Sabrina', 'Blaine', 'Giovanni', 'Lorelei', 'Lance'];
+const BATTLE_LOGO_PATH = '../assets/pokemon-logo-cutout.png';
 const GENERATION_CONFIG = {
   gen1: {
     id: 'gen1',
     label: 'Gen 1',
     kicker: 'Retro Arena',
-    title: 'Pokémon Battle Arena',
-    subtitle: 'Wähle zuerst eine Generation. Danach entscheidest du dich für Bot-Serie oder Link Battle und startest direkt in den Draft.',
-    availability: 'Jetzt spielbar',
-    status: 'Kanto-Pool aktiv',
-    features: ['151 Kanto-Pokémon', 'Direkt spielbar', 'Retro-Arena im Gen-1-Stil'],
-    steps: ['Generation wählen', 'Modus starten', 'Draft, Reihenfolge, Kampf'],
+    title: 'Pokemon Battle Arena',
+    subtitle: 'Choose a generation first. Then pick Bot Run or Link Battle and jump straight into the draft.',
+    availability: 'Playable now',
+    status: 'Kanto roster live',
+    features: ['151 Kanto Pokemon', 'Ready to play', 'Retro arena style inspired by Gen 1'],
+    steps: ['Pick a generation', 'Choose a mode', 'Draft, order, battle'],
     modeCards: {
       bot: {
         eyebrow: 'Solo',
-        title: 'Bot-Serie',
-        points: ['Immer 3 Pokémon zur Auswahl', 'Reihenfolge selbst festlegen', 'Danach gegen die KI kämpfen'],
+        title: 'Bot Run',
+        points: ['Always 3 Pokemon to choose from', 'Set your own order', 'Then battle the AI'],
         enabled: true,
         action: 'start-bot',
-        cta: 'Starten',
+        cta: 'Start',
       },
       link: {
         eyebrow: 'Online',
         title: 'Link Battle',
-        points: ['Raumcode teilen oder beitreten', 'Beide draften verdeckt in 3 Runden', 'Danach direkt gegeneinander kämpfen'],
+        points: ['Share a room code or join one', 'Both players draft in secret across 3 rounds', 'Then battle each other right away'],
         enabled: true,
         action: 'start-link',
-        cta: 'Verbinden',
+        cta: 'Connect',
       },
     },
-    note: 'Die genauen Kampfregeln hängen von der gewählten Generation ab.',
+    note: 'Battle rules depend on the selected generation.',
   },
   gen5: {
     id: 'gen5',
     label: 'Gen 5',
     kicker: 'Next Era Preview',
-    title: 'Pokémon Battle Arena',
-    subtitle: 'Hier siehst du bereits den eigenen Stil für die spätere Gen-5-Erweiterung. Der spielbare Modus folgt danach.',
-    availability: 'Stilvorschau',
-    status: 'Nächste Erweiterung',
-    features: ['Eigenes Theme', 'Moderneres Arena-Gefühl', 'Bereit für den Ausbau'],
-    steps: ['Generation ansehen', 'Stile vergleichen', 'Später als Modus erweitern'],
+    title: 'Pokemon Battle Arena',
+    subtitle: 'This already previews the visual direction for the later Gen 5 expansion. The playable mode comes next.',
+    availability: 'Style preview',
+    status: 'Next expansion',
+    features: ['Distinct theme', 'More modern arena feel', 'Prepared for expansion'],
+    steps: ['Inspect the generation', 'Compare styles', 'Expand it into a full mode later'],
     modeCards: {
       bot: {
         eyebrow: 'Solo',
-        title: 'Bot-Serie',
-        points: ['Theme-Vorschau ist schon aktiv', 'Spielbarer Gen-5-Modus folgt', 'Struktur für späteren Ausbau steht'],
+        title: 'Bot Run',
+        points: ['The theme preview is already live', 'The playable Gen 5 mode comes next', 'The structure is ready for future expansion'],
         enabled: false,
         action: 'start-bot',
-        cta: 'Bald verfügbar',
+        cta: 'Coming soon',
       },
       link: {
         eyebrow: 'Online',
         title: 'Link Battle',
-        points: ['Designsystem schon getrennt', 'Wechsel zwischen den Stilen sofort sichtbar', 'Online-Modus folgt später'],
+        points: ['The design system is already separated', 'Switching styles is visible immediately', 'Online mode comes later'],
         enabled: false,
         action: 'start-link',
-        cta: 'Bald verfügbar',
+        cta: 'Coming soon',
       },
     },
-    note: 'Regeltexte bleiben absichtlich generationsoffen, damit künftige Systeme sauber passen.',
+    note: 'Rules stay intentionally generation-agnostic so future systems fit cleanly.',
   },
 };
 const MENU_SHOWCASE = {
@@ -116,7 +117,7 @@ const state = {
   playerRequest: null,
   logs: [],
   battleFeed: [],
-  message: 'Wähle Bot-Serie oder Link Battle.',
+  message: 'Choose Bot Run or Link Battle.',
   actionLocked: false,
   battleFinished: false,
   teamStates: {p1: [], p2: []},
@@ -139,8 +140,8 @@ function freshLinkState() {
     role: 'host',
     connected: false,
     peerId: '',
-    remoteName: 'Gegner',
-    status: 'Noch keine Verbindung.',
+    remoteName: 'Opponent',
+    status: 'No connection yet.',
     localSide: 'p1',
     draftRound: 0,
     localPack: [],
@@ -218,7 +219,7 @@ function renderBattleDecor() {
 }
 
 function menuSpriteTag(member, facing = 'front', slot = 'foe') {
-  if (!member?.sprites?.[facing]) return `<div class="menu-mon-placeholder menu-mon-placeholder-${slot}">${slot === 'foe' ? 'G' : 'D'}</div>`;
+  if (!member?.sprites?.[facing]) return `<div class="menu-mon-placeholder menu-mon-placeholder-${slot}">${slot === 'foe' ? 'F' : 'P'}</div>`;
   return `<img class="menu-sprite menu-sprite-${slot} ${facing}" src="${member.sprites[facing]}" alt="${member.name}">`;
 }
 
@@ -228,7 +229,7 @@ function createLoadout(species) {
 }
 
 function currentEnemyLabel() {
-  return state.playMode === 'bot' ? `${state.enemyName || 'Gegner'} #${state.enemyNumber}` : state.link.remoteName;
+  return state.playMode === 'bot' ? `${state.enemyName || 'Opponent'} #${state.enemyNumber}` : state.link.remoteName;
 }
 
 function nextEnemyName() {
@@ -281,19 +282,19 @@ function formatMovePower(move) {
 }
 
 function renderInspectMoveCard(move) {
-  const effectText = move.desc && move.desc !== 'No additional effect.' ? move.desc : move.shortDesc && move.shortDesc !== 'No additional effect.' ? move.shortDesc : 'Kein zusätzlicher Effekt.';
+  const effectText = move.desc && move.desc !== 'No additional effect.' ? move.desc : move.shortDesc && move.shortDesc !== 'No additional effect.' ? move.shortDesc : 'No additional effect.';
   return `<article class="inspect-move-card">
     <div class="inspect-move-head">
       <strong>${move.name}</strong>
       <div class="inspect-move-tags"><span>${move.type}</span><span>${move.category}</span></div>
     </div>
     <div class="inspect-move-stats">
-      <div><span>STK</span><strong>${formatMovePower(move)}</strong></div>
-      <div><span>GEN</span><strong>${formatMoveAccuracy(move)}</strong></div>
+      <div><span>PWR</span><strong>${formatMovePower(move)}</strong></div>
+      <div><span>ACC</span><strong>${formatMoveAccuracy(move)}</strong></div>
       <div><span>PP</span><strong>${move.pp || '--'}</strong></div>
-      <div><span>PRIO</span><strong>${move.priority || 0}</strong></div>
+      <div><span>PRI</span><strong>${move.priority || 0}</strong></div>
     </div>
-    <p><span>Effekt</span>${effectText}</p>
+    <p><span>Effect</span>${effectText}</p>
   </article>`;
 }
 
@@ -308,34 +309,34 @@ function pushBattleFeed(text) {
 
 function renderRosterCard(member, reveal) {
   return `<div class="roster-card" style="background:${typeGradient(member.types)}">
-    <div class="roster-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="tiny">#${member.num} | ${member.types.join(' / ')}</div></div><button class="info-chip" data-inspect="${member.name}">Infos</button></div>
-    <div class="tiny">${reveal ? `L100 ${member.battleStats.hp}/${member.battleStats.atk}/${member.battleStats.def}/${member.battleStats.spc}/${member.battleStats.spe}` : 'Daten verborgen'}</div>
+    <div class="roster-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="tiny">#${member.num} | ${member.types.join(' / ')}</div></div><button class="info-chip" data-inspect="${member.name}">Info</button></div>
+    <div class="tiny">${reveal ? `Lv100 ${member.battleStats.hp}/${member.battleStats.atk}/${member.battleStats.def}/${member.battleStats.spc}/${member.battleStats.spe}` : 'Data hidden'}</div>
   </div>`;
 }
 
 function renderSidePanel(title, team, reveal) {
   const synergy = team.length ? draftSynergy(team) : null;
   return `<div class="panel"><div class="label">${title}</div>
-    ${team.length ? team.map((member) => renderRosterCard(member, reveal)).join('') : '<div class="empty">Noch keine Auswahl.</div>'}
-    ${synergy ? `<div class="synergy"><span>Typen ${synergy.typeCoverage}</span><span>Profile ${synergy.roleCoverage}</span><span>Control ${synergy.control}</span></div>` : ''}
+    ${team.length ? team.map((member) => renderRosterCard(member, reveal)).join('') : '<div class="empty">No picks yet.</div>'}
+    ${synergy ? `<div class="synergy"><span>Types ${synergy.typeCoverage}</span><span>Profiles ${synergy.roleCoverage}</span><span>Control ${synergy.control}</span></div>` : ''}
   </div>`;
 }
 
 function renderOpponentPanel() {
   if (state.playMode === 'link' && state.phase !== 'battle') {
-    return `<div class="panel"><div class="label">Gegner</div><div class="empty"><strong>${state.link.connected ? state.link.remoteName : 'Kein Gegner'}</strong><div>${state.link.remoteDraftCount}/3 Picks bestätigt</div><div>${state.link.remoteReady ? 'Bereit für den Kampf' : 'Noch nicht bereit'}</div></div></div>`;
+    return `<div class="panel"><div class="label">Opponent</div><div class="empty"><strong>${state.link.connected ? state.link.remoteName : 'No opponent'}</strong><div>${state.link.remoteDraftCount}/3 picks locked</div><div>${state.link.remoteReady ? 'Ready to battle' : 'Not ready yet'}</div></div></div>`;
   }
   const team = state.playMode === 'bot' ? (state.phase === 'draft' ? state.opponentDraft : state.opponentLoadout) : state.opponentLoadout;
-  return renderSidePanel(state.playMode === 'bot' ? currentEnemyLabel() : 'Gegner', team, state.playMode === 'bot');
+  return renderSidePanel(state.playMode === 'bot' ? currentEnemyLabel() : 'Opponent', team, state.playMode === 'bot');
 }
 
 function renderDraftStatCells(member) {
   const stats = [
-    ['KP', member.battleStats.hp],
-    ['ANG', member.battleStats.atk],
-    ['VER', member.battleStats.def],
+    ['HP', member.battleStats.hp],
+    ['ATK', member.battleStats.atk],
+    ['DEF', member.battleStats.def],
     ['SPC', member.battleStats.spc],
-    ['INIT', member.battleStats.spe],
+    ['SPE', member.battleStats.spe],
   ];
   return stats.map(([label, value]) => `<div class="draft-stat-cell"><span>${label}</span><strong>${value}</strong></div>`).join('');
 }
@@ -344,7 +345,7 @@ function renderDraftCard(species, pickAttr) {
   return `<article class="draft-card draft-choice-card" style="background:${typeGradient(species.types)}">
     <div class="draft-choice-head">
       <div><div class="label">#${species.num}</div><h3>${species.name}</h3></div>
-      <button class="info-chip" data-inspect="${species.name}">Infos</button>
+      <button class="info-chip" data-inspect="${species.name}">Info</button>
     </div>
     <div class="draft-choice-body">
       <div class="draft-choice-sprite">${spriteTag(species, 'front', 'lg')}</div>
@@ -354,7 +355,7 @@ function renderDraftCard(species, pickAttr) {
       </div>
     </div>
     <div class="draft-stat-grid">${renderDraftStatCells(species)}</div>
-    <div class="card-actions"><button class="primary-btn" ${pickAttr}>Wählen</button></div>
+    <div class="card-actions"><button class="primary-btn" ${pickAttr}>Pick</button></div>
   </article>`;
 }
 
@@ -362,13 +363,13 @@ function renderDraftTeamSlots(team) {
   return `<div class="draft-team-strip">${Array.from({length: 3}, (_, index) => {
     const member = team[index];
     if (!member) {
-      return `<div class="draft-team-slot empty"><span class="draft-team-index">${index + 1}</span><div><strong>Slot frei</strong><div class="tiny">Hier landet dein Pick.</div></div></div>`;
+      return `<div class="draft-team-slot empty"><span class="draft-team-index">${index + 1}</span><div><strong>Empty slot</strong><div class="tiny">Your pick appears here.</div></div></div>`;
     }
     return `<div class="draft-team-slot filled" style="background:${typeGradient(member.types)}">
       <span class="draft-team-index">${index + 1}</span>
       ${spriteTag(member, 'front', 'sm')}
       <div class="draft-team-copy"><strong>${member.name}</strong><div class="tiny">${member.types.join(' / ')}</div></div>
-      <button class="info-chip" data-inspect="${member.name}">Infos</button>
+      <button class="info-chip" data-inspect="${member.name}">Info</button>
     </div>`;
   }).join('')}</div>`;
 }
@@ -377,13 +378,13 @@ function renderDraftStatusCard(mode, roundLabel) {
   const filled = state.playerDraft.length;
   const progress = `<div class="draft-status-progress">${Array.from({length: 3}, (_, index) => `<span class="${index < filled ? 'filled' : ''}">${index + 1}</span>`).join('')}</div>`;
   return `<div class="draft-status-card">
-    <div class="label">${mode === 'link' ? 'Gegnerstatus' : 'Draft-Fortschritt'}</div>
-    <strong>${filled}/3 gewählt</strong>
+    <div class="label">${mode === 'link' ? 'Opponent status' : 'Draft progress'}</div>
+    <strong>${filled}/3 picked</strong>
     ${progress}
     <div class="draft-status-list">
-      <span>${state.link.connected ? 'Verbindung steht' : 'Warte auf Verbindung'}</span>
-      <span>${state.link.connected ? state.link.remoteName : 'Kein Gegner verbunden'}</span>
-      <span>${state.link.localPickLocked ? 'Wahl bestätigt' : 'Wähle jetzt 1 von 3'}</span>
+      <span>${state.link.connected ? 'Connection ready' : 'Waiting for connection'}</span>
+      <span>${state.link.connected ? state.link.remoteName : 'No opponent connected'}</span>
+      <span>${state.link.localPickLocked ? 'Pick locked' : 'Pick 1 of 3 now'}</span>
     </div>
   </div>`;
 }
@@ -391,12 +392,12 @@ function renderDraftStatusCard(mode, roundLabel) {
 function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, cards}) {
   return `<section class="draft-shell">
     <div class="draft-topbar">
-      <a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a>
-      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</span></div>
+      <a class="ghost-btn back" href="../index.html#games">Back to home</a>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
     </div>
     <section class="draft-hero-panel">
       <div class="draft-hero-copy">
-        <div class="draft-kicker-row"><span class="label">${mode === 'bot' ? 'Arena-Auswahl' : 'Verdeckter Draft'}</span><span class="draft-status-pill">${roundLabel}</span></div>
+        <div class="draft-kicker-row"><span class="label">${mode === 'bot' ? 'Arena Draft' : 'Hidden Draft'}</span><span class="draft-status-pill">${roundLabel}</span></div>
         <h2>${title}</h2>
         <p>${statusCopy}</p>
         <div class="draft-chip-row">${chips.map((chip) => `<span>${chip}</span>`).join('')}</div>
@@ -404,12 +405,12 @@ function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, c
     </section>
     ${mode === 'link' ? `<section class="draft-link-status">${renderDraftStatusCard(mode, roundLabel)}</section>` : ''}
     <section class="draft-team-panel">
-      <div class="draft-section-head"><div><div class="label">Dein Team</div><h3>3 Slots für den Draft</h3></div><p>Deine Picks erscheinen direkt hier. Über Infos kannst du Werte und Attacken vor der Wahl prüfen.</p></div>
+      <div class="draft-section-head"><div><div class="label">Your Team</div><h3>3 draft slots</h3></div><p>Your picks appear here right away. Use Info to check stats and moves before you lock one in.</p></div>
       ${renderDraftTeamSlots(state.playerDraft)}
     </section>
     <section class="draft-board">
-      <div class="draft-section-head"><div><div class="label">Auswahl</div><h3>Wähle 1 von 3 Pokémon</h3></div><p>${action}</p></div>
-      <div class="draft-mobile-swipe-hint"><span>←</span><strong>Wischen für die nächste Karte</strong><em>● ● ●</em></div>
+      <div class="draft-section-head"><div><div class="label">Selection</div><h3>Pick 1 of 3 Pokemon</h3></div><p>${action}</p></div>
+      <div class="draft-mobile-swipe-hint"><span>←</span><strong>Swipe for the next card</strong><em>● ● ●</em></div>
       <section class="draft-choice-grid">${cards}</section>
     </section>
   </section>`;
@@ -419,19 +420,19 @@ function renderPreviewHeroGuide(mode) {
   const slots = Array.from({length: 3}, (_, index) => {
     const member = state.playerPreview[index];
     if (!member) {
-      return `<div class="preview-hero-slot empty"><span>${index + 1}</span><strong>Offen</strong><div>Wird nach dem Draft gefüllt.</div></div>`;
+      return `<div class="preview-hero-slot empty"><span>${index + 1}</span><strong>Open</strong><div>Filled after the draft.</div></div>`;
     }
     return `<div class="preview-hero-slot" style="background:${typeGradient(member.types)}">
       <span>${index + 1}</span>
       <strong>${member.name}</strong>
-      <div>${index === 0 ? 'Startet im Kampf' : 'Bleibt als Wechsel bereit'}</div>
+      <div>${index === 0 ? 'Leads the battle' : 'Ready to switch in'}</div>
     </div>`;
   }).join('');
   const note = mode === 'bot'
-    ? 'Prüfe nur dein Lead und die beiden Wechseloptionen. Das Gegnerteam bleibt bis zum Kampf verborgen.'
-    : 'Deine Sortierung bleibt verborgen, bis beide Seiten bereit sind und der Kampf startet.';
+    ? 'Only check your lead and your two switch options. The opposing team stays hidden until battle.'
+    : 'Your order stays hidden until both sides are ready and the battle begins.';
   return `<aside class="preview-hero-guide">
-    <div class="label">${mode === 'bot' ? 'Startplan' : 'Verdeckter Plan'}</div>
+    <div class="label">${mode === 'bot' ? 'Battle plan' : 'Hidden plan'}</div>
     <div class="preview-hero-slot-grid">${slots}</div>
     <div class="preview-hero-note">${note}</div>
   </aside>`;
@@ -440,12 +441,12 @@ function renderPreviewHeroGuide(mode) {
 function renderPreviewShell({mode, title, statusCopy, chips, actionLabel, playerPanelTitle, playerCards, asidePanel}) {
   return `<section class="preview-shell">
     <div class="draft-topbar">
-      <a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a>
-      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</span></div>
+      <a class="ghost-btn back" href="../index.html#games">Back to home</a>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
     </div>
     <section class="draft-hero-panel preview-hero-panel">
       <div class="draft-hero-copy">
-        <div class="draft-kicker-row"><span class="label">${mode === 'bot' ? 'Reihenfolge' : 'Verdeckte Reihenfolge'}</span><span class="draft-status-pill">${mode === 'bot' ? currentEnemyLabel() : 'Team ordnen'}</span></div>
+        <div class="draft-kicker-row"><span class="label">${mode === 'bot' ? 'Order' : 'Hidden Order'}</span><span class="draft-status-pill">${mode === 'bot' ? currentEnemyLabel() : 'Arrange team'}</span></div>
         <h2>${title}</h2>
         <p>${statusCopy}</p>
         <div class="draft-chip-row">${chips.map((chip) => `<span>${chip}</span>`).join('')}</div>
@@ -454,7 +455,7 @@ function renderPreviewShell({mode, title, statusCopy, chips, actionLabel, player
     </section>
     <section class="preview-main-grid">
       <section class="preview-panel preview-order-panel">
-        <div class="draft-section-head"><div><div class="label">${playerPanelTitle}</div><h3>Ziehe dein Team in die Startreihenfolge</h3></div><p class="preview-order-note">${actionLabel}</p></div>
+        <div class="draft-section-head"><div><div class="label">${playerPanelTitle}</div><h3>Move your team into lead order</h3></div><p class="preview-order-note">${actionLabel}</p></div>
         <div class="preview-card-list">${playerCards}</div>
       </section>
       <aside class="preview-side-panel">${asidePanel}</aside>
@@ -466,7 +467,7 @@ function renderPreviewCard(member, index, controls) {
   return `<div class="preview-card" style="background:${typeGradient(member.types)}">
     <div class="preview-card-media"><span class="preview-rank">${index + 1}</span>${spriteTag(member, 'front', 'sm')}</div>
     <div class="preview-copy"><strong>${member.name}</strong><div class="tiny">${member.moveNames.join(', ')}</div></div>
-    <div class="preview-actions"><button class="info-chip" data-inspect="${member.name}">Infos</button>${controls ? `<button class="mini-btn" data-move-index="${index}" data-move-dir="-1" ${index === 0 ? 'disabled' : ''}>hoch</button><button class="mini-btn" data-move-index="${index}" data-move-dir="1" ${index === state.playerPreview.length - 1 ? 'disabled' : ''}>runter</button>` : ''}</div>
+    <div class="preview-actions"><button class="info-chip" data-inspect="${member.name}">Info</button>${controls ? `<button class="mini-btn" data-move-index="${index}" data-move-dir="-1" ${index === 0 ? 'disabled' : ''}>Up</button><button class="mini-btn" data-move-index="${index}" data-move-dir="1" ${index === state.playerPreview.length - 1 ? 'disabled' : ''}>Down</button>` : ''}</div>
   </div>`;
 }
 
@@ -476,7 +477,7 @@ function renderInspectModal() {
   const moves = inspectMoveDetails(member);
   return `<div class="modal-backdrop" data-close-inspect="1">
     <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-head"><div><div class="label">Pokémon-Infos</div><h3>${member.name}</h3></div><button class="ghost-btn" data-close-inspect="1">Schließen</button></div>
+      <div class="modal-head"><div><div class="label">Pokemon Info</div><h3>${member.name}</h3></div><button class="ghost-btn" data-close-inspect="1">Close</button></div>
       <div class="modal-body">
         <div class="inspect-sidebar">
           <div class="modal-card inspect-summary" style="background:${typeGradient(member.types)}">
@@ -487,19 +488,19 @@ function renderInspectModal() {
             </div>
           </div>
           <div class="modal-stats inspect-stat-panel">
-            <strong>Level 100 Werte</strong>
+            <strong>Level 100 Stats</strong>
             <div class="inspect-stat-grid">
-              <div><span>KP</span><strong>${member.battleStats.hp}</strong></div>
-              <div><span>ANG</span><strong>${member.battleStats.atk}</strong></div>
-              <div><span>VER</span><strong>${member.battleStats.def}</strong></div>
+              <div><span>HP</span><strong>${member.battleStats.hp}</strong></div>
+              <div><span>ATK</span><strong>${member.battleStats.atk}</strong></div>
+              <div><span>DEF</span><strong>${member.battleStats.def}</strong></div>
               <div><span>SPC</span><strong>${member.battleStats.spc}</strong></div>
-              <div><span>INIT</span><strong>${member.battleStats.spe}</strong></div>
+              <div><span>SPE</span><strong>${member.battleStats.spe}</strong></div>
             </div>
           </div>
         </div>
         <div class="inspect-details">
           <div class="modal-moves inspect-move-panel">
-            <strong>Attacken</strong>
+            <strong>Moves</strong>
             <div class="inspect-move-list">${moves.map((move) => renderInspectMoveCard(move)).join('')}</div>
           </div>
         </div>
@@ -516,7 +517,7 @@ function renderMenuStage() {
     <button class="menu-mode-card ${card.enabled ? '' : 'locked'}" data-action="${card.action}" ${card.enabled ? '' : 'disabled'}>
       <div class="menu-mode-head">
         <span class="label">${card.eyebrow}</span>
-        <span class="menu-mode-state">${card.enabled ? generation.availability : 'In Vorbereitung'}</span>
+        <span class="menu-mode-state">${card.enabled ? generation.availability : 'In development'}</span>
       </div>
       <h3>${card.title}</h3>
       <div class="menu-mode-points">${card.points.map((point) => `<span>${point}</span>`).join('')}</div>
@@ -531,20 +532,20 @@ function renderMenuStage() {
         <div class="menu-stage-mon menu-stage-mon-player">${menuSpriteTag(MENU_SHOWCASE.player, 'back', 'player')}</div>
         <div class="menu-stage-line menu-stage-line-top"></div>
         <div class="menu-stage-line menu-stage-line-bottom"></div>
-        <div class="menu-stage-text">Generation wählen, Modus starten, dann Draft und Kampf.</div>
+        <div class="menu-stage-text">Choose a generation, pick a mode, then draft and battle.</div>
       </div>`
     : `<div class="menu-showcase menu-showcase-gen5">
-        <div class="menu-tech-card menu-tech-card-foe"><span class="label">Theme Shift</span><strong>Gen 5 Preview</strong><span>Eigenständiger Stil</span></div>
-        <div class="menu-tech-card menu-tech-card-player"><span class="label">Ausbau</span><strong>Next Battle Layer</strong><span>Modus folgt später</span></div>
+        <div class="menu-tech-card menu-tech-card-foe"><span class="label">Theme Shift</span><strong>Gen 5 Preview</strong><span>Distinct battle style</span></div>
+        <div class="menu-tech-card menu-tech-card-player"><span class="label">Expansion</span><strong>Next Battle Layer</strong><span>Mode arrives later</span></div>
         <div class="menu-energy menu-energy-a"></div>
         <div class="menu-energy menu-energy-b"></div>
         <div class="menu-energy menu-energy-c"></div>
-        <div class="menu-stage-text">Der Umschalter trennt bereits die visuelle Sprache der Generationen.</div>
+        <div class="menu-stage-text">The switch already separates the visual language of each generation.</div>
       </div>`;
   return `<section class="menu-shell">
     <div class="menu-topbar">
-      <a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a>
-      <div class="menu-generation-switch" role="tablist" aria-label="Generation wählen">
+      <a class="ghost-btn back" href="../index.html#games">Back to home</a>
+      <div class="menu-generation-switch" role="tablist" aria-label="Choose generation">
         <button class="menu-generation-btn ${state.generation === 'gen1' ? 'active' : ''}" data-action="set-generation-gen1">Gen 1</button>
         <button class="menu-generation-btn ${state.generation === 'gen5' ? 'active' : ''}" data-action="set-generation-gen5">Gen 5</button>
       </div>
@@ -560,14 +561,14 @@ function renderMenuStage() {
     </section>
     <section class="menu-lower">
       <div class="menu-modes">
-        <div class="menu-section-head"><div><div class="label">Moduswahl</div><h3>Wähle deine Arena</h3></div><p>${generation.note}</p></div>
+        <div class="menu-section-head"><div><div class="label">Mode Select</div><h3>Choose your arena</h3></div><p>${generation.note}</p></div>
         <div class="menu-mode-grid">${renderMenuModeCard(botCard)}${renderMenuModeCard(linkCard)}</div>
       </div>
       <div class="menu-info-panel">
-        <div class="label">Ablauf</div>
+        <div class="label">Flow</div>
         <div class="menu-step-list">${generation.steps.map((step, index) => `<div class="menu-step"><span>${index + 1}</span><strong>${step}</strong></div>`).join('')}</div>
         <div class="menu-meta-grid">
-          <div class="menu-meta-card"><span class="label">Aktive Generation</span><strong>${generation.label}</strong></div>
+          <div class="menu-meta-card"><span class="label">Active Generation</span><strong>${generation.label}</strong></div>
           <div class="menu-meta-card"><span class="label">Best Run</span><strong>${state.bestRun}</strong></div>
           <div class="menu-meta-card"><span class="label">Status</span><strong>${generation.availability}</strong></div>
         </div>
@@ -580,11 +581,11 @@ function renderDraftStage() {
   const round = Math.min(state.playerDraft.length + 1, 3);
   return renderDraftShell({
     mode: 'bot',
-    roundLabel: `Runde ${round} von 3`,
-    title: 'Wähle dein nächstes Pokémon',
+    roundLabel: `Round ${round} of 3`,
+    title: 'Pick your next Pokemon',
     statusCopy: state.message,
-    chips: [currentGenerationConfig().label, '3er-Draft', `${state.playerDraft.length}/3 gewählt`],
-    action: 'Diese drei Karten sind deine komplette Auswahl für die aktuelle Runde.',
+    chips: [currentGenerationConfig().label, '3-card draft', `${state.playerDraft.length}/3 picked`],
+    action: 'These three cards are your full selection for this round.',
     cards: state.pack.map((species) => renderDraftCard(species, `data-draft-id="${species.id}"`)).join(''),
   });
 }
@@ -592,36 +593,36 @@ function renderDraftStage() {
 function renderBotPreviewStage() {
   return renderPreviewShell({
     mode: 'bot',
-    title: `Ordne dein Team für ${currentEnemyLabel()}`,
+    title: `Arrange your team for ${currentEnemyLabel()}`,
     statusCopy: state.message,
-    chips: [currentGenerationConfig().label, '3 Pokémon gewählt', 'Startreihenfolge festlegen'],
-    actionLabel: 'Die Reihenfolge bestimmt dein Lead und deine Wechseloptionen.',
-    playerPanelTitle: 'Deine Reihenfolge',
+    chips: [currentGenerationConfig().label, '3 Pokemon picked', 'Set your lead order'],
+    actionLabel: 'Your order decides your lead and your switch options.',
+    playerPanelTitle: 'Your order',
     playerCards: state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join(''),
     asidePanel: `<div class="preview-panel preview-opponent-panel">
-        <div class="draft-section-head"><div><div class="label">Arena bereit</div><h3>${currentEnemyLabel()}</h3></div><p>Lege jetzt nur dein Lead und deine beiden Wechseloptionen fest.</p></div>
+        <div class="draft-section-head"><div><div class="label">Arena ready</div><h3>${currentEnemyLabel()}</h3></div><p>Only set your lead and your two switch options now.</p></div>
         <div class="preview-status-stack">
-          <div class="empty"><strong>Reihenfolge festlegen</strong><div>Slot 1 startet im Kampf. Slot 2 und 3 sind deine Wechseloptionen.</div></div>
+          <div class="empty"><strong>Set your order</strong><div>Slot 1 starts the battle. Slots 2 and 3 are your switch options.</div></div>
         </div>
-        <div class="actions"><button class="primary-btn" data-action="start-battle">Kampf starten</button><button class="ghost-btn" data-action="go-menu">Zur Moduswahl</button></div>
+        <div class="actions"><button class="primary-btn" data-action="start-battle">Start Battle</button><button class="ghost-btn" data-action="go-menu">Mode Select</button></div>
       </div>`,
   });
 }
 
 function renderLinkSetupStage() {
-  return `<section class="hero"><div><div class="label">Link Battle</div><h2>Verbindung</h2></div><p>${state.link.status}</p></section>
-    <section class="two-col"><div class="panel"><div class="label">Host</div><button class="primary-btn" data-action="host-link">Raum öffnen</button><div class="code-box">${state.link.peerId || 'Noch kein Code'}</div></div><div class="panel"><div class="label">Gast</div><input id="joinCodeInput" class="text-input" placeholder="Raumcode eingeben" value="${state.hostJoinCode}"><button class="primary-btn" data-action="join-link">Verbinden</button></div></section>
-    <div class="actions"><button class="ghost-btn" data-action="go-menu">Zurück</button></div>`;
+  return `<section class="hero"><div><div class="label">Link Battle</div><h2>Connection</h2></div><p>${state.link.status}</p></section>
+    <section class="two-col"><div class="panel"><div class="label">Host</div><button class="primary-btn" data-action="host-link">Open room</button><div class="code-box">${state.link.peerId || 'No code yet'}</div></div><div class="panel"><div class="label">Guest</div><input id="joinCodeInput" class="text-input" placeholder="Enter room code" value="${state.hostJoinCode}"><button class="primary-btn" data-action="join-link">Connect</button></div></section>
+    <div class="actions"><button class="ghost-btn" data-action="go-menu">Back</button></div>`;
 }
 
 function renderLinkDraftStage() {
   return renderDraftShell({
     mode: 'link',
-    roundLabel: `Runde ${state.link.draftRound || 1} von 3`,
-    title: 'Wähle verdeckt dein nächstes Pokémon',
-    statusCopy: state.link.connected ? `Verbunden mit ${state.link.remoteName}. Beide Seiten wählen gleichzeitig aus drei Optionen.` : 'Warte auf Verbindung.',
-    chips: [currentGenerationConfig().label, 'Verdeckter Draft', `${state.playerDraft.length}/3 gewählt`, state.link.connected ? 'Gegner verbunden' : 'Warte auf Gegner'],
-    action: state.link.localPickLocked ? 'Deine Wahl ist bestätigt. Warte auf die Gegenseite.' : 'Nur deine drei Karten sind sichtbar. Der Gegner sieht deinen Pack nicht.',
+    roundLabel: `Round ${state.link.draftRound || 1} of 3`,
+    title: 'Secretly pick your next Pokemon',
+    statusCopy: state.link.connected ? `Connected to ${state.link.remoteName}. Both sides pick from three options at the same time.` : 'Waiting for connection.',
+    chips: [currentGenerationConfig().label, 'Hidden draft', `${state.playerDraft.length}/3 picked`, state.link.connected ? 'Opponent connected' : 'Waiting for opponent'],
+    action: state.link.localPickLocked ? 'Your pick is locked. Wait for the other side.' : 'Only your three cards are visible. The opponent cannot see your pack.',
     cards: state.link.localPack.map((species) => renderDraftCard(species, `data-link-draft-id="${species.id}" ${state.link.localPickLocked ? 'disabled' : ''}`)).join(''),
   });
 }
@@ -629,19 +630,19 @@ function renderLinkDraftStage() {
 function renderLinkPreviewStage() {
   return renderPreviewShell({
     mode: 'link',
-    title: 'Ordne dein Team verdeckt',
-    statusCopy: 'Der Gegner sieht deine Anpassungen nicht live. Erst beim Kampfstart wird aufgedeckt.',
-    chips: [currentGenerationConfig().label, 'Verdeckter Draft', `${state.playerPreview.length}/3 bereit`, state.link.connected ? 'Gegner verbunden' : 'Warte auf Gegner'],
-    actionLabel: 'Nutze hoch und runter, bis deine Lead-Reihenfolge passt.',
-    playerPanelTitle: 'Deine Reihenfolge',
+    title: 'Arrange your team in secret',
+    statusCopy: 'The opponent cannot see your changes live. Everything is revealed only when the battle starts.',
+    chips: [currentGenerationConfig().label, 'Hidden draft', `${state.playerPreview.length}/3 ready`, state.link.connected ? 'Opponent connected' : 'Waiting for opponent'],
+    actionLabel: 'Use up and down until your lead order looks right.',
+    playerPanelTitle: 'Your order',
     playerCards: state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join(''),
     asidePanel: `<div class="preview-panel preview-status-panel">
-        <div class="draft-section-head"><div><div class="label">Gegnerstatus</div><h3>${state.link.connected ? state.link.remoteName : 'Warte auf Gegner'}</h3></div><p>Deine Änderungen bleiben verdeckt, bis beide Seiten bereit sind.</p></div>
+        <div class="draft-section-head"><div><div class="label">Opponent status</div><h3>${state.link.connected ? state.link.remoteName : 'Waiting for opponent'}</h3></div><p>Your changes stay hidden until both sides are ready.</p></div>
         <div class="preview-status-stack">
-          <div class="empty"><strong>${state.link.remoteDraftCount}/3 Picks bestätigt</strong><div>${state.link.remoteReady ? 'Bereit für den Kampf' : 'Noch nicht bereit'}</div></div>
-          <div class="empty"><strong>${state.link.connected ? 'Verbindung steht' : 'Verbindung offen'}</strong><div>${state.link.localPickLocked ? 'Dein letzter Pick ist bestätigt' : 'Team kann noch umsortiert werden'}</div></div>
+          <div class="empty"><strong>${state.link.remoteDraftCount}/3 picks locked</strong><div>${state.link.remoteReady ? 'Ready to battle' : 'Not ready yet'}</div></div>
+          <div class="empty"><strong>${state.link.connected ? 'Connection ready' : 'Connection open'}</strong><div>${state.link.localPickLocked ? 'Your last pick is locked' : 'Your team can still be reordered'}</div></div>
         </div>
-        <div class="actions"><button class="primary-btn" data-action="ready-link-battle" ${!state.link.connected ? 'disabled' : ''}>Bereit für den Kampf</button><button class="ghost-btn" data-action="link-rematch">Neu draften</button></div>
+        <div class="actions"><button class="primary-btn" data-action="ready-link-battle" ${!state.link.connected ? 'disabled' : ''}>Ready to battle</button><button class="ghost-btn" data-action="link-rematch">Draft again</button></div>
       </div>`,
   });
 }
@@ -653,13 +654,13 @@ function hpTone(percent) {
 }
 
 function renderCombatant(mon, label, facing, sideKey, side) {
-  if (!mon) return `<div class="combatant combatant-${side} empty">Warte auf Aktivierung.</div>`;
+  if (!mon) return `<div class="combatant combatant-${side} empty">Waiting for the active Pokemon.</div>`;
   const percent = conditionToPercent(mon.condition);
   return `<div class="combatant combatant-${side} ${state.flash[sideKey]}">
     <div class="battle-status battle-status-${side}">
       <div class="battle-status-top">
         <div><div class="label">${label}</div><strong>${mon.name}</strong></div>
-        <button class="info-chip" data-inspect="${mon.name}">Infos</button>
+        <button class="info-chip" data-inspect="${mon.name}">Info</button>
       </div>
       <div class="battle-status-meta"><span>Lv100</span><span>${mon.status || 'OK'}</span></div>
       <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill ${hpTone(percent)}" style="width:${percent}%"></div></div></div>
@@ -674,46 +675,47 @@ function renderCombatant(mon, label, facing, sideKey, side) {
 
 function renderBench(team, own) {
   const bench = team.filter((member) => !member.active);
-  if (!bench.length) return '<div class="empty">Keine Reserve sichtbar.</div>';
+  if (!bench.length) return '<div class="empty">No reserve available.</div>';
   return `<div class="bench-grid">${bench.map((member) => `<div class="bench-card bench-card-switch" style="background:${typeGradient(member.types || ['Normal'])}">
       <div class="bench-card-sprite">${spriteTag(member, own ? 'back' : 'front', 'sm')}</div>
       <div class="bench-card-copy"><strong>${member.name}</strong><div class="tiny">${member.condition}</div></div>
-      <button class="info-chip" data-inspect="${member.name}">Infos</button>
+      <button class="info-chip" data-inspect="${member.name}">Info</button>
     </div>`).join('')}</div>`;
 }
 
 function renderChoiceButtons() {
-  if (!state.playerRequest) return '<div class="empty">Warte auf den nächsten Request.</div>';
+  if (!state.playerRequest) return '<div class="empty">Waiting for the next request.</div>';
   const disabled = state.actionLocked ? 'disabled' : '';
   if (state.playerRequest.forceSwitch) {
-    return `<div class="choice-grid">${state.playerRequest.side.pokemon.map((mon, index) => ({mon, index})).filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt')).map(({mon, index}) => `<button class="choice-btn" ${disabled} data-choice="switch ${index + 1}">${mon.details.split(',')[0]}<span>Pflichtwechsel</span></button>`).join('')}</div>`;
+    return `<div class="choice-grid">${state.playerRequest.side.pokemon.map((mon, index) => ({mon, index})).filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt')).map(({mon, index}) => `<button class="choice-btn" ${disabled} data-choice="switch ${index + 1}">${mon.details.split(',')[0]}<span>Forced switch</span></button>`).join('')}</div>`;
   }
   const moves = state.playerRequest.active?.[0]?.moves.map((move, index) => `<button class="choice-btn" ${disabled} data-choice="move ${index + 1}">${move.move}<span>${move.pp}/${move.maxpp} PP</span></button>`).join('') || '';
   const switches = !state.playerRequest.active?.[0]?.trapped
-    ? state.playerRequest.side.pokemon.map((mon, index) => ({mon, index})).filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt')).map(({mon, index}) => `<button class="choice-btn alt" ${disabled} data-choice="switch ${index + 1}">${mon.details.split(',')[0]}<span>Zug opfern</span></button>`).join('')
+    ? state.playerRequest.side.pokemon.map((mon, index) => ({mon, index})).filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt')).map(({mon, index}) => `<button class="choice-btn alt" ${disabled} data-choice="switch ${index + 1}">${mon.details.split(',')[0]}<span>Spend your turn</span></button>`).join('')
     : '';
   return `<div class="choice-grid">${moves}${switches}</div>`;
 }
 
 function renderBattleStage() {
-  const rematch = state.playMode === 'link' && state.battleFinished ? '<button class="primary-btn" data-action="link-rematch">Revanche</button>' : '';
-  const latestFeed = state.battleFeed[0] || 'Der Kampf beginnt.';
-  const streak = `Siegesserie ${state.runWins}`;
+  const rematch = state.playMode === 'link' && state.battleFinished ? '<button class="primary-btn" data-action="link-rematch">Rematch</button>' : '';
+  const latestFeed = state.battleFeed[0] || 'The battle is about to begin.';
+  const streak = `Win Streak ${state.runWins}`;
   return `<section class="battle-ui">
     ${renderBattleDecor()}
     <div class="battle-frame-top">
-      <button class="ghost-btn battle-mode-link" data-action="go-menu">Zur Moduswahl</button>
-      <div class="battle-streak-badge"><span class="label">Serie</span><strong>${streak}</strong></div>
+      <button class="ghost-btn battle-mode-link" data-action="go-menu">Mode Select</button>
+      <div class="battle-streak-badge"><span class="label">Run</span><strong>${streak}</strong></div>
     </div>
     <div class="battle-desktop-shell">
       <div class="battle-center">
+        <div class="battle-brand-logo"><img src="${BATTLE_LOGO_PATH}" alt="Pokemon logo"></div>
         <div class="battle-header"><div><div class="label">Battle Phase</div><h2>${currentEnemyLabel()}</h2></div><p>${state.message}</p></div>
-        <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), currentEnemyLabel(), 'front', foeSide(), 'foe')}<div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'Du', 'back', ownSide(), 'player')}</div></section>
+        <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), currentEnemyLabel(), 'front', foeSide(), 'foe')}<div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'You', 'back', ownSide(), 'player')}</div></section>
         <section class="battle-footer">
-          <div class="panel battle-panel"><div class="label">Deine Reserve</div>${renderBench(ownTeamState(), true)}</div>
-          <div class="panel battle-panel battle-actions-panel"><div class="label">Aktionen</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn battle-mobile-menu" data-action="go-menu">Zur Moduswahl</button></div></div>
+          <div class="panel battle-panel"><div class="label">Your Bench</div>${renderBench(ownTeamState(), true)}</div>
+          <div class="panel battle-panel battle-actions-panel"><div class="label">Actions</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn battle-mobile-menu" data-action="go-menu">Mode Select</button></div></div>
         </section>
-        <div class="battle-starter-art"><img src="${STARTER_ART_PATH}" alt="Starter der ersten Generation"></div>
+        <div class="battle-starter-art"><img src="${STARTER_ART_PATH}" alt="First-generation starters"></div>
       </div>
     </div>
   </section>`;
@@ -748,9 +750,9 @@ function render() {
     </div>`;
   } else {
     app.innerHTML = `<div class="app-shell ${battleView ? 'battle-view' : ''} theme-${state.generation}">
-      <aside class="side"><a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a><div class="brand"><div class="label">Pokémon Battler</div><h1>Kanto Link Arena</h1><p>Gen-1-Sprites, Level-100-Stats, RBY-Regeln und Link Battles mit verdecktem Draft.</p></div><div class="panel metrics"><span>Modus ${state.playMode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</span><span>151 Pokémon</span><span>Best Run ${state.bestRun}</span></div>${renderSidePanel('Dein Team', ownTeam, true)}${renderOpponentPanel()}</aside>
+      <aside class="side"><a class="ghost-btn back" href="../index.html#games">Back to home</a><div class="brand"><div class="label">Pokemon Battler</div><h1>Kanto Link Arena</h1><p>Gen 1 sprites, level 100 stats, RBY rules, and Link Battles with a hidden draft.</p></div><div class="panel metrics"><span>Mode ${state.playMode === 'bot' ? 'Bot Run' : 'Link Battle'}</span><span>151 Pokemon</span><span>Best Run ${state.bestRun}</span></div>${renderSidePanel('Your Team', ownTeam, true)}${renderOpponentPanel()}</aside>
       <main class="main">${renderStage()}</main>
-      <aside class="side"><div class="panel"><div class="label">Hinweise</div><div class="empty">Das Regelset folgt der aktiven Generation.</div></div><div class="panel"><div class="label">Log</div>${state.logs.map((line) => `<div class="log-line">${line}</div>`).join('')}</div></aside>
+      <aside class="side"><div class="panel"><div class="label">Notes</div><div class="empty">Rules follow the active generation.</div></div><div class="panel"><div class="label">Log</div>${state.logs.map((line) => `<div class="log-line">${line}</div>`).join('')}</div></aside>
       ${renderInspectModal()}
     </div>`;
   }
@@ -793,7 +795,7 @@ function resetDraft() {
   state.playerPreview = [];
   state.opponentPreview = [];
   state.logs = [];
-  state.message = 'Wähle dein erstes Pokémon für die Bot-Serie.';
+  state.message = 'Pick your first Pokemon for the Bot Run.';
   state.runWins = 0;
   state.enemyNumber = 1;
   state.enemyName = '';
@@ -813,7 +815,7 @@ function draftSpecies(id) {
   }
   if (state.playerDraft.length === 3) {
     state.playerLoadout = state.playerDraft.map(createLoadout);
-    prepareNextEnemy('Dein Team ist gesetzt. Ordne jetzt den Lead.');
+    prepareNextEnemy('Your team is ready. Arrange your lead now.');
     return;
   }
   state.pack = drawPack(state.draftedIds, 3);
@@ -855,23 +857,23 @@ function movePreviewMon(index, direction) {
 function handleAction(action) {
   if (action === 'set-generation-gen1') {
     state.generation = 'gen1';
-    state.message = 'Wähle Bot-Serie oder Link Battle.';
+    state.message = 'Choose Bot Run or Link Battle.';
     return render();
   }
   if (action === 'set-generation-gen5') {
     state.generation = 'gen5';
-    state.message = 'Die Gen-5-Erweiterung ist als Stilvorschau vorbereitet.';
+    state.message = 'The Gen 5 expansion is prepared as a style preview.';
     return render();
   }
   if (state.generation !== 'gen1' && (action === 'start-bot' || action === 'start-link')) {
-    state.message = 'Der spielbare Gen-5-Modus folgt mit dem nächsten Ausbau.';
+    state.message = 'The playable Gen 5 mode arrives in the next expansion.';
     return render();
   }
   if (action === 'start-bot') return resetDraft();
   if (action === 'start-link') {
     state.playMode = 'link';
     state.phase = 'link-setup';
-    state.message = 'Öffne einen Raum oder tritt einem Raum bei.';
+    state.message = 'Open a room or join one.';
     return render();
   }
   if (action === 'start-battle') return startBotBattle();
@@ -883,7 +885,7 @@ function handleAction(action) {
     teardownLink();
     state.playMode = 'bot';
     state.phase = 'menu';
-    state.message = 'Wähle Bot-Serie oder Link Battle.';
+    state.message = 'Choose Bot Run or Link Battle.';
     resetBattleState();
     return render();
   }
@@ -973,7 +975,7 @@ function startHosting() {
   state.link.peer = peer;
   peer.on('open', (id) => {
     state.link.peerId = id;
-    state.link.status = 'Raum offen. Teile den Code.';
+    state.link.status = 'Room open. Share the code.';
     render();
   });
   peer.on('connection', (conn) => attachConnection(conn, 'host'));
@@ -994,22 +996,22 @@ function attachConnection(conn, role) {
   state.link.role = role;
   conn.on('open', () => {
     state.link.connected = true;
-    state.link.status = 'Verbindung steht.';
-    sendLinkMessage({type: 'hello', name: 'Gegner'});
+    state.link.status = 'Connection ready.';
+    sendLinkMessage({type: 'hello', name: 'Opponent'});
     setupLinkDraft();
   });
   conn.on('data', handleLinkMessage);
   conn.on('close', () => {
     state.link.connected = false;
-    state.link.status = 'Verbindung getrennt.';
+    state.link.status = 'Connection closed.';
     render();
   });
 }
 
 function handleLinkMessage(message) {
   if (message.type === 'hello') {
-    state.link.status = 'Verbindung steht.';
-    state.link.remoteName = message.name || 'Gegner';
+    state.link.status = 'Connection ready.';
+    state.link.remoteName = message.name || 'Opponent';
   }
   if (message.type === 'link-pack') {
     state.phase = 'link-draft';
@@ -1071,7 +1073,7 @@ function maybeStartHostedBattle() {
   startBattleSimulation({
     p1Team: state.playerPreview,
     p2Team: state.link.remoteRoster,
-    p1Name: 'Du',
+    p1Name: 'You',
     p2Name: state.link.remoteName,
     localSide: 'p1',
     multiplayer: true,
@@ -1091,7 +1093,7 @@ function startBotBattle() {
   startBattleSimulation({
     p1Team: state.playerPreview,
     p2Team: state.opponentPreview,
-    p1Name: 'Du',
+    p1Name: 'You',
     p2Name: currentEnemyLabel(),
     localSide: 'p1',
     multiplayer: false,
@@ -1103,7 +1105,7 @@ async function startBattleSimulation({p1Team, p2Team, p1Name, p2Name, localSide,
   state.phase = 'battle';
   state.link.localSide = localSide;
   initialiseTeamStates(p1Team, p2Team);
-  state.message = `${p2Name} nimmt die Herausforderung an.`;
+  state.message = `${p2Name} accepts the challenge.`;
   render();
   const streams = BattleStreams.getPlayerStreams(new BattleStreams.BattleStream());
   state.battle = {streams, multiplayer};
@@ -1163,65 +1165,65 @@ function updateRosterState(sideKey, name, updater) {
 
 function formatStatus(status) {
   const labels = {
-    brn: 'Verbrennung',
-    frz: 'Eis',
-    par: 'Paralyse',
-    psn: 'Vergiftung',
-    tox: 'schwere Vergiftung',
-    slp: 'Schlaf',
-    confusion: 'Verwirrung',
+    brn: 'burn',
+    frz: 'freeze',
+    par: 'paralysis',
+    psn: 'poison',
+    tox: 'bad poison',
+    slp: 'sleep',
+    confusion: 'confusion',
   };
   return labels[status] || status;
 }
 
 function battleText(parts) {
   const type = parts[1];
-  if (type === 'move') return `${parts[2].split(': ').pop()} setzt ${parts[3]} ein.`;
-  if (type === '-miss') return `${parts[2].split(': ').pop()} verfehlt.`;
-  if (type === '-supereffective') return 'Es ist sehr effektiv.';
-  if (type === '-resisted') return 'Das ist nicht sehr effektiv.';
-  if (type === '-crit') return 'Ein Volltreffer.';
-  if (type === 'switch') return `${parts[2].split(': ').pop()} betritt das Feld.`;
-  if (type === 'faint') return `${parts[2].split(': ').pop()} ist kampfunfähig.`;
-  if (type === '-status') return `${parts[2].split(': ').pop()} erleidet ${formatStatus(parts[3])}.`;
-  if (type === '-curestatus') return `${parts[2].split(': ').pop()} ist wieder fit.`;
+  if (type === 'move') return `${parts[2].split(': ').pop()} used ${parts[3]}.`;
+  if (type === '-miss') return `${parts[2].split(': ').pop()} missed.`;
+  if (type === '-supereffective') return "It's super effective.";
+  if (type === '-resisted') return "It's not very effective.";
+  if (type === '-crit') return 'A critical hit.';
+  if (type === 'switch') return `${parts[2].split(': ').pop()} entered the battle.`;
+  if (type === 'faint') return `${parts[2].split(': ').pop()} fainted.`;
+  if (type === '-status') return `${parts[2].split(': ').pop()} is afflicted with ${formatStatus(parts[3])}.`;
+  if (type === '-curestatus') return `${parts[2].split(': ').pop()} recovered.`;
   if (type === 'cant') {
     const name = parts[2].split(': ').pop();
     const reason = parts[3];
-    if (reason === 'slp') return `${name} schläft tief und fest.`;
-    if (reason === 'frz') return `${name} ist eingefroren.`;
-    if (reason === 'par') return `${name} ist paralysiert und kann sich nicht bewegen.`;
-    if (reason === 'flinch') return `${name} schreckt zurück.`;
-    if (reason === 'recharge') return `${name} muss sich aufladen.`;
-    if (reason === 'Disable') return `${name} kann die Attacke nicht einsetzen.`;
-    return `${name} kann nicht handeln.`;
+    if (reason === 'slp') return `${name} is fast asleep.`;
+    if (reason === 'frz') return `${name} is frozen solid.`;
+    if (reason === 'par') return `${name} is paralyzed and cannot move.`;
+    if (reason === 'flinch') return `${name} flinched.`;
+    if (reason === 'recharge') return `${name} must recharge.`;
+    if (reason === 'Disable') return `${name} cannot use that move.`;
+    return `${name} cannot act.`;
   }
   if (type === '-start') {
     const name = parts[2].split(': ').pop();
-    if (parts[3] === 'confusion') return `${name} ist verwirrt.`;
-    if (parts[3] === 'Substitute') return `${name} erschafft einen Delegator.`;
-    return `${name} ist von ${parts[3]} betroffen.`;
+    if (parts[3] === 'confusion') return `${name} became confused.`;
+    if (parts[3] === 'Substitute') return `${name} put up a substitute.`;
+    return `${name} is affected by ${parts[3]}.`;
   }
   if (type === '-end') {
     const name = parts[2].split(': ').pop();
-    if (parts[3] === 'confusion') return `${name} ist nicht mehr verwirrt.`;
-    if (parts[3] === 'Substitute') return `Der Delegator von ${name} verschwindet.`;
-    return `${parts[3]} endet bei ${name}.`;
+    if (parts[3] === 'confusion') return `${name} snapped out of confusion.`;
+    if (parts[3] === 'Substitute') return `${name}'s substitute faded.`;
+    return `${parts[3]} ended for ${name}.`;
   }
   if (type === '-activate') {
     const name = parts[2].split(': ').pop();
-    if (parts[3] === 'confusion') return `${name} ist verwirrt.`;
-    if (parts[3]?.startsWith('move: Bide')) return `${name} sammelt Energie.`;
-    return `${name} aktiviert ${parts[3]}.`;
+    if (parts[3] === 'confusion') return `${name} is confused.`;
+    if (parts[3]?.startsWith('move: Bide')) return `${name} is storing energy.`;
+    return `${name} activates ${parts[3]}.`;
   }
-  if (type === '-boost') return `${parts[2].split(': ').pop()} steigert ${parts[3]}.`;
-  if (type === '-unboost') return `${parts[2].split(': ').pop()} verliert ${parts[3]}.`;
-  if (type === '-immune') return `${parts[2].split(': ').pop()} bleibt unbeeindruckt.`;
-  if (type === '-fail') return 'Aber es fehlschlägt.';
-  if (type === '-mustrecharge') return `${parts[2].split(': ').pop()} muss aussetzen.`;
-  if (type === '-hitcount') return `${parts[2]} Treffer.`;
-  if (type === '-ohko') return 'Ein K.-o.-Treffer.';
-  if (type === 'win') return `${parts[2]} gewinnt den Kampf.`;
+  if (type === '-boost') return `${parts[2].split(': ').pop()} boosts ${parts[3]}.`;
+  if (type === '-unboost') return `${parts[2].split(': ').pop()} loses ${parts[3]}.`;
+  if (type === '-immune') return `${parts[2].split(': ').pop()} is unaffected.`;
+  if (type === '-fail') return 'But it failed.';
+  if (type === '-mustrecharge') return `${parts[2].split(': ').pop()} must wait this turn.`;
+  if (type === '-hitcount') return `${parts[2]} hits.`;
+  if (type === '-ohko') return 'A one-hit knockout.';
+  if (type === 'win') return `${parts[2]} wins the battle.`;
   return '';
 }
 
@@ -1281,7 +1283,7 @@ function handleBattleLine(line) {
     return 800;
   }
   if (type === 'turn') {
-    state.message = `Zug ${parts[2]}.`;
+    state.message = `Turn ${parts[2]}.`;
     return 350;
   }
   if (type === 'win') {
@@ -1304,22 +1306,22 @@ async function finishBattle(winner) {
   state.battleFinished = true;
   state.playerRequest = null;
   state.actionLocked = true;
-  const localWon = winner === 'Du';
+  const localWon = winner === 'You';
   if (state.playMode === 'bot') {
     if (localWon) {
       state.runWins += 1;
       saveBestRun(state.runWins);
       state.enemyNumber += 1;
-      state.message = `Sieg. Serie: ${state.runWins}.`;
+      state.message = `Win. Streak: ${state.runWins}.`;
       render();
       await sleep(1000);
-      prepareNextEnemy('Nächster Gegner wartet.');
+      prepareNextEnemy('The next opponent is waiting.');
       return;
     }
-    state.message = `Serie endet bei ${state.runWins}.`;
+    state.message = `The streak ends at ${state.runWins}.`;
     return render();
   }
-  state.message = localWon ? 'Du gewinnst das Link Battle.' : 'Das Link Battle geht an den Gegner.';
+  state.message = localWon ? 'You win the Link Battle.' : 'The opponent wins the Link Battle.';
   render();
 }
 
@@ -2200,7 +2202,7 @@ function injectStyles() {
     .battle-ui{
       position:relative;
       display:grid;
-      gap:6px;
+      gap:4px;
       font-family:"Courier New",monospace;
       overflow:hidden;
     }
@@ -2249,8 +2251,21 @@ function injectStyles() {
     }
     .battle-center{
       display:grid;
-      gap:10px;
+      gap:6px;
       min-width:0;
+    }
+    .battle-brand-logo{
+      display:grid;
+      place-items:center;
+      padding:0;
+      position:relative;
+      z-index:2;
+    }
+    .battle-brand-logo img{
+      width:min(26vw,300px);
+      height:auto;
+      display:block;
+      filter:drop-shadow(0 12px 20px rgba(0,0,0,.18));
     }
     .battle-header{
       display:flex;
@@ -2727,6 +2742,9 @@ function injectStyles() {
       .battle-center{
         width:min(72vw,1080px);
         margin:0 auto;
+      }
+      .battle-brand-logo img{
+        width:min(24vw,290px);
       }
       .battle-mobile-menu{
         display:none;
@@ -3386,7 +3404,7 @@ function injectStyles() {
         min-height:38px;
         padding:8px 12px;
       }
-      .battle-view .main{padding:10px}
+      .battle-view .main{padding:8px}
       .brand h1{font-size:clamp(1.85rem,10vw,2.8rem)}
       .hero,.panel,.draft-card,.preview-card,.combatant,.bench-card,.mode-card{padding:14px}
       .draft-top,.roster-head,.combatant-head,.card-actions,.preview-actions,.actions,.draft-choice-head,.draft-choice-body{
@@ -3417,6 +3435,12 @@ function injectStyles() {
         align-items:flex-start;
         flex-direction:column;
         gap:6px;
+      }
+      .battle-brand-logo{
+        padding:0;
+      }
+      .battle-brand-logo img{
+        width:min(42vw,170px);
       }
       .battle-header p{
         text-align:left;
