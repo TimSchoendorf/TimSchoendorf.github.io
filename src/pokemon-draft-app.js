@@ -1664,7 +1664,7 @@ function injectStyles() {
     .combatant.flash-switch{transform:translateX(4px)}
     .battle-status{
       position:absolute;
-      padding:2.4% 2.8%;
+      padding:2.05% 2.35%;
       border:3px solid #151d11;
       border-radius:8px;
       background:#f8f5e8;
@@ -1693,12 +1693,12 @@ function injectStyles() {
     .battle-status-meta{
       margin-top:4px;
       color:#4d5b41;
-      font-size:.8rem;
+      font-size:.76rem;
       font-weight:700;
       text-transform:uppercase;
       letter-spacing:.08em;
     }
-    .battle-hp-row{margin-top:8px}
+    .battle-hp-row{margin-top:6px}
     .hp-label{
       color:#1e2b14;
       font-size:.86rem;
@@ -1713,7 +1713,7 @@ function injectStyles() {
       overflow:hidden;
     }
     .battle-hp{
-      height:14px;
+      height:13px;
       border:2px solid #1e2b14;
       background:#b7bf9c;
     }
@@ -1889,25 +1889,29 @@ function injectStyles() {
         margin:0 auto;
       }
       .battle-stage{
-        --battle-foe-line:11.5%;
-        --battle-player-line:20.5%;
+        --battle-pad-top:4.5%;
+        --battle-feed-height:15.8%;
+        --battle-foe-line:7%;
+        --battle-player-line:20%;
       }
       .battle-status-foe{
-        width:22%;
+        width:20.5%;
       }
       .battle-status-player{
-        width:22%;
-        bottom:calc(var(--battle-player-line) + .5%);
+        width:20.5%;
+        bottom:20%;
       }
       .battle-sprite-foe{
-        top:calc(var(--battle-foe-line) + .5%);
-        right:7.5%;
-        width:19%;
-        height:24%;
+        top:8%;
+        right:8.5%;
+        width:16%;
+        height:19%;
       }
       .battle-sprite-player{
-        width:24%;
-        height:35%;
+        left:7%;
+        bottom:23%;
+        width:21%;
+        height:31%;
       }
     }
     @media (max-height:950px) and (min-width:721px){
@@ -1966,7 +1970,7 @@ function injectStyles() {
       body{padding:10px}
       .side,.main{padding:14px;border-radius:22px}
       .menu-view .main{padding:0}
-      .menu-shell{gap:14px;padding:8px 0 10px}
+      .menu-shell{gap:10px;padding:6px 0 8px}
       .menu-topbar{
         flex-direction:column;
         align-items:stretch;
@@ -1981,59 +1985,88 @@ function injectStyles() {
         border-radius:24px;
       }
       .menu-copy,.menu-modes,.menu-info-panel{
-        padding:18px;
+        padding:14px;
+        gap:12px;
       }
       .menu-copy h2{
-        font-size:clamp(2.2rem,11vw,3.4rem);
+        font-size:clamp(1.8rem,9.4vw,2.7rem);
       }
+      .menu-copy p,.menu-section-head p{font-size:.92rem;line-height:1.45}
       .menu-feature-row,.menu-mode-points{
         gap:8px;
       }
+      .menu-feature-row span,.menu-mode-points span{padding:6px 9px;font-size:.74rem}
+      .menu-feature-row span:nth-child(n+3),
+      .menu-mode-points span:nth-child(3){display:none}
       .menu-showcase{
-        min-height:286px;
-        padding:14px;
+        min-height:164px;
+        padding:10px;
       }
       .menu-stage-card,.menu-tech-card{
-        min-width:150px;
-        padding:10px 12px;
+        min-width:120px;
+        padding:7px 9px;
       }
       .menu-stage-card strong,.menu-tech-card strong{
-        font-size:1rem;
+        font-size:.92rem;
       }
       .menu-stage-card-foe{top:12px;left:12px}
-      .menu-stage-card-player{right:12px;bottom:88px}
-      .menu-stage-mon-foe{top:86px;right:12px;width:25%;height:22%}
-      .menu-stage-mon-player{left:12px;bottom:84px;width:30%;height:26%}
+      .menu-stage-card-player{display:none}
+      .menu-stage-mon-foe{top:46px;right:10px;width:18%;height:16%}
+      .menu-stage-mon-player{left:8px;bottom:42px;width:20%;height:18%}
       .menu-stage-line-bottom{
         left:12px;
         right:12px;
-        bottom:12px;
-        height:60px;
+        bottom:8px;
+        height:34px;
       }
       .menu-stage-text{
-        left:24px;
-        right:24px;
-        bottom:32px;
-        font-size:.8rem;
+        left:18px;
+        right:18px;
+        bottom:13px;
+        font-size:.56rem;
+        letter-spacing:0;
+        line-height:1.15;
       }
-      .menu-tech-card-player{right:12px;bottom:72px}
-      .menu-energy-a{width:120px;height:120px;top:112px;right:26px}
-      .menu-energy-b{width:150px;height:150px;bottom:70px;left:18px}
-      .menu-showcase-gen5 .menu-stage-text{bottom:24px;left:20px;right:20px;font-size:.88rem}
+      .menu-tech-card-player{display:none}
+      .menu-energy-a{width:82px;height:82px;top:54px;right:22px}
+      .menu-energy-b{width:90px;height:90px;bottom:34px;left:14px}
+      .menu-energy-c{width:44px;height:44px;top:86px;left:42%}
+      .menu-showcase-gen5 .menu-stage-text{bottom:12px;left:16px;right:16px;font-size:.68rem;line-height:1.2}
       .menu-mode-card{
-        padding:16px;
-        gap:12px;
+        padding:10px;
+        gap:8px;
+        border-radius:20px;
       }
       .menu-mode-card h3{
-        font-size:1.35rem;
+        font-size:1.06rem;
+      }
+      .menu-step-list{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:8px;
       }
       .menu-step{
-        grid-template-columns:38px 1fr;
-        padding:10px;
+        grid-template-columns:1fr;
+        justify-items:center;
+        text-align:center;
+        gap:6px;
+        padding:8px 6px;
       }
       .menu-step span{
-        width:38px;
-        height:38px;
+        width:30px;
+        height:30px;
+      }
+      .menu-step strong{
+        font-size:.68rem;
+        line-height:1.2;
+      }
+      .menu-meta-grid{
+        gap:8px;
+      }
+      .menu-meta-card{
+        padding:9px;
+      }
+      .menu-meta-card strong{
+        font-size:.9rem;
       }
       .battle-view .main{padding:10px}
       .brand h1{font-size:clamp(1.85rem,10vw,2.8rem)}
@@ -2073,74 +2106,74 @@ function injectStyles() {
       }
       .combatant{inset:0}
       .battle-status{
-        padding:8px 10px;
+        padding:6px 8px;
         border-width:2px;
         border-radius:6px;
       }
-      .battle-status-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:36%;max-width:none}
-      .battle-status-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:38%;max-width:none}
+      .battle-status-foe{top:3%;left:3%;width:33%;max-width:none}
+      .battle-status-player{right:3%;bottom:22%;width:34%;max-width:none}
       .battle-status .info-chip{padding:6px 8px}
       .battle-status-meta{
-        font-size:.68rem;
-        letter-spacing:.05em;
+        font-size:.6rem;
+        letter-spacing:.04em;
       }
-      .battle-hp{height:12px}
+      .battle-hp{height:11px}
       .battle-sprite-foe{
-        top:var(--battle-foe-line);
-        right:8%;
-        width:26%;
-        height:32%;
+        top:11%;
+        right:10%;
+        width:20%;
+        height:18%;
       }
       .battle-sprite-player{
-        left:7%;
-        bottom:var(--battle-player-line);
-        width:26%;
-        height:30%;
+        left:8%;
+        bottom:28%;
+        width:22%;
+        height:22%;
       }
-      .battle-shadow{width:72%;height:14%;bottom:6%}
+      .battle-shadow{width:64%;height:12%;bottom:4%}
       .sprite.battle{width:100%;height:100%}
       .battle-sprite-foe .sprite.battle.front{
-        transform:translateX(4%) translateY(0);
+        transform:translateX(2%) translateY(0);
       }
       .battle-sprite-player .sprite.battle.back{
-        transform:translateX(-4%) translateY(0);
+        transform:translateX(-1%) translateY(0);
       }
       .battle-feed{
         left:3%;
         right:3%;
         bottom:var(--battle-feed-bottom);
-        min-height:var(--battle-feed-height);
-        padding:2% 2.4%;
+        min-height:15%;
+        padding:1.8% 2.2%;
         border-width:2px;
         border-radius:6px;
       }
-      .feed-line{font-size:.8rem}
+      .feed-line{font-size:.75rem;line-height:1.3}
       .battle-footer{
         grid-template-columns:1fr 1fr;
-        gap:6px;
+        gap:4px;
       }
       .battle-panel{
-        padding:6px;
-        border-radius:18px;
+        padding:5px;
+        border-radius:16px;
       }
       .battle-panel .bench-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
       .battle-panel .bench-card{
-        min-height:70px;
-        padding:4px 3px;
+        min-height:58px;
+        padding:3px;
       }
       .battle-panel .bench-card .info-chip{
-        padding:3px 5px;
-        font-size:.62rem;
+        padding:2px 4px;
+        font-size:.58rem;
       }
-      .battle-panel .sprite.sm{width:28px;height:28px}
+      .battle-panel .sprite.sm{width:24px;height:24px}
       .choice-grid{
         grid-template-columns:repeat(2,minmax(0,1fr));
-        gap:6px;
+        gap:4px;
       }
       .choice-btn{
-        min-height:40px;
-        padding:6px 8px;
-        gap:3px;
+        min-height:34px;
+        padding:5px 7px;
+        gap:2px;
       }
       .modal{
         padding:16px;
