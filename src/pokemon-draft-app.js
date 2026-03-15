@@ -2019,7 +2019,7 @@ function injectStyles() {
         min-height:146px;
         --menu-dialog-bottom:8px;
         --menu-dialog-height:30px;
-        --menu-player-shift-y:-7%;
+        --menu-player-shift-y:-14%;
         padding:10px;
       }
       .menu-stage-card,.menu-tech-card{
