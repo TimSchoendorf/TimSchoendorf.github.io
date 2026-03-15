@@ -704,11 +704,11 @@ function renderBattleStage() {
     ${renderBattleDecor()}
     <div class="battle-frame-top">
       <button class="ghost-btn battle-mode-link" data-action="go-menu">Mode Select</button>
+      <div class="battle-brand-logo"><img src="${BATTLE_LOGO_PATH}" alt="Pokemon logo"></div>
       <div class="battle-streak-badge"><span class="label">Run</span><strong>${streak}</strong></div>
     </div>
     <div class="battle-desktop-shell">
       <div class="battle-center">
-        <div class="battle-brand-logo"><img src="${BATTLE_LOGO_PATH}" alt="Pokemon logo"></div>
         <div class="battle-header"><div><div class="label">Battle Phase</div><h2>${currentEnemyLabel()}</h2></div><p>${state.message}</p></div>
         <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), currentEnemyLabel(), 'front', foeSide(), 'foe')}<div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'You', 'back', ownSide(), 'player')}</div></section>
         <section class="battle-footer">
@@ -2224,6 +2224,7 @@ function injectStyles() {
       gap:12px;
       position:relative;
       z-index:2;
+      min-height:52px;
     }
     .battle-mode-link{
       justify-self:start;
@@ -2255,14 +2256,15 @@ function injectStyles() {
       min-width:0;
     }
     .battle-brand-logo{
-      display:grid;
-      place-items:center;
-      padding:0;
-      position:relative;
+      position:absolute;
+      top:-12px;
+      left:50%;
+      transform:translateX(-50%);
       z-index:2;
+      pointer-events:none;
     }
     .battle-brand-logo img{
-      width:min(26vw,300px);
+      width:min(24vw,272px);
       height:auto;
       display:block;
       filter:drop-shadow(0 12px 20px rgba(0,0,0,.18));
@@ -2744,7 +2746,7 @@ function injectStyles() {
         margin:0 auto;
       }
       .battle-brand-logo img{
-        width:min(24vw,290px);
+        width:min(22vw,258px);
       }
       .battle-mobile-menu{
         display:none;
@@ -3437,10 +3439,10 @@ function injectStyles() {
         gap:6px;
       }
       .battle-brand-logo{
-        padding:0;
+        top:-6px;
       }
       .battle-brand-logo img{
-        width:min(42vw,170px);
+        width:min(38vw,150px);
       }
       .battle-header p{
         text-align:left;
