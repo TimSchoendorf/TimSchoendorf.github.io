@@ -547,10 +547,9 @@ function renderBotPreviewStage() {
     playerPanelTitle: 'Deine Reihenfolge',
     playerCards: state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join(''),
     asidePanel: `<div class="preview-panel preview-opponent-panel">
-        <div class="draft-section-head"><div><div class="label">Arena bereit</div><h3>${currentEnemyLabel()}</h3></div><p>Das Gegnerteam bleibt verborgen. Du legst jetzt nur deine eigene Startreihenfolge fest.</p></div>
+        <div class="draft-section-head"><div><div class="label">Arena bereit</div><h3>${currentEnemyLabel()}</h3></div><p>Lege jetzt nur dein Lead und deine beiden Wechseloptionen fest.</p></div>
         <div class="preview-status-stack">
-          <div class="empty"><strong>Gegnerteam verborgen</strong><div>Die gegnerischen Pokémon werden erst im Kampf nach und nach sichtbar.</div></div>
-          <div class="empty"><strong>Dein Team steht</strong><div>Ordne jetzt Lead und Wechselreihenfolge für den Start.</div></div>
+          <div class="empty"><strong>Reihenfolge festlegen</strong><div>Slot 1 startet im Kampf. Slot 2 und 3 sind deine Wechseloptionen.</div></div>
         </div>
         <div class="actions"><button class="primary-btn" data-action="start-battle">Kampf starten</button><button class="ghost-btn" data-action="go-menu">Zur Moduswahl</button></div>
       </div>`,
@@ -624,7 +623,11 @@ function renderCombatant(mon, label, facing, sideKey, side) {
 function renderBench(team, own) {
   const bench = team.filter((member) => !member.active);
   if (!bench.length) return '<div class="empty">Keine Reserve sichtbar.</div>';
-  return `<div class="bench-grid">${bench.map((member) => `<div class="bench-card" style="background:${typeGradient(member.types || ['Normal'])}">${spriteTag(member, own ? 'back' : 'front', 'sm')}<strong>${member.name}</strong><div class="tiny">${member.condition}</div><button class="info-chip" data-inspect="${member.name}">Infos</button></div>`).join('')}</div>`;
+  return `<div class="bench-grid">${bench.map((member) => `<div class="bench-card bench-card-switch" style="background:${typeGradient(member.types || ['Normal'])}">
+      <div class="bench-card-sprite">${spriteTag(member, own ? 'back' : 'front', 'sm')}</div>
+      <div class="bench-card-copy"><strong>${member.name}</strong><div class="tiny">${member.condition}</div></div>
+      <button class="info-chip" data-inspect="${member.name}">Infos</button>
+    </div>`).join('')}</div>`;
 }
 
 function renderChoiceButtons() {
@@ -2250,40 +2253,55 @@ function injectStyles() {
     }
     .battle-footer{
       display:grid;
-      grid-template-columns:.92fr 1.18fr;
-      gap:6px;
+      grid-template-columns:minmax(0,.94fr) minmax(0,1.06fr);
+      gap:8px;
       max-width:none;
       width:100%;
       margin:0 auto;
     }
     .battle-panel{
-      padding:3px;
-      gap:4px;
+      padding:8px;
+      gap:6px;
       background:rgba(255,255,255,.05);
     }
-    .battle-panel .bench-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+    .battle-panel .bench-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
     .bench-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
     .bench-card{
       display:grid;
+      gap:6px;
+      padding:8px 10px;
+      min-height:84px;
+    }
+    .bench-card-switch{
+      grid-template-columns:auto minmax(0,1fr) auto;
+      align-items:center;
+      justify-items:start;
+      text-align:left;
+    }
+    .bench-card-sprite{
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .bench-card-copy{
+      display:grid;
       gap:3px;
-      padding:4px;
-      justify-items:center;
-      text-align:center;
-      min-height:56px;
+      min-width:0;
     }
     .battle-panel .bench-card strong{
-      font-size:.75rem;
+      font-size:.84rem;
       line-height:1.1;
     }
     .battle-panel .bench-card .tiny{
-      font-size:.67rem;
-      line-height:1.2;
+      font-size:.72rem;
+      line-height:1.15;
     }
     .battle-panel .bench-card .info-chip{
-      padding:4px 6px;
-      font-size:.68rem;
+      justify-self:end;
+      padding:6px 8px;
+      font-size:.72rem;
     }
-    .battle-panel .sprite.sm{width:30px;height:30px}
+    .battle-panel .sprite.sm{width:44px;height:44px}
     .choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .choice-btn{
       display:flex;
@@ -2503,7 +2521,7 @@ function injectStyles() {
     }
     @media (min-width:721px){
       .battle-view{
-        width:min(82vw,1240px);
+        width:min(74vw,1100px);
         max-width:none;
         margin:0 auto;
       }
@@ -3108,7 +3126,7 @@ function injectStyles() {
       }
       .sprite.lg{width:104px;height:104px}
       .battle-stage{
-        min-height:36vh;
+        min-height:34vh;
         border-radius:8px;
         aspect-ratio:auto;
         --battle-pad-x:3%;
@@ -3116,7 +3134,7 @@ function injectStyles() {
         --battle-feed-bottom:3%;
         --battle-feed-height:17%;
         --battle-player-line:22%;
-        --battle-foe-line:16%;
+        --battle-foe-line:10.5%;
       }
       .battle-header{
         align-items:flex-start;
@@ -3142,10 +3160,10 @@ function injectStyles() {
       }
       .battle-hp{height:12px}
       .battle-sprite-foe{
-        top:var(--battle-foe-line);
-        right:8%;
-        width:26%;
-        height:32%;
+        top:calc(var(--battle-foe-line) - 1.5%);
+        right:6%;
+        width:29%;
+        height:35%;
       }
       .battle-sprite-player{
         left:7%;
@@ -3172,30 +3190,40 @@ function injectStyles() {
       }
       .feed-line{font-size:.8rem}
       .battle-footer{
-        grid-template-columns:1fr 1fr;
+        grid-template-columns:1fr;
         gap:6px;
       }
       .battle-panel{
         padding:6px;
         border-radius:18px;
       }
-      .battle-panel .bench-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:4px}
+      .battle-panel .bench-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
       .battle-panel .bench-card{
-        min-height:70px;
-        padding:4px 3px;
+        min-height:72px;
+        padding:6px 8px;
+      }
+      .battle-panel .bench-card-switch{
+        grid-template-columns:44px minmax(0,1fr) auto;
+        gap:6px;
+      }
+      .battle-panel .bench-card strong{
+        font-size:.82rem;
+      }
+      .battle-panel .bench-card .tiny{
+        font-size:.68rem;
       }
       .battle-panel .bench-card .info-chip{
-        padding:3px 5px;
-        font-size:.62rem;
+        padding:4px 6px;
+        font-size:.66rem;
       }
-      .battle-panel .sprite.sm{width:28px;height:28px}
+      .battle-panel .sprite.sm{width:44px;height:44px}
       .choice-grid{
         grid-template-columns:repeat(2,minmax(0,1fr));
         gap:6px;
       }
       .choice-btn{
-        min-height:40px;
-        padding:6px 8px;
+        min-height:36px;
+        padding:5px 8px;
         gap:3px;
       }
       .modal{
@@ -3338,6 +3366,37 @@ function injectStyles() {
         min-height:34px;
         padding:7px 10px;
         font-size:.92rem;
+      }
+      .battle-stage{
+        --battle-foe-line:11%;
+      }
+      .battle-sprite-foe{
+        top:calc(var(--battle-foe-line) - 1.2%);
+      }
+      .battle-panel .bench-grid{
+        gap:5px;
+      }
+      .battle-panel .bench-card{
+        min-height:68px;
+        padding:5px 6px;
+      }
+      .battle-panel .bench-card-switch{
+        grid-template-columns:40px minmax(0,1fr) auto;
+        gap:5px;
+      }
+      .battle-panel .bench-card strong{
+        font-size:.74rem;
+      }
+      .battle-panel .bench-card .tiny{
+        font-size:.64rem;
+      }
+      .battle-panel .bench-card .info-chip{
+        padding:4px 5px;
+        font-size:.62rem;
+      }
+      .battle-panel .sprite.sm{
+        width:40px;
+        height:40px;
       }
     }
   `;
