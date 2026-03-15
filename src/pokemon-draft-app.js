@@ -386,23 +386,46 @@ function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, c
   </section>`;
 }
 
+function renderPreviewHeroGuide(mode) {
+  const slots = Array.from({length: 3}, (_, index) => {
+    const member = state.playerPreview[index];
+    if (!member) {
+      return `<div class="preview-hero-slot empty"><span>${index + 1}</span><strong>Offen</strong><div>Wird nach dem Draft gefüllt.</div></div>`;
+    }
+    return `<div class="preview-hero-slot" style="background:${typeGradient(member.types)}">
+      <span>${index + 1}</span>
+      <strong>${member.name}</strong>
+      <div>${index === 0 ? 'Startet im Kampf' : 'Bleibt als Wechsel bereit'}</div>
+    </div>`;
+  }).join('');
+  const note = mode === 'bot'
+    ? 'Prüfe nur dein Lead und die beiden Wechseloptionen. Das Gegnerteam bleibt bis zum Kampf verborgen.'
+    : 'Deine Sortierung bleibt verborgen, bis beide Seiten bereit sind und der Kampf startet.';
+  return `<aside class="preview-hero-guide">
+    <div class="label">${mode === 'bot' ? 'Startplan' : 'Verdeckter Plan'}</div>
+    <div class="preview-hero-slot-grid">${slots}</div>
+    <div class="preview-hero-note">${note}</div>
+  </aside>`;
+}
+
 function renderPreviewShell({mode, title, statusCopy, chips, actionLabel, playerPanelTitle, playerCards, asidePanel}) {
   return `<section class="preview-shell">
     <div class="draft-topbar">
       <a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</span></div>
     </div>
-    <section class="draft-hero-panel">
+    <section class="draft-hero-panel preview-hero-panel">
       <div class="draft-hero-copy">
         <div class="draft-kicker-row"><span class="label">${mode === 'bot' ? 'Reihenfolge' : 'Verdeckte Reihenfolge'}</span><span class="draft-status-pill">${mode === 'bot' ? currentEnemyLabel() : 'Team ordnen'}</span></div>
         <h2>${title}</h2>
         <p>${statusCopy}</p>
         <div class="draft-chip-row">${chips.map((chip) => `<span>${chip}</span>`).join('')}</div>
       </div>
+      ${renderPreviewHeroGuide(mode)}
     </section>
     <section class="preview-main-grid">
-      <section class="preview-panel">
-        <div class="draft-section-head"><div><div class="label">${playerPanelTitle}</div><h3>Ziehe dein Team in die Startreihenfolge</h3></div><p>${actionLabel}</p></div>
+      <section class="preview-panel preview-order-panel">
+        <div class="draft-section-head"><div><div class="label">${playerPanelTitle}</div><h3>Ziehe dein Team in die Startreihenfolge</h3></div><p class="preview-order-note">${actionLabel}</p></div>
         <div class="preview-card-list">${playerCards}</div>
       </section>
       <aside class="preview-side-panel">${asidePanel}</aside>
@@ -412,8 +435,8 @@ function renderPreviewShell({mode, title, statusCopy, chips, actionLabel, player
 
 function renderPreviewCard(member, index, controls) {
   return `<div class="preview-card" style="background:${typeGradient(member.types)}">
-    ${spriteTag(member, 'front', 'sm')}
-    <div class="preview-copy"><strong>${index + 1}. ${member.name}</strong><div class="tiny">${member.moveNames.join(', ')}</div></div>
+    <div class="preview-card-media"><span class="preview-rank">${index + 1}</span>${spriteTag(member, 'front', 'sm')}</div>
+    <div class="preview-copy"><strong>${member.name}</strong><div class="tiny">${member.moveNames.join(', ')}</div></div>
     <div class="preview-actions"><button class="info-chip" data-inspect="${member.name}">Infos</button>${controls ? `<button class="mini-btn" data-move-index="${index}" data-move-dir="-1" ${index === 0 ? 'disabled' : ''}>hoch</button><button class="mini-btn" data-move-index="${index}" data-move-dir="1" ${index === state.playerPreview.length - 1 ? 'disabled' : ''}>runter</button>` : ''}</div>
   </div>`;
 }
@@ -647,12 +670,24 @@ function renderBattleStage() {
   const rematch = state.playMode === 'link' && state.battleFinished ? '<button class="primary-btn" data-action="link-rematch">Revanche</button>' : '';
   const latestFeed = state.battleFeed[0] || 'Der Kampf beginnt.';
   return `<section class="battle-ui">
-    <div class="battle-header"><div><div class="label">Battle Phase</div><h2>${currentEnemyLabel()}</h2></div><p>${state.message}</p></div>
-    <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), currentEnemyLabel(), 'front', foeSide(), 'foe')}<div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'Du', 'back', ownSide(), 'player')}</div></section>
-    <section class="battle-footer">
-      <div class="panel battle-panel"><div class="label">Deine Reserve</div>${renderBench(ownTeamState(), true)}</div>
-      <div class="panel battle-panel battle-actions-panel"><div class="label">Aktionen</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn" data-action="go-menu">Zur Moduswahl</button></div></div>
-    </section>
+    <div class="battle-desktop-shell">
+      <aside class="battle-rail battle-rail-left">
+        <button class="ghost-btn battle-rail-link" data-action="go-menu">Zur Moduswahl</button>
+        <div class="battle-rail-card"><span class="label">Arena</span><strong>${currentGenerationConfig().label}</strong><div class="tiny">${state.playMode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</div></div>
+      </aside>
+      <div class="battle-center">
+        <div class="battle-header"><div><div class="label">Battle Phase</div><h2>${currentEnemyLabel()}</h2></div><p>${state.message}</p></div>
+        <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), currentEnemyLabel(), 'front', foeSide(), 'foe')}<div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'Du', 'back', ownSide(), 'player')}</div></section>
+        <section class="battle-footer">
+          <div class="panel battle-panel"><div class="label">Deine Reserve</div>${renderBench(ownTeamState(), true)}</div>
+          <div class="panel battle-panel battle-actions-panel"><div class="label">Aktionen</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn" data-action="go-menu">Zur Moduswahl</button></div></div>
+        </section>
+      </div>
+      <aside class="battle-rail battle-rail-right">
+        <div class="battle-rail-card"><span class="label">Kanto Arena</span><strong>3 gegen 3</strong><div class="tiny">Lead plus zwei Wechseloptionen.</div></div>
+        <div class="battle-rail-card"><span class="label">Textbox</span><strong>Letzte Meldung</strong><div class="tiny">Die Box zeigt immer den aktuellsten Kampftext.</div></div>
+      </aside>
+    </div>
   </section>`;
 }
 
@@ -1407,6 +1442,11 @@ function injectStyles() {
       align-items:center;
       min-height:88px;
     }
+    .preview-card-media{
+      display:grid;
+      justify-items:center;
+      gap:8px;
+    }
     .preview-copy strong,.draft-card h3,.combatant strong,.roster-card strong{color:var(--ink)}
     .battle-view{grid-template-columns:minmax(0,1fr)}
     .battle-view .side{display:none}
@@ -1565,6 +1605,57 @@ function injectStyles() {
       gap:12px;
       align-items:start;
     }
+    .preview-hero-panel{
+      grid-template-columns:minmax(0,1.2fr) minmax(300px,.8fr);
+      align-items:stretch;
+    }
+    .preview-hero-guide{
+      display:grid;
+      gap:10px;
+      padding:14px;
+      border-radius:22px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+      align-content:start;
+    }
+    .preview-hero-slot-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:8px;
+    }
+    .preview-hero-slot{
+      display:grid;
+      gap:4px;
+      padding:10px;
+      border-radius:18px;
+      color:var(--ink);
+      box-shadow:inset 0 0 0 999px rgba(255,255,255,.12);
+      min-width:0;
+    }
+    .preview-hero-slot.empty{
+      background:rgba(255,255,255,.04);
+      color:var(--text);
+      box-shadow:none;
+    }
+    .preview-hero-slot span,.preview-rank{
+      width:28px;
+      height:28px;
+      display:grid;
+      place-items:center;
+      border-radius:50%;
+      background:linear-gradient(180deg,var(--menu-accent-soft),var(--menu-accent));
+      color:#16211a;
+      font-weight:800;
+      box-shadow:0 10px 24px var(--menu-glow);
+    }
+    .preview-hero-slot strong{
+      line-height:1.05;
+    }
+    .preview-hero-slot div,.preview-hero-note{
+      color:var(--muted);
+      font-size:.82rem;
+      line-height:1.35;
+    }
     .preview-panel,.preview-side-panel{
       border:1px solid var(--line);
       border-radius:28px;
@@ -1578,6 +1669,14 @@ function injectStyles() {
     .preview-card-list,.preview-status-stack{
       display:grid;
       gap:10px;
+    }
+    .preview-order-note{
+      max-width:340px;
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.08);
+      text-align:right;
     }
     .draft-section-head{
       display:flex;
@@ -2075,6 +2174,36 @@ function injectStyles() {
       gap:6px;
       font-family:"Courier New",monospace;
     }
+    .battle-desktop-shell{
+      display:grid;
+      grid-template-columns:minmax(0,1fr);
+      gap:12px;
+      align-items:start;
+    }
+    .battle-center{
+      display:grid;
+      gap:6px;
+      min-width:0;
+    }
+    .battle-rail{
+      display:none;
+    }
+    .battle-rail-card{
+      display:grid;
+      gap:6px;
+      padding:12px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+    }
+    .battle-rail-card strong{
+      font-size:1rem;
+      line-height:1.05;
+    }
+    .battle-rail-link{
+      width:100%;
+      justify-content:center;
+    }
     .battle-header{
       display:flex;
       align-items:flex-end;
@@ -2269,8 +2398,8 @@ function injectStyles() {
     .bench-card{
       display:grid;
       gap:6px;
-      padding:8px 10px;
-      min-height:84px;
+      padding:10px 12px;
+      min-height:92px;
     }
     .bench-card-switch{
       grid-template-columns:auto minmax(0,1fr) auto;
@@ -2289,11 +2418,11 @@ function injectStyles() {
       min-width:0;
     }
     .battle-panel .bench-card strong{
-      font-size:.84rem;
+      font-size:.9rem;
       line-height:1.1;
     }
     .battle-panel .bench-card .tiny{
-      font-size:.72rem;
+      font-size:.76rem;
       line-height:1.15;
     }
     .battle-panel .bench-card .info-chip{
@@ -2301,7 +2430,7 @@ function injectStyles() {
       padding:6px 8px;
       font-size:.72rem;
     }
-    .battle-panel .sprite.sm{width:44px;height:44px}
+    .battle-panel .sprite.sm{width:56px;height:56px}
     .choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     .choice-btn{
       display:flex;
@@ -2521,9 +2650,47 @@ function injectStyles() {
     }
     @media (min-width:721px){
       .battle-view{
-        width:min(74vw,1100px);
+        width:min(82vw,1280px);
         max-width:none;
         margin:0 auto;
+      }
+      .battle-desktop-shell{
+        grid-template-columns:120px minmax(0,1fr) 120px;
+        gap:16px;
+      }
+      .battle-rail{
+        display:grid;
+        gap:10px;
+        align-content:start;
+        position:sticky;
+        top:16px;
+      }
+      .preview-shell .draft-hero-copy h2{
+        font-size:clamp(2rem,3.6vw,3.2rem);
+      }
+      .preview-card{
+        grid-template-columns:auto minmax(0,1fr) auto;
+        min-height:96px;
+        padding:12px 14px;
+      }
+      .preview-card .sprite.sm{
+        width:52px;
+        height:52px;
+      }
+      .battle-panel .sprite.sm{
+        width:64px;
+        height:64px;
+      }
+      .preview-copy strong{
+        font-size:1.12rem;
+      }
+      .preview-copy .tiny{
+        line-height:1.25;
+      }
+      .preview-actions{
+        display:grid;
+        grid-template-columns:repeat(3,minmax(0,auto));
+        gap:6px;
       }
       .battle-stage{
         --battle-foe-line:11.5%;
@@ -2727,7 +2894,7 @@ function injectStyles() {
         gap:8px;
         padding:4px 0 2px;
         height:calc(100svh - 20px);
-        grid-template-rows:auto 1fr;
+        grid-template-rows:auto auto 1fr;
         overflow:hidden;
       }
       .draft-topbar{
@@ -2758,6 +2925,30 @@ function injectStyles() {
         border-radius:20px;
         padding:10px;
         gap:8px;
+      }
+      .preview-hero-panel{
+        grid-template-columns:1fr;
+      }
+      .preview-hero-guide{
+        padding:8px;
+        gap:6px;
+      }
+      .preview-hero-slot-grid{
+        gap:5px;
+      }
+      .preview-hero-slot{
+        padding:6px;
+        border-radius:14px;
+      }
+      .preview-hero-slot strong{
+        font-size:.78rem;
+      }
+      .preview-hero-slot div,.preview-hero-note{
+        font-size:.68rem;
+        line-height:1.2;
+      }
+      .preview-hero-note{
+        display:none;
       }
       .preview-panel{
         min-height:0;
@@ -2811,12 +3002,20 @@ function injectStyles() {
         text-align:left;
         align-items:center;
         gap:8px;
-        min-height:72px;
-        padding:8px;
+        min-height:66px;
+        padding:7px 8px;
+      }
+      .preview-card-media{
+        gap:4px;
+      }
+      .preview-rank{
+        width:24px;
+        height:24px;
+        font-size:.72rem;
       }
       .preview-card .sprite.sm{
-        width:42px;
-        height:42px;
+        width:38px;
+        height:38px;
       }
       .preview-copy{
         display:grid;
@@ -2827,7 +3026,7 @@ function injectStyles() {
         display:none;
       }
       .preview-copy strong{
-        font-size:.92rem;
+        font-size:.86rem;
         line-height:1.15;
       }
       .preview-actions{
@@ -2839,8 +3038,8 @@ function injectStyles() {
       }
       .preview-actions .info-chip,.preview-actions .mini-btn{
         justify-content:center;
-        padding:6px 8px;
-        font-size:.66rem;
+        padding:5px 7px;
+        font-size:.62rem;
       }
       .preview-side-panel .actions{
         display:grid;
@@ -3199,11 +3398,11 @@ function injectStyles() {
       }
       .battle-panel .bench-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
       .battle-panel .bench-card{
-        min-height:72px;
+        min-height:80px;
         padding:6px 8px;
       }
       .battle-panel .bench-card-switch{
-        grid-template-columns:44px minmax(0,1fr) auto;
+        grid-template-columns:56px minmax(0,1fr) auto;
         gap:6px;
       }
       .battle-panel .bench-card strong{
@@ -3216,7 +3415,7 @@ function injectStyles() {
         padding:4px 6px;
         font-size:.66rem;
       }
-      .battle-panel .sprite.sm{width:44px;height:44px}
+      .battle-panel .sprite.sm{width:54px;height:54px}
       .choice-grid{
         grid-template-columns:repeat(2,minmax(0,1fr));
         gap:6px;
@@ -3377,11 +3576,11 @@ function injectStyles() {
         gap:5px;
       }
       .battle-panel .bench-card{
-        min-height:68px;
+        min-height:72px;
         padding:5px 6px;
       }
       .battle-panel .bench-card-switch{
-        grid-template-columns:40px minmax(0,1fr) auto;
+        grid-template-columns:48px minmax(0,1fr) auto;
         gap:5px;
       }
       .battle-panel .bench-card strong{
@@ -3395,8 +3594,8 @@ function injectStyles() {
         font-size:.62rem;
       }
       .battle-panel .sprite.sm{
-        width:40px;
-        height:40px;
+        width:46px;
+        height:46px;
       }
     }
   `;
