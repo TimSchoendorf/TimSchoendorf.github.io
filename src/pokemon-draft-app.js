@@ -84,6 +84,13 @@ const MENU_SHOWCASE = {
   foe: POKEMON_POOL.find((species) => species.name === 'Mewtwo') || POKEMON_POOL[0],
   player: POKEMON_POOL.find((species) => species.name === 'Charizard') || POKEMON_POOL[1] || POKEMON_POOL[0],
 };
+const STARTER_ART_PATH = '../assets/firstgenstarter-cutout.png';
+const BATTLE_DECOR_ZONES = [
+  {leftMin: 1.2, leftMax: 12.8, topMin: 12, topMax: 53},
+  {leftMin: 87.2, leftMax: 98.8, topMin: 12, topMax: 53},
+  {leftMin: 1.8, leftMax: 14.5, topMin: 64, topMax: 92},
+  {leftMin: 85.5, leftMax: 98.2, topMin: 64, topMax: 92},
+];
 
 const state = {
   phase: 'menu',
@@ -186,6 +193,24 @@ function compactMeta(parts) {
 function spriteTag(member, facing = 'front', size = 'md') {
   if (!member?.sprites?.[facing]) return '';
   return `<img class="sprite ${size} ${facing}" src="${member.sprites[facing]}" alt="${member.name}">`;
+}
+
+function seededUnit(seed) {
+  const value = Math.sin(seed * 12.9898) * 43758.5453;
+  return value - Math.floor(value);
+}
+
+function renderBattleDecor() {
+  return `<div class="battle-decor-layer" aria-hidden="true">${POKEMON_POOL.map((member, index) => {
+    if (!member?.sprites?.front) return '';
+    const zone = BATTLE_DECOR_ZONES[index % BATTLE_DECOR_ZONES.length];
+    const left = zone.leftMin + (zone.leftMax - zone.leftMin) * seededUnit(index + 11);
+    const top = zone.topMin + (zone.topMax - zone.topMin) * seededUnit(index + 97);
+    const size = 10 + Math.round(seededUnit(index + 173) * 12);
+    const rotation = -10 + seededUnit(index + 241) * 20;
+    const opacity = 0.12 + seededUnit(index + 311) * 0.13;
+    return `<img class="battle-decor-sprite" src="${member.sprites.front}" alt="" style="left:${left.toFixed(2)}%;top:${top.toFixed(2)}%;width:${size}px;height:${size}px;opacity:${opacity.toFixed(2)};transform:translate(-50%,-50%) rotate(${rotation.toFixed(2)}deg);">`;
+  }).join('')}</div>`;
 }
 
 function menuSpriteTag(member, facing = 'front', slot = 'foe') {
@@ -669,24 +694,23 @@ function renderChoiceButtons() {
 function renderBattleStage() {
   const rematch = state.playMode === 'link' && state.battleFinished ? '<button class="primary-btn" data-action="link-rematch">Revanche</button>' : '';
   const latestFeed = state.battleFeed[0] || 'Der Kampf beginnt.';
+  const streak = `Siegesserie ${state.runWins}`;
   return `<section class="battle-ui">
+    ${renderBattleDecor()}
+    <div class="battle-frame-top">
+      <button class="ghost-btn battle-mode-link" data-action="go-menu">Zur Moduswahl</button>
+      <div class="battle-streak-badge"><span class="label">Serie</span><strong>${streak}</strong></div>
+    </div>
     <div class="battle-desktop-shell">
-      <aside class="battle-rail battle-rail-left">
-        <button class="ghost-btn battle-rail-link" data-action="go-menu">Zur Moduswahl</button>
-        <div class="battle-rail-card"><span class="label">Arena</span><strong>${currentGenerationConfig().label}</strong><div class="tiny">${state.playMode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</div></div>
-      </aside>
       <div class="battle-center">
         <div class="battle-header"><div><div class="label">Battle Phase</div><h2>${currentEnemyLabel()}</h2></div><p>${state.message}</p></div>
         <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), currentEnemyLabel(), 'front', foeSide(), 'foe')}<div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'Du', 'back', ownSide(), 'player')}</div></section>
         <section class="battle-footer">
           <div class="panel battle-panel"><div class="label">Deine Reserve</div>${renderBench(ownTeamState(), true)}</div>
-          <div class="panel battle-panel battle-actions-panel"><div class="label">Aktionen</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn" data-action="go-menu">Zur Moduswahl</button></div></div>
+          <div class="panel battle-panel battle-actions-panel"><div class="label">Aktionen</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn battle-mobile-menu" data-action="go-menu">Zur Moduswahl</button></div></div>
         </section>
+        <div class="battle-starter-art"><img src="${STARTER_ART_PATH}" alt="Starter der ersten Generation"></div>
       </div>
-      <aside class="battle-rail battle-rail-right">
-        <div class="battle-rail-card"><span class="label">Kanto Arena</span><strong>3 gegen 3</strong><div class="tiny">Lead plus zwei Wechseloptionen.</div></div>
-        <div class="battle-rail-card"><span class="label">Textbox</span><strong>Letzte Meldung</strong><div class="tiny">Die Box zeigt immer den aktuellsten Kampftext.</div></div>
-      </aside>
     </div>
   </section>`;
 }
@@ -2170,39 +2194,59 @@ function injectStyles() {
       font-size:1.1rem;
     }
     .battle-ui{
+      position:relative;
       display:grid;
       gap:6px;
       font-family:"Courier New",monospace;
+      overflow:hidden;
+    }
+    .battle-decor-layer{
+      display:none;
+    }
+    .battle-decor-sprite{
+      position:absolute;
+      image-rendering:pixelated;
+      pointer-events:none;
+      z-index:0;
+      filter:drop-shadow(0 0 6px rgba(0,0,0,.2));
+    }
+    .battle-frame-top{
+      display:grid;
+      grid-template-columns:auto auto;
+      justify-content:space-between;
+      align-items:start;
+      gap:12px;
+      position:relative;
+      z-index:2;
+    }
+    .battle-mode-link{
+      justify-self:start;
+    }
+    .battle-streak-badge{
+      display:grid;
+      gap:4px;
+      justify-items:end;
+      padding:10px 14px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.05);
+    }
+    .battle-streak-badge strong{
+      font-size:1rem;
+      line-height:1.05;
     }
     .battle-desktop-shell{
       display:grid;
       grid-template-columns:minmax(0,1fr);
       gap:12px;
       align-items:start;
+      position:relative;
+      z-index:1;
     }
     .battle-center{
       display:grid;
-      gap:6px;
+      gap:10px;
       min-width:0;
-    }
-    .battle-rail{
-      display:none;
-    }
-    .battle-rail-card{
-      display:grid;
-      gap:6px;
-      padding:12px;
-      border-radius:18px;
-      border:1px solid rgba(255,255,255,.08);
-      background:rgba(255,255,255,.04);
-    }
-    .battle-rail-card strong{
-      font-size:1rem;
-      line-height:1.05;
-    }
-    .battle-rail-link{
-      width:100%;
-      justify-content:center;
     }
     .battle-header{
       display:flex;
@@ -2387,6 +2431,12 @@ function injectStyles() {
       max-width:none;
       width:100%;
       margin:0 auto;
+    }
+    .battle-starter-art{
+      display:none;
+    }
+    .battle-mobile-menu{
+      display:inline-flex;
     }
     .battle-panel{
       padding:8px;
@@ -2650,20 +2700,44 @@ function injectStyles() {
     }
     @media (min-width:721px){
       .battle-view{
-        width:min(82vw,1280px);
+        width:min(90vw,1520px);
         max-width:none;
         margin:0 auto;
       }
-      .battle-desktop-shell{
-        grid-template-columns:120px minmax(0,1fr) 120px;
-        gap:16px;
+      .battle-decor-layer{
+        display:block;
       }
-      .battle-rail{
+      .battle-frame-top{
+        padding:0 12px;
+      }
+      .battle-mode-link{
+        min-width:154px;
+      }
+      .battle-streak-badge{
+        min-width:164px;
+      }
+      .battle-desktop-shell{
+        grid-template-columns:minmax(0,1fr);
+        gap:14px;
+      }
+      .battle-center{
+        width:min(72vw,1080px);
+        margin:0 auto;
+      }
+      .battle-mobile-menu{
+        display:none;
+      }
+      .battle-starter-art{
         display:grid;
-        gap:10px;
-        align-content:start;
-        position:sticky;
-        top:16px;
+        place-items:center;
+        padding:6px 0 2px;
+      }
+      .battle-starter-art img{
+        width:min(34vw,430px);
+        height:auto;
+        display:block;
+        mix-blend-mode:multiply;
+        filter:drop-shadow(0 18px 24px rgba(0,0,0,.18));
       }
       .preview-shell .draft-hero-copy h2{
         font-size:clamp(2rem,3.6vw,3.2rem);
