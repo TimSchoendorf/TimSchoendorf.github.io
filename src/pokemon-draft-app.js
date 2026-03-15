@@ -1331,6 +1331,10 @@ function injectStyles() {
     .menu-showcase{
       position:relative;
       min-height:386px;
+      --menu-dialog-bottom:5.5%;
+      --menu-dialog-height:23%;
+      --menu-player-overlap:3.1%;
+      --menu-player-shift-y:12%;
       overflow:hidden;
       padding:18px;
     }
@@ -1389,7 +1393,7 @@ function injectStyles() {
     }
     .menu-stage-mon-player{
       left:8%;
-      bottom:28.5%;
+      bottom:calc(var(--menu-dialog-bottom) + var(--menu-dialog-height) - var(--menu-player-overlap));
       width:20%;
       height:31%;
     }
@@ -1403,7 +1407,7 @@ function injectStyles() {
       filter:drop-shadow(0 12px 0 rgba(255,255,255,.2)) drop-shadow(0 20px 18px rgba(0,0,0,.18));
     }
     .menu-sprite-foe.front{transform:translateX(1%)}
-    .menu-sprite-player.back{transform:translateX(-1%) translateY(0)}
+    .menu-sprite-player.back{transform:translateX(-1%) translateY(var(--menu-player-shift-y))}
     .menu-mon-placeholder{
       display:grid;
       place-items:center;
@@ -1425,10 +1429,10 @@ function injectStyles() {
     }
     .menu-stage-line-top{top:53%}
     .menu-stage-line-bottom{
-      bottom:5.5%;
+      bottom:var(--menu-dialog-bottom);
       left:3.8%;
       right:3.8%;
-      height:23%;
+      height:var(--menu-dialog-height);
       border:3px solid #182117;
       border-radius:12px;
       background:rgba(249,245,232,.94);
@@ -1438,8 +1442,8 @@ function injectStyles() {
       position:absolute;
       left:7%;
       right:7%;
-      bottom:5.5%;
-      height:23%;
+      bottom:var(--menu-dialog-bottom);
+      height:var(--menu-dialog-height);
       z-index:4;
       display:flex;
       align-items:center;
@@ -1942,12 +1946,15 @@ function injectStyles() {
       }
       .menu-showcase{
         min-height:334px;
+        --menu-dialog-bottom:16px;
+        --menu-dialog-height:72px;
+        --menu-player-overlap:8px;
       }
       .menu-stage-card-foe{top:16px;left:16px;width:min(34%,200px);min-height:60px}
       .menu-stage-mon-foe{top:56px;right:24px;width:18%;height:26%}
-      .menu-stage-mon-player{left:24px;bottom:88px;width:22%;height:30%}
-      .menu-stage-line-bottom{left:16px;right:16px;bottom:16px;height:72px}
-      .menu-stage-text{left:26px;right:26px;bottom:16px;height:72px;padding-left:116px;font-size:.82rem;line-height:1.08}
+      .menu-stage-mon-player{left:24px;width:22%;height:30%}
+      .menu-stage-line-bottom{left:16px;right:16px}
+      .menu-stage-text{left:26px;right:26px;padding-left:116px;font-size:.82rem;line-height:1.08}
       .menu-mode-card{
         padding:16px;
       }
@@ -1972,7 +1979,7 @@ function injectStyles() {
       .menu-section-head{align-items:flex-start;flex-direction:column}
       .menu-showcase{min-height:340px}
       .menu-stage-mon-foe{right:28px;width:18%;height:26%}
-      .menu-stage-mon-player{left:24px;bottom:88px;width:22%;height:30%}
+      .menu-stage-mon-player{left:24px;width:22%;height:30%}
       .battle-footer{grid-template-columns:1fr 1fr}
       .battle-actions-panel{grid-column:1 / -1}
     }
@@ -2010,6 +2017,9 @@ function injectStyles() {
       .menu-mode-points span:nth-child(3){display:none}
       .menu-showcase{
         min-height:146px;
+        --menu-dialog-bottom:8px;
+        --menu-dialog-height:30px;
+        --menu-player-overlap:4px;
         padding:10px;
       }
       .menu-stage-card,.menu-tech-card{
@@ -2023,24 +2033,20 @@ function injectStyles() {
       .menu-stage-card-foe strong{font-size:.8rem}
       .menu-stage-card-player{display:none}
       .menu-stage-mon-foe{top:34px;right:8px;width:17%;height:18%}
-      .menu-stage-mon-player{display:grid;left:6px;bottom:54px;width:20%;height:28%}
+      .menu-stage-mon-player{display:grid;left:6px;width:20%;height:28%}
       .menu-stage-line-bottom{
         left:12px;
         right:12px;
-        bottom:8px;
-        height:30px;
       }
       .menu-stage-text{
         left:80px;
         right:16px;
-        bottom:8px;
-        height:30px;
         padding-left:0;
         font-size:.56rem;
         letter-spacing:0;
         line-height:1.08;
       }
-      .menu-stage-mon-player .menu-sprite-player.back{transform:translateX(-2%) translateY(0)}
+      .menu-stage-mon-player .menu-sprite-player.back{transform:translateX(-2%) translateY(var(--menu-player-shift-y))}
       .menu-tech-card-player{display:none}
       .menu-energy-a{width:82px;height:82px;top:54px;right:22px}
       .menu-energy-b{width:90px;height:90px;bottom:34px;left:14px}
