@@ -272,14 +272,102 @@ function renderOpponentPanel() {
   return renderSidePanel(state.playMode === 'bot' ? currentEnemyLabel() : 'Gegner', team, state.playMode === 'bot');
 }
 
+function renderDraftStatCells(member) {
+  const stats = [
+    ['KP', member.battleStats.hp],
+    ['ANG', member.battleStats.atk],
+    ['VER', member.battleStats.def],
+    ['SPC', member.battleStats.spc],
+    ['INIT', member.battleStats.spe],
+  ];
+  return stats.map(([label, value]) => `<div class="draft-stat-cell"><span>${label}</span><strong>${value}</strong></div>`).join('');
+}
+
 function renderDraftCard(species, pickAttr) {
-  return `<div class="draft-card" style="background:${typeGradient(species.types)}">
-    <div class="draft-top">${spriteTag(species, 'front', 'md')}<div><div class="tiny">#${species.num}</div><h3>${species.name}</h3></div></div>
-    <div class="types">${species.types.map((type) => `<span>${type}</span>`).join('')}</div>
-    <div class="tiny">L100 ${species.battleStats.hp}/${species.battleStats.atk}/${species.battleStats.def}/${species.battleStats.spc}/${species.battleStats.spe}</div>
-    <div class="move-row">${previewMoves(species, dex).map((move) => `<span>${move}</span>`).join('')}</div>
-    <div class="card-actions"><button class="ghost-btn" data-inspect="${species.name}">Infos</button><button class="primary-btn" ${pickAttr}>Wählen</button></div>
+  return `<article class="draft-card draft-choice-card" style="background:${typeGradient(species.types)}">
+    <div class="draft-choice-head">
+      <div><div class="label">#${species.num}</div><h3>${species.name}</h3></div>
+      <button class="info-chip" data-inspect="${species.name}">Infos</button>
+    </div>
+    <div class="draft-choice-body">
+      <div class="draft-choice-sprite">${spriteTag(species, 'front', 'lg')}</div>
+      <div class="draft-choice-copy">
+        <div class="types">${species.types.map((type) => `<span>${type}</span>`).join('')}</div>
+        <div class="draft-role-row"><span>${estimateRole(species)}</span><span>${species.archetype}</span></div>
+        <div class="move-row">${previewMoves(species, dex).map((move) => `<span>${move}</span>`).join('')}</div>
+      </div>
+    </div>
+    <div class="draft-stat-grid">${renderDraftStatCells(species)}</div>
+    <div class="card-actions"><button class="primary-btn" ${pickAttr}>Wählen</button></div>
+  </article>`;
+}
+
+function renderDraftTeamSlots(team) {
+  return `<div class="draft-team-strip">${Array.from({length: 3}, (_, index) => {
+    const member = team[index];
+    if (!member) {
+      return `<div class="draft-team-slot empty"><span class="draft-team-index">${index + 1}</span><div><strong>Slot frei</strong><div class="tiny">Hier landet dein Pick.</div></div></div>`;
+    }
+    return `<div class="draft-team-slot filled" style="background:${typeGradient(member.types)}">
+      <span class="draft-team-index">${index + 1}</span>
+      ${spriteTag(member, 'front', 'sm')}
+      <div class="draft-team-copy"><strong>${member.name}</strong><div class="tiny">${member.types.join(' / ')}</div></div>
+      <button class="info-chip" data-inspect="${member.name}">Infos</button>
+    </div>`;
+  }).join('')}</div>`;
+}
+
+function renderDraftStatusCard(mode, roundLabel) {
+  const filled = mode === 'bot' ? state.playerDraft.length : state.playerDraft.length;
+  const progress = `<div class="draft-status-progress">${Array.from({length: 3}, (_, index) => `<span class="${index < filled ? 'filled' : ''}">${index + 1}</span>`).join('')}</div>`;
+  if (mode === 'bot') {
+    return `<div class="draft-status-card">
+      <div class="label">Arena-Status</div>
+      <strong>${currentEnemyLabel()}</strong>
+      ${progress}
+      <div class="draft-status-list">
+        <span>${roundLabel}</span>
+        <span>Gegner draftet parallel</span>
+        <span>Infos zeigt Werte und Attacken</span>
+      </div>
+    </div>`;
+  }
+  return `<div class="draft-status-card">
+    <div class="label">Gegnerstatus</div>
+    <strong>${state.link.connected ? state.link.remoteName : 'Warte auf Gegner'}</strong>
+    ${progress}
+    <div class="draft-status-list">
+      <span>${state.playerDraft.length}/3 gewählt</span>
+      <span>${state.link.remoteDraftCount}/3 bestätigt</span>
+      <span>${state.link.localPickLocked ? 'Wahl bestätigt' : 'Wähle jetzt 1 von 3'}</span>
+    </div>
   </div>`;
+}
+
+function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, cards}) {
+  return `<section class="draft-shell">
+    <div class="draft-topbar">
+      <a class="ghost-btn back" href="../index.html#games">Zurück zur Startseite</a>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot-Serie' : 'Link Battle'}</span></div>
+    </div>
+    <section class="draft-hero-panel">
+      <div class="draft-hero-copy">
+        <div class="draft-kicker-row"><span class="label">${mode === 'bot' ? 'Arena-Auswahl' : 'Verdeckter Draft'}</span><span class="draft-status-pill">${roundLabel}</span></div>
+        <h2>${title}</h2>
+        <p>${statusCopy}</p>
+        <div class="draft-chip-row">${chips.map((chip) => `<span>${chip}</span>`).join('')}</div>
+      </div>
+      ${renderDraftStatusCard(mode, roundLabel)}
+    </section>
+    <section class="draft-team-panel">
+      <div class="draft-section-head"><div><div class="label">Dein Team</div><h3>3 Slots für den Draft</h3></div><p>Deine Picks erscheinen direkt hier. Über Infos kannst du Werte und Attacken vor der Wahl prüfen.</p></div>
+      ${renderDraftTeamSlots(state.playerDraft)}
+    </section>
+    <section class="draft-board">
+      <div class="draft-section-head"><div><div class="label">Auswahl</div><h3>Wähle 1 von 3 Pokémon</h3></div><p>${action}</p></div>
+      <section class="draft-choice-grid">${cards}</section>
+    </section>
+  </section>`;
 }
 
 function renderPreviewCard(member, index, controls) {
@@ -379,8 +467,16 @@ function renderMenuStage() {
 }
 
 function renderDraftStage() {
-  return `<section class="hero"><div><div class="label">Bot-Serie</div><h2>Draft Phase</h2></div><p>${state.message}</p></section>
-    <section class="three-col">${state.pack.map((species) => renderDraftCard(species, `data-draft-id="${species.id}"`)).join('')}</section>`;
+  const round = Math.min(state.playerDraft.length + 1, 3);
+  return renderDraftShell({
+    mode: 'bot',
+    roundLabel: `Runde ${round} von 3`,
+    title: 'Wähle dein nächstes Pokémon',
+    statusCopy: state.message,
+    chips: [currentGenerationConfig().label, '3er-Draft', `${state.playerDraft.length}/3 gewählt`, currentEnemyLabel()],
+    action: 'Diese drei Karten sind deine komplette Auswahl für die aktuelle Runde.',
+    cards: state.pack.map((species) => renderDraftCard(species, `data-draft-id="${species.id}"`)).join(''),
+  });
 }
 
 function renderBotPreviewStage() {
@@ -396,10 +492,15 @@ function renderLinkSetupStage() {
 }
 
 function renderLinkDraftStage() {
-  return `<section class="hero"><div><div class="label">Link Battle Draft</div><h2>Runde ${state.link.draftRound || 1} von 3</h2></div><p>${state.link.connected ? `Verbunden mit ${state.link.remoteName}. Wähle eines aus 3.` : 'Warte auf Verbindung.'}</p></section>
-    ${state.playerDraft.length ? `<div class="panel"><div class="label">Deine bisherigen Picks</div>${state.playerDraft.map((member) => renderRosterCard(createLoadout(member), true)).join('')}</div>` : ''}
-    <div class="status-row"><span>${state.playerDraft.length}/3 gewählt</span><span>${state.link.remoteDraftCount}/3 Gegner-Picks</span><span>${state.link.localPickLocked ? 'Wahl gesperrt' : 'Wähle jetzt'}</span></div>
-    <section class="three-col">${state.link.localPack.map((species) => renderDraftCard(species, `data-link-draft-id="${species.id}" ${state.link.localPickLocked ? 'disabled' : ''}`)).join('')}</section>`;
+  return renderDraftShell({
+    mode: 'link',
+    roundLabel: `Runde ${state.link.draftRound || 1} von 3`,
+    title: 'Wähle verdeckt dein nächstes Pokémon',
+    statusCopy: state.link.connected ? `Verbunden mit ${state.link.remoteName}. Beide Seiten wählen gleichzeitig aus drei Optionen.` : 'Warte auf Verbindung.',
+    chips: [currentGenerationConfig().label, 'Verdeckter Draft', `${state.playerDraft.length}/3 gewählt`, state.link.connected ? 'Gegner verbunden' : 'Warte auf Gegner'],
+    action: state.link.localPickLocked ? 'Deine Wahl ist bestätigt. Warte auf die Gegenseite.' : 'Nur deine drei Karten sind sichtbar. Der Gegner sieht deinen Pack nicht.',
+    cards: state.link.localPack.map((species) => renderDraftCard(species, `data-link-draft-id="${species.id}" ${state.link.localPickLocked ? 'disabled' : ''}`)).join(''),
+  });
 }
 
 function renderLinkPreviewStage() {
@@ -483,9 +584,15 @@ function render() {
     : (state.phase === 'draft' ? state.playerDraft : state.playerPreview.length ? state.playerPreview : state.playerLoadout);
   const battleView = state.phase === 'battle';
   const menuView = state.phase === 'menu';
+  const draftView = state.phase === 'draft' || state.phase === 'link-draft';
   if (menuView) {
     app.innerHTML = `<div class="app-shell menu-view theme-${state.generation}">
       <main class="main menu-main">${renderStage()}</main>
+      ${renderInspectModal()}
+    </div>`;
+  } else if (draftView) {
+    app.innerHTML = `<div class="app-shell draft-view theme-${state.generation}">
+      <main class="main draft-main">${renderStage()}</main>
       ${renderInspectModal()}
     </div>`;
   } else {
@@ -1224,6 +1331,234 @@ function injectStyles() {
       background:none;
       border:none;
       box-shadow:none;
+    }
+    .draft-view{
+      width:min(1500px,100%);
+      grid-template-columns:minmax(0,1fr);
+    }
+    .draft-view .main{
+      padding:0;
+      background:none;
+      border:none;
+      box-shadow:none;
+    }
+    .draft-shell{
+      display:grid;
+      gap:16px;
+      padding:12px 0 8px;
+    }
+    .draft-topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:14px;
+    }
+    .draft-topbar .back{
+      padding:10px 16px;
+      background:rgba(255,255,255,.1);
+    }
+    .draft-topbar-meta,.draft-chip-row,.draft-status-list,.draft-role-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+    }
+    .draft-topbar-meta span,.draft-chip-row span,.draft-status-list span,.draft-role-row span{
+      padding:8px 12px;
+      border-radius:999px;
+      background:rgba(255,255,255,.06);
+      border:1px solid rgba(255,255,255,.08);
+      color:var(--text);
+      font-size:.86rem;
+    }
+    .draft-hero-panel,.draft-team-panel,.draft-board{
+      border:1px solid var(--line);
+      border-radius:28px;
+      background:linear-gradient(180deg,rgba(21,31,24,.94),rgba(16,25,20,.9));
+      box-shadow:0 28px 80px rgba(0,0,0,.22);
+    }
+    .draft-hero-panel{
+      display:grid;
+      grid-template-columns:minmax(0,1.35fr) minmax(260px,.75fr);
+      gap:16px;
+      padding:22px;
+      align-items:stretch;
+    }
+    .draft-hero-copy,.draft-status-card{
+      border:1px solid rgba(255,255,255,.08);
+      border-radius:24px;
+      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));
+      padding:18px;
+    }
+    .draft-hero-copy{
+      display:grid;
+      gap:14px;
+      align-content:start;
+    }
+    .draft-kicker-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+    }
+    .draft-status-pill{
+      padding:7px 12px;
+      border-radius:999px;
+      color:#16211a;
+      font-size:.82rem;
+      font-weight:700;
+      background:linear-gradient(180deg,var(--menu-accent-soft),var(--menu-accent));
+      box-shadow:0 10px 24px var(--menu-glow);
+    }
+    .draft-hero-copy h2,.draft-section-head h3{
+      margin:0;
+    }
+    .draft-hero-copy h2{
+      font-size:clamp(2.2rem,4.4vw,3.8rem);
+      line-height:.95;
+      letter-spacing:-.03em;
+    }
+    .draft-hero-copy p,.draft-section-head p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.55;
+    }
+    .draft-status-card{
+      display:grid;
+      gap:12px;
+      align-content:start;
+    }
+    .draft-status-progress{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:10px;
+    }
+    .draft-status-progress span{
+      min-height:44px;
+      display:grid;
+      place-items:center;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      color:var(--muted);
+      font-weight:800;
+    }
+    .draft-status-progress span.filled{
+      background:linear-gradient(180deg,var(--menu-accent-soft),var(--menu-accent));
+      color:#16211a;
+      box-shadow:0 10px 24px var(--menu-glow);
+      border-color:transparent;
+    }
+    .draft-status-card strong{
+      font-size:1.55rem;
+      line-height:1;
+    }
+    .draft-team-panel,.draft-board{
+      padding:20px;
+      display:grid;
+      gap:16px;
+    }
+    .draft-section-head{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:16px;
+    }
+    .draft-team-strip{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:14px;
+    }
+    .draft-team-slot{
+      min-width:0;
+      display:grid;
+      grid-template-columns:auto auto minmax(0,1fr) auto;
+      align-items:center;
+      gap:12px;
+      padding:14px;
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,.1);
+      background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));
+      color:var(--text);
+    }
+    .draft-team-slot.empty{
+      grid-template-columns:auto 1fr;
+      color:var(--muted);
+    }
+    .draft-team-index{
+      width:34px;
+      height:34px;
+      display:grid;
+      place-items:center;
+      border-radius:50%;
+      background:linear-gradient(180deg,var(--menu-accent-soft),var(--menu-accent));
+      color:#16211a;
+      font-weight:800;
+      box-shadow:0 10px 24px var(--menu-glow);
+    }
+    .draft-team-copy{
+      min-width:0;
+      display:grid;
+      gap:3px;
+    }
+    .draft-choice-grid{
+      display:grid;
+      grid-template-columns:repeat(3,minmax(0,1fr));
+      gap:16px;
+    }
+    .draft-choice-card{
+      display:grid;
+      gap:14px;
+      padding:18px;
+      border-radius:26px;
+      box-shadow:inset 0 0 0 999px rgba(255,255,255,.12),0 20px 34px rgba(0,0,0,.16);
+    }
+    .draft-choice-head,.draft-choice-body{
+      display:flex;
+      justify-content:space-between;
+      gap:12px;
+      align-items:flex-start;
+    }
+    .draft-choice-sprite{
+      min-width:112px;
+      display:grid;
+      place-items:center;
+    }
+    .draft-choice-copy{
+      min-width:0;
+      display:grid;
+      gap:10px;
+      flex:1;
+    }
+    .draft-role-row span{
+      color:var(--chip-text);
+      background:var(--chip);
+      border:none;
+      font-size:.78rem;
+      font-weight:700;
+    }
+    .draft-stat-grid{
+      display:grid;
+      grid-template-columns:repeat(5,minmax(0,1fr));
+      gap:8px;
+    }
+    .draft-stat-cell{
+      padding:9px 6px;
+      border-radius:16px;
+      text-align:center;
+      background:rgba(255,255,255,.18);
+      display:grid;
+      gap:3px;
+    }
+    .draft-stat-cell span{
+      font-size:.68rem;
+      letter-spacing:.08em;
+      text-transform:uppercase;
+      color:var(--ink-soft);
+      font-weight:700;
+    }
+    .draft-stat-cell strong{
+      color:var(--ink);
+      font-size:.94rem;
     }
     .menu-shell{
       display:grid;
@@ -1981,6 +2316,8 @@ function injectStyles() {
       .three-col,.two-col,.choice-grid,.bench-grid{grid-template-columns:1fr}
       .preview-card{grid-template-columns:1fr}
       .menu-hero,.menu-lower,.menu-mode-grid,.menu-meta-grid{grid-template-columns:1fr}
+      .draft-hero-panel,.draft-team-strip,.draft-choice-grid{grid-template-columns:1fr}
+      .draft-section-head{align-items:flex-start;flex-direction:column}
       .menu-section-head{align-items:flex-start;flex-direction:column}
       .menu-showcase{min-height:340px}
       .menu-stage-mon-foe{right:28px;width:18%;height:26%}
@@ -2010,10 +2347,78 @@ function injectStyles() {
         padding:14px;
         gap:12px;
       }
+      .draft-shell{gap:10px;padding:6px 0 8px}
+      .draft-topbar{
+        flex-direction:column;
+        align-items:stretch;
+      }
+      .draft-topbar-meta{
+        justify-content:flex-start;
+      }
+      .draft-hero-panel,.draft-team-panel,.draft-board{
+        border-radius:24px;
+      }
+      .draft-hero-panel{
+        padding:14px;
+        gap:12px;
+      }
+      .draft-hero-copy,.draft-status-card{
+        padding:14px;
+        border-radius:20px;
+        gap:10px;
+      }
+      .draft-hero-copy h2{
+        font-size:clamp(1.85rem,9vw,2.7rem);
+      }
+      .draft-topbar-meta span,.draft-chip-row span,.draft-status-list span,.draft-role-row span{
+        padding:6px 9px;
+        font-size:.74rem;
+      }
+      .draft-status-progress{
+        gap:8px;
+      }
+      .draft-status-progress span{
+        min-height:36px;
+      }
+      .draft-team-panel,.draft-board{
+        padding:14px;
+        gap:12px;
+      }
+      .draft-team-strip,.draft-choice-grid{
+        gap:10px;
+      }
+      .draft-team-slot{
+        grid-template-columns:auto auto 1fr;
+        padding:12px;
+        gap:10px;
+      }
+      .draft-team-slot .info-chip{
+        grid-column:1 / -1;
+        width:100%;
+        justify-content:center;
+      }
+      .draft-choice-card{
+        padding:14px;
+        gap:12px;
+        border-radius:22px;
+      }
+      .draft-choice-head,.draft-choice-body{
+        gap:10px;
+      }
+      .draft-choice-sprite{
+        min-width:84px;
+      }
+      .draft-stat-grid{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+      }
+      .draft-stat-cell{
+        padding:8px 6px;
+      }
       .menu-copy h2{
         font-size:clamp(1.8rem,9.4vw,2.7rem);
       }
       .menu-copy p,.menu-section-head p{font-size:.92rem;line-height:1.45}
+      .draft-hero-copy p,.draft-section-head p{font-size:.9rem;line-height:1.45}
       .menu-feature-row,.menu-mode-points{
         gap:8px;
       }
@@ -2093,10 +2498,13 @@ function injectStyles() {
       .menu-meta-card strong{
         font-size:.9rem;
       }
+      .draft-choice-head,.draft-choice-body,.draft-topbar-meta,.draft-chip-row,.draft-status-list{
+        gap:8px;
+      }
       .battle-view .main{padding:10px}
       .brand h1{font-size:clamp(1.85rem,10vw,2.8rem)}
       .hero,.panel,.draft-card,.preview-card,.combatant,.bench-card,.mode-card{padding:14px}
-      .draft-top,.roster-head,.combatant-head,.card-actions,.preview-actions,.actions{
+      .draft-top,.roster-head,.combatant-head,.card-actions,.preview-actions,.actions,.draft-choice-head,.draft-choice-body{
         flex-wrap:wrap;
         align-items:flex-start;
       }
