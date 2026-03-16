@@ -4203,6 +4203,87 @@ function injectStyles() {
         height:46px;
       }
     }
+    @media (max-width:380px) and (max-height:760px){
+      .link-setup-copy,.link-setup-stage-card,.link-setup-card{
+        padding:7px;
+        gap:5px;
+      }
+      .link-setup-copy h2{
+        font-size:clamp(1.18rem,6vw,1.55rem);
+        line-height:.96;
+      }
+      .link-setup-copy p,.link-setup-card p{
+        font-size:.78rem;
+        line-height:1.28;
+      }
+      .link-card-note{
+        display:none;
+      }
+      .link-setup-step-grid{
+        gap:3px;
+      }
+      .link-setup-step{
+        padding:5px 4px;
+        gap:4px;
+        text-align:center;
+      }
+      .link-setup-step span{
+        width:20px;
+        height:20px;
+        justify-self:center;
+      }
+      .link-setup-step strong{
+        font-size:.6rem;
+        line-height:1.08;
+        letter-spacing:-.01em;
+      }
+      .link-code-box{
+        min-height:40px;
+        font-size:.8rem;
+      }
+      .preview-hero-slot{
+        padding:5px;
+      }
+      .preview-hero-slot strong{
+        font-size:.72rem;
+        line-height:1.06;
+      }
+      .preview-hero-slot div{
+        display:none;
+      }
+      .link-preview-order-panel .preview-card{
+        min-height:50px;
+        padding:5px 6px;
+      }
+      .link-preview-order-panel .preview-card .sprite.sm{
+        width:28px;
+        height:28px;
+      }
+      .link-preview-order-panel .preview-actions{
+        gap:3px;
+      }
+      .link-preview-order-panel .preview-actions .info-chip,
+      .link-preview-order-panel .preview-actions .mini-btn{
+        padding:4px 5px;
+        font-size:.58rem;
+      }
+      .link-preview-ready-panel{
+        padding:6px;
+        gap:5px;
+      }
+      .link-preview-ready-panel .draft-section-head h3{
+        font-size:.98rem;
+        line-height:1.02;
+      }
+      .link-preview-ready-panel .empty{
+        padding:7px;
+      }
+      .link-preview-ready-panel .actions .primary-btn,
+      .link-preview-ready-panel .actions .ghost-btn{
+        padding:7px 8px;
+        font-size:.74rem;
+      }
+    }
   `;
   document.head.appendChild(style);
 }
