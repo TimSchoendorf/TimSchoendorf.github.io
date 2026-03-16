@@ -3385,6 +3385,9 @@ function injectStyles() {
         font-size:.84rem;
         line-height:1.35;
       }
+      .link-setup-shell .draft-chip-row span:nth-child(n+3){
+        display:none;
+      }
       .link-setup-step-grid{
         grid-template-columns:repeat(3,minmax(0,1fr));
         gap:6px;
@@ -3402,8 +3405,7 @@ function injectStyles() {
         line-height:1.15;
       }
       .link-setup-step div{
-        font-size:.64rem;
-        line-height:1.15;
+        display:none;
       }
       .link-code-box{
         min-height:46px;
@@ -3603,6 +3605,9 @@ function injectStyles() {
         padding:10px;
       }
       .link-preview-ready-notes .empty:nth-child(2){
+        display:none;
+      }
+      .battle-brand-logo{
         display:none;
       }
       .draft-team-panel .label{
@@ -3999,6 +4004,9 @@ function injectStyles() {
         gap:6px;
         padding:2px 0 0;
       }
+      .link-setup-shell,.link-preview-shell{
+        gap:6px;
+      }
       .draft-topbar .back{
         padding:6px 8px;
         font-size:.7rem;
@@ -4012,6 +4020,26 @@ function injectStyles() {
       }
       .draft-chip-row span:nth-child(n+3){
         display:none;
+      }
+      .link-setup-copy,.link-setup-stage-card,.link-setup-card{
+        padding:8px;
+        gap:6px;
+      }
+      .link-setup-copy h2{
+        font-size:clamp(1.3rem,6.4vw,1.8rem);
+      }
+      .link-setup-step-grid{
+        gap:4px;
+      }
+      .link-setup-step{
+        padding:6px 5px;
+      }
+      .link-setup-step span{
+        width:22px;
+        height:22px;
+      }
+      .link-setup-step strong{
+        font-size:.66rem;
       }
       .draft-hero-panel,.draft-team-panel,.draft-board{
         padding:8px;
@@ -4125,6 +4153,23 @@ function injectStyles() {
         min-height:34px;
         padding:7px 10px;
         font-size:.92rem;
+      }
+      .link-preview-order-panel .preview-card{
+        min-height:52px;
+        padding:5px 7px;
+      }
+      .link-preview-order-panel .preview-card .sprite.sm{
+        width:30px;
+        height:30px;
+      }
+      .link-preview-order-panel .preview-copy strong{
+        font-size:.76rem;
+      }
+      .link-preview-ready-panel{
+        padding:7px;
+      }
+      .link-preview-ready-panel .empty{
+        padding:8px;
       }
       .battle-stage{
         --battle-foe-line:11%;
