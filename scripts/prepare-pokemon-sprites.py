@@ -16,99 +16,61 @@ def is_background(pixel: tuple[int, int, int, int]) -> bool:
     return a > 0 and r >= 248 and g >= 248 and b >= 248
 
 
-def touches_sprite_detail(
-    component_size: int,
-    dark_adjacent_pixels: int,
-) -> bool:
-    ratio = dark_adjacent_pixels / component_size
-    return (
-        ratio >= 0.62
-        or (ratio >= 0.48 and component_size <= 120)
-        or (ratio >= 0.78 and component_size <= 420)
-    )
-
-
-def edge_white_components(image: Image.Image) -> list[dict[str, object]]:
+def clear_edge_white(image: Image.Image) -> Image.Image:
     rgba = image.convert("RGBA")
     width, height = rgba.size
     pixels = rgba.load()
-    seen: set[tuple[int, int]] = set()
-    components: list[dict[str, object]] = []
+    bridge_cells = [[False for _ in range(width)] for _ in range(height)]
 
     for y in range(height):
         for x in range(width):
-            if (x, y) in seen or not is_background(pixels[x, y]):
+            if not is_background(pixels[x, y]):
                 continue
-
-            queue: deque[tuple[int, int]] = deque([(x, y)])
-            seen.add((x, y))
-            cells: list[tuple[int, int]] = []
-            touches_edge = False
-            dark_adjacent_pixels = 0
-
-            while queue:
-                cx, cy = queue.popleft()
-                cells.append((cx, cy))
-                if cx == 0 or cy == 0 or cx == width - 1 or cy == height - 1:
-                    touches_edge = True
-
-                has_dark_neighbor = False
-                for nx, ny in (
-                    (cx + 1, cy),
-                    (cx - 1, cy),
-                    (cx, cy + 1),
-                    (cx, cy - 1),
-                    (cx + 1, cy + 1),
-                    (cx + 1, cy - 1),
-                    (cx - 1, cy + 1),
-                    (cx - 1, cy - 1),
+            for (ax, ay), (bx, by) in (
+                ((x - 1, y), (x + 1, y)),
+                ((x, y - 1), (x, y + 1)),
+                ((x - 1, y - 1), (x + 1, y + 1)),
+                ((x - 1, y + 1), (x + 1, y - 1)),
+            ):
+                if ax < 0 or ay < 0 or ax >= width or ay >= height or bx < 0 or by < 0 or bx >= width or by >= height:
+                    continue
+                if (
+                    pixels[ax, ay][3] > 0
+                    and pixels[bx, by][3] > 0
+                    and not is_background(pixels[ax, ay])
+                    and not is_background(pixels[bx, by])
                 ):
-                    if nx < 0 or ny < 0 or nx >= width or ny >= height:
-                        continue
-                    if is_background(pixels[nx, ny]):
-                        if (nx, ny) not in seen:
-                            seen.add((nx, ny))
-                            queue.append((nx, ny))
-                    elif pixels[nx, ny][3] > 0:
-                        has_dark_neighbor = True
+                    bridge_cells[y][x] = True
+                    break
 
-                if has_dark_neighbor:
-                    dark_adjacent_pixels += 1
+    reachable_background = [[False for _ in range(width)] for _ in range(height)]
+    queue: deque[tuple[int, int]] = deque()
 
-            if touches_edge:
-                components.append(
-                    {
-                        "cells": cells,
-                        "size": len(cells),
-                        "dark_adjacent_pixels": dark_adjacent_pixels,
-                    }
-                )
+    for x in range(width):
+        for y in (0, height - 1):
+            if is_background(pixels[x, y]) and not bridge_cells[y][x] and not reachable_background[y][x]:
+                reachable_background[y][x] = True
+                queue.append((x, y))
+    for y in range(height):
+        for x in (0, width - 1):
+            if is_background(pixels[x, y]) and not bridge_cells[y][x] and not reachable_background[y][x]:
+                reachable_background[y][x] = True
+                queue.append((x, y))
 
-    return components
+    while queue:
+        x, y = queue.popleft()
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if nx < 0 or ny < 0 or nx >= width or ny >= height:
+                continue
+            if not is_background(pixels[nx, ny]) or bridge_cells[ny][nx] or reachable_background[ny][nx]:
+                continue
+            reachable_background[ny][nx] = True
+            queue.append((nx, ny))
 
-
-def clear_edge_white(image: Image.Image) -> Image.Image:
-    rgba = image.convert("RGBA")
-    pixels = rgba.load()
-    components = edge_white_components(rgba)
-
-    if not components:
-        return rgba
-
-    largest_background = max(components, key=lambda component: int(component["size"]))
-
-    for component in components:
-        preserve_component = (
-            component is not largest_background
-            and touches_sprite_detail(
-                int(component["size"]),
-                int(component["dark_adjacent_pixels"]),
-            )
-        )
-        if preserve_component:
-            continue
-        for x, y in component["cells"]:
-            pixels[x, y] = (255, 255, 255, 0)
+    for y in range(height):
+        for x in range(width):
+            if is_background(pixels[x, y]) and reachable_background[y][x]:
+                pixels[x, y] = (255, 255, 255, 0)
 
     return rgba
 
