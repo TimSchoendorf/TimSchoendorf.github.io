@@ -20,40 +20,45 @@ def clear_edge_white(image: Image.Image) -> Image.Image:
     rgba = image.convert("RGBA")
     width, height = rgba.size
     pixels = rgba.load()
-    bridge_cells = [[False for _ in range(width)] for _ in range(height)]
+    solid = [
+        [pixels[x, y][3] > 0 and not is_background(pixels[x, y]) for x in range(width)]
+        for y in range(height)
+    ]
 
+    dilated = [[False for _ in range(width)] for _ in range(height)]
     for y in range(height):
         for x in range(width):
-            if not is_background(pixels[x, y]):
+            if not solid[y][x]:
                 continue
-            for (ax, ay), (bx, by) in (
-                ((x - 1, y), (x + 1, y)),
-                ((x, y - 1), (x, y + 1)),
-                ((x - 1, y - 1), (x + 1, y + 1)),
-                ((x - 1, y + 1), (x + 1, y - 1)),
-            ):
-                if ax < 0 or ay < 0 or ax >= width or ay >= height or bx < 0 or by < 0 or bx >= width or by >= height:
-                    continue
-                if (
-                    pixels[ax, ay][3] > 0
-                    and pixels[bx, by][3] > 0
-                    and not is_background(pixels[ax, ay])
-                    and not is_background(pixels[bx, by])
-                ):
-                    bridge_cells[y][x] = True
-                    break
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    nx = x + dx
+                    ny = y + dy
+                    if 0 <= nx < width and 0 <= ny < height:
+                        dilated[ny][nx] = True
+
+    closed = [[False for _ in range(width)] for _ in range(height)]
+    for y in range(height):
+        for x in range(width):
+            closed[y][x] = all(
+                0 <= x + dx < width
+                and 0 <= y + dy < height
+                and dilated[y + dy][x + dx]
+                for dy in (-1, 0, 1)
+                for dx in (-1, 0, 1)
+            )
 
     reachable_background = [[False for _ in range(width)] for _ in range(height)]
     queue: deque[tuple[int, int]] = deque()
 
     for x in range(width):
         for y in (0, height - 1):
-            if is_background(pixels[x, y]) and not bridge_cells[y][x] and not reachable_background[y][x]:
+            if not closed[y][x] and not reachable_background[y][x]:
                 reachable_background[y][x] = True
                 queue.append((x, y))
     for y in range(height):
         for x in (0, width - 1):
-            if is_background(pixels[x, y]) and not bridge_cells[y][x] and not reachable_background[y][x]:
+            if not closed[y][x] and not reachable_background[y][x]:
                 reachable_background[y][x] = True
                 queue.append((x, y))
 
@@ -62,7 +67,7 @@ def clear_edge_white(image: Image.Image) -> Image.Image:
         for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
             if nx < 0 or ny < 0 or nx >= width or ny >= height:
                 continue
-            if not is_background(pixels[nx, ny]) or bridge_cells[ny][nx] or reachable_background[ny][nx]:
+            if closed[ny][nx] or reachable_background[ny][nx]:
                 continue
             reachable_background[ny][nx] = True
             queue.append((nx, ny))
