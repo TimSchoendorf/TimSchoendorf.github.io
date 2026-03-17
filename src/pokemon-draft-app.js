@@ -761,7 +761,7 @@ function hpTone(percent) {
 }
 
 function renderCombatant(mon, label, facing, sideKey, side) {
-  if (!mon) return `<div class="combatant combatant-${side} empty"></div>`;
+  if (!mon || mon.condition?.endsWith(' fnt')) return `<div class="combatant combatant-${side} empty"></div>`;
   const percent = conditionToPercent(mon.condition);
   const infoButton = side === 'player' ? `<button class="info-chip" data-inspect="${mon.name}">Info</button>` : '';
   return `<div class="combatant combatant-${side} ${state.flash[sideKey]}">
@@ -1319,13 +1319,13 @@ function updateTeamStateFromRequest(sideKey, request) {
       status: mon.status || statusFromCondition(mon.condition),
     };
   });
-  state.active[sideKey] = state.teamStates[sideKey].find((member) => member.active) || null;
+  state.active[sideKey] = state.teamStates[sideKey].find((member) => member.active && !member.condition?.endsWith(' fnt')) || null;
 }
 
 function updateRosterState(sideKey, name, updater) {
   const target = state.teamStates[sideKey].find((member) => member.name === name);
   if (target) updater(target, state.teamStates[sideKey]);
-  state.active[sideKey] = state.teamStates[sideKey].find((member) => member.active) || null;
+  state.active[sideKey] = state.teamStates[sideKey].find((member) => member.active && !member.condition?.endsWith(' fnt')) || null;
 }
 
 function formatStatus(status) {
