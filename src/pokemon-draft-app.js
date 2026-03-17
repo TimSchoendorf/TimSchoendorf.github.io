@@ -763,11 +763,11 @@ function hpTone(percent) {
 function renderCombatant(mon, label, facing, sideKey, side) {
   if (!mon) return `<div class="combatant combatant-${side} empty"></div>`;
   const percent = conditionToPercent(mon.condition);
+  const infoButton = side === 'player' ? `<button class="info-chip" data-inspect="${mon.name}">Info</button>` : '';
   return `<div class="combatant combatant-${side} ${state.flash[sideKey]}">
     <div class="battle-status battle-status-${side}">
       <div class="battle-status-top">
-        <div><div class="label">${label}</div><strong>${mon.name}</strong></div>
-        <button class="info-chip" data-inspect="${mon.name}">Info</button>
+        <div class="battle-status-name"><div class="label">${label}</div><div class="battle-status-name-row"><strong>${mon.name}</strong>${infoButton}</div></div>
       </div>
       <div class="battle-status-meta"><span>Lv100</span><span>${mon.status || 'OK'}</span></div>
       <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill ${hpTone(percent)}" style="width:${percent}%"></div></div></div>
@@ -784,7 +784,7 @@ function renderBench(team, own) {
   const bench = team.filter((member) => !member.active);
   if (!bench.length) return '<div class="empty">No reserve available.</div>';
   return `<div class="bench-grid">${bench.map((member) => `<div class="bench-card bench-card-switch" style="background:${typeGradient(member.types || ['Normal'])}">
-      <div class="bench-card-sprite">${spriteTag(member, own ? 'back' : 'front', 'sm')}</div>
+      <div class="bench-card-sprite">${spriteTag(member, 'front', 'sm')}</div>
       <div class="bench-card-copy"><strong>${member.name}</strong><div class="tiny">${member.condition}</div></div>
       <button class="info-chip" data-inspect="${member.name}">Info</button>
     </div>`).join('')}</div>`;
@@ -1613,9 +1613,26 @@ function injectStyles() {
       cursor:pointer;
       transition:transform .14s ease, background .14s ease, color .14s ease;
     }
-    .ghost-btn,.info-chip,.mini-btn{
+    .ghost-btn,.mini-btn{
       background:rgba(255,255,255,.14);
       color:var(--text);
+    }
+    .info-chip{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:7px 10px;
+      border-radius:999px;
+      background:rgba(18,29,22,.82);
+      color:#f7f3e8;
+      font-size:.78rem;
+      font-weight:700;
+      letter-spacing:.02em;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), 0 6px 16px rgba(0,0,0,.12);
+    }
+    .info-chip:hover{
+      background:rgba(28,42,33,.92);
+      color:#fffdf7;
     }
     .primary-btn,.choice-btn{
       background:linear-gradient(180deg,#f2d97b,#c6a548);
@@ -2681,6 +2698,25 @@ function injectStyles() {
       justify-content:space-between;
       gap:10px;
     }
+    .battle-status-name{
+      display:grid;
+      gap:2px;
+      min-width:0;
+      flex:1 1 auto;
+    }
+    .battle-status-name-row{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+      min-width:0;
+    }
+    .battle-status-name-row strong{
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+    }
     .battle-status-meta{
       margin-top:4px;
       color:#4d5b41;
@@ -2809,6 +2845,12 @@ function injectStyles() {
       text-align:left;
       border:2px solid transparent;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
+    }
+    .choice-btn span{
+      color:rgba(30,43,20,.76);
+      font-size:.74rem;
+      font-weight:700;
+      white-space:nowrap;
     }
     .choice-btn:hover:not(:disabled){
       border-color:rgba(135,211,255,.88);
@@ -3933,6 +3975,13 @@ function injectStyles() {
       .battle-status-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:36%;max-width:none}
       .battle-status-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:38%;max-width:none}
       .battle-status .info-chip{padding:6px 8px}
+      .battle-status-name-row{
+        gap:6px;
+      }
+      .battle-status-player .info-chip{
+        padding:4px 7px;
+        font-size:.62rem;
+      }
       .battle-status-meta{
         font-size:.68rem;
         letter-spacing:.05em;
@@ -4004,6 +4053,15 @@ function injectStyles() {
         min-height:36px;
         padding:5px 8px;
         gap:3px;
+      }
+      .battle-actions-panel .actions{
+        display:grid;
+        grid-template-columns:1fr;
+        gap:6px;
+        margin-top:6px;
+      }
+      .battle-mobile-menu{
+        width:100%;
       }
       .modal{
         padding:16px;
