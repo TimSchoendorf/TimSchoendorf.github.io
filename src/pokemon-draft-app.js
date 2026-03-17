@@ -849,13 +849,14 @@ function render() {
   const battleView = state.phase === 'battle';
   const menuView = state.phase === 'menu';
   const draftView = state.phase === 'draft' || state.phase === 'link-setup' || state.phase === 'link-draft' || state.phase === 'preview' || state.phase === 'link-preview';
+  const previewFlowView = state.phase === 'preview' || state.phase === 'link-preview';
   if (menuView) {
     app.innerHTML = `<div class="app-shell menu-view theme-${state.generation}">
       <main class="main menu-main">${renderStage()}</main>
       ${renderInspectModal()}
     </div>`;
   } else if (draftView) {
-    app.innerHTML = `<div class="app-shell draft-view theme-${state.generation}">
+    app.innerHTML = `<div class="app-shell draft-view ${previewFlowView ? 'preview-flow-view' : ''} theme-${state.generation}">
       <main class="main draft-main">${renderStage()}</main>
       ${renderInspectModal()}
     </div>`;
@@ -3296,6 +3297,14 @@ function injectStyles() {
         height:100%;
         overflow:hidden;
       }
+      .draft-view.preview-flow-view{
+        height:auto;
+        min-height:calc(100svh - 20px);
+      }
+      .draft-view.preview-flow-view .main{
+        height:auto;
+        overflow:visible;
+      }
       .menu-shell{gap:10px;padding:6px 0 8px}
       .menu-topbar{
         flex-direction:column;
@@ -3340,9 +3349,10 @@ function injectStyles() {
       .link-preview-shell{
         gap:8px;
         padding:4px 0 2px;
-        height:calc(100svh - 20px);
-        grid-template-rows:auto auto 1fr;
-        overflow:hidden;
+        height:auto;
+        min-height:calc(100svh - 20px);
+        grid-template-rows:auto auto auto;
+        overflow:visible;
       }
       .draft-topbar{
         display:grid;
@@ -3473,7 +3483,7 @@ function injectStyles() {
         grid-template-rows:auto auto;
         gap:8px;
         min-height:0;
-        overflow:hidden;
+        overflow:visible;
       }
       .draft-hero-panel{
         grid-template-columns:minmax(0,1fr);
