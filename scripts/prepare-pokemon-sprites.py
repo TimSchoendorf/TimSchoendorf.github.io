@@ -23,10 +23,11 @@ def clear_edge_white(color_image: Image.Image, gray_image: Image.Image) -> Image
     color_pixels = color_rgba.load()
     gray_pixels = gray_rgba.load()
 
-    # Any non-white pixel in either sprite variant is treated as definite foreground.
-    # The grayscale companion preserves many highlight shapes that are white in the
-    # color sprite, so it gives us a much more reliable foreground mask.
-    foreground_mask = [
+    # Combine both variants into one conservative foreground mask.
+    # The grayscale companion rescues many highlight pixels that are white in the
+    # color sprite, and a light closing step seals tiny contour gaps before the
+    # edge flood decides what is true background.
+    foreground_seed = [
         [
             (
                 color_pixels[x, y][3] > 0
@@ -40,6 +41,29 @@ def clear_edge_white(color_image: Image.Image, gray_image: Image.Image) -> Image
         ]
         for y in range(height)
     ]
+
+    dilated = [[False for _ in range(width)] for _ in range(height)]
+    for y in range(height):
+        for x in range(width):
+            if not foreground_seed[y][x]:
+                continue
+            for dy in (-1, 0, 1):
+                for dx in (-1, 0, 1):
+                    nx = x + dx
+                    ny = y + dy
+                    if 0 <= nx < width and 0 <= ny < height:
+                        dilated[ny][nx] = True
+
+    foreground_mask = [[False for _ in range(width)] for _ in range(height)]
+    for y in range(height):
+        for x in range(width):
+            foreground_mask[y][x] = all(
+                0 <= x + dx < width
+                and 0 <= y + dy < height
+                and dilated[y + dy][x + dx]
+                for dy in (-1, 0, 1)
+                for dx in (-1, 0, 1)
+            )
 
     reachable_background = [[False for _ in range(width)] for _ in range(height)]
     queue: deque[tuple[int, int]] = deque()
