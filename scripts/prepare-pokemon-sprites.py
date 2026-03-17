@@ -16,49 +16,42 @@ def is_background(pixel: tuple[int, int, int, int]) -> bool:
     return a > 0 and r >= 248 and g >= 248 and b >= 248
 
 
-def clear_edge_white(image: Image.Image) -> Image.Image:
-    rgba = image.convert("RGBA")
-    width, height = rgba.size
-    pixels = rgba.load()
-    solid = [
-        [pixels[x, y][3] > 0 and not is_background(pixels[x, y]) for x in range(width)]
+def clear_edge_white(color_image: Image.Image, gray_image: Image.Image) -> Image.Image:
+    color_rgba = color_image.convert("RGBA")
+    gray_rgba = gray_image.convert("RGBA")
+    width, height = color_rgba.size
+    color_pixels = color_rgba.load()
+    gray_pixels = gray_rgba.load()
+
+    # Any non-white pixel in either sprite variant is treated as definite foreground.
+    # The grayscale companion preserves many highlight shapes that are white in the
+    # color sprite, so it gives us a much more reliable foreground mask.
+    foreground_mask = [
+        [
+            (
+                color_pixels[x, y][3] > 0
+                and not is_background(color_pixels[x, y])
+            )
+            or (
+                gray_pixels[x, y][3] > 0
+                and not is_background(gray_pixels[x, y])
+            )
+            for x in range(width)
+        ]
         for y in range(height)
     ]
-
-    dilated = [[False for _ in range(width)] for _ in range(height)]
-    for y in range(height):
-        for x in range(width):
-            if not solid[y][x]:
-                continue
-            for dy in (-1, 0, 1):
-                for dx in (-1, 0, 1):
-                    nx = x + dx
-                    ny = y + dy
-                    if 0 <= nx < width and 0 <= ny < height:
-                        dilated[ny][nx] = True
-
-    closed = [[False for _ in range(width)] for _ in range(height)]
-    for y in range(height):
-        for x in range(width):
-            closed[y][x] = all(
-                0 <= x + dx < width
-                and 0 <= y + dy < height
-                and dilated[y + dy][x + dx]
-                for dy in (-1, 0, 1)
-                for dx in (-1, 0, 1)
-            )
 
     reachable_background = [[False for _ in range(width)] for _ in range(height)]
     queue: deque[tuple[int, int]] = deque()
 
     for x in range(width):
         for y in (0, height - 1):
-            if not closed[y][x] and not reachable_background[y][x]:
+            if not foreground_mask[y][x] and not reachable_background[y][x]:
                 reachable_background[y][x] = True
                 queue.append((x, y))
     for y in range(height):
         for x in (0, width - 1):
-            if not closed[y][x] and not reachable_background[y][x]:
+            if not foreground_mask[y][x] and not reachable_background[y][x]:
                 reachable_background[y][x] = True
                 queue.append((x, y))
 
@@ -67,26 +60,33 @@ def clear_edge_white(image: Image.Image) -> Image.Image:
         for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
             if nx < 0 or ny < 0 or nx >= width or ny >= height:
                 continue
-            if closed[ny][nx] or reachable_background[ny][nx]:
+            if foreground_mask[ny][nx] or reachable_background[ny][nx]:
                 continue
             reachable_background[ny][nx] = True
             queue.append((nx, ny))
 
+    output = Image.new("RGBA", color_rgba.size, (255, 255, 255, 0))
+    output_pixels = output.load()
     for y in range(height):
         for x in range(width):
-            if is_background(pixels[x, y]) and reachable_background[y][x]:
-                pixels[x, y] = (255, 255, 255, 0)
+            pixel = color_pixels[x, y]
+            if pixel[3] == 0:
+                continue
+            if not is_background(pixel) or not reachable_background[y][x]:
+                output_pixels[x, y] = pixel
 
-    return rgba
+    return output
 
 
 def process_folder(relative: str) -> None:
     source = SOURCE_ROOT / relative
+    gray = SOURCE_ROOT / relative / "gray" if relative else SOURCE_ROOT / "gray"
     target = TARGET_ROOT / relative
     target.mkdir(parents=True, exist_ok=True)
     for sprite in sorted(source.glob("*.png")):
-      cleaned = clear_edge_white(Image.open(sprite))
-      cleaned.save(target / sprite.name)
+        gray_sprite = gray / sprite.name
+        cleaned = clear_edge_white(Image.open(sprite), Image.open(gray_sprite))
+        cleaned.save(target / sprite.name)
 
 
 def main() -> None:
