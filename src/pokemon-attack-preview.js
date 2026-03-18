@@ -77,35 +77,42 @@ const STYLES = `
   .attack-preview-header p,.attack-preview-current p{margin:10px 0 0;max-width:72ch;color:var(--muted);line-height:1.4}
   .attack-preview-meta{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
   .attack-preview-meta span,.attack-preview-status{padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#e3eedf;font-size:.92rem}
-  .attack-preview-stage-grid{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(340px,.92fr);gap:16px;align-items:start}
+  .attack-preview-stage-grid{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
   .attack-preview-panel{padding:18px;display:grid;gap:14px;overflow:hidden}
   .attack-preview-panel-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
   .attack-preview-stage{padding:0;background:transparent;border:none}
-  .attack-preview-stage.desktop{aspect-ratio:1080/430}
-  .attack-preview-stage.mobile{aspect-ratio:430/316;max-width:320px;width:100%;margin:0 auto}
-  .attack-preview-stage-field{position:relative;width:100%;height:100%;overflow:hidden;min-height:0;aspect-ratio:auto;--battle-pad-x:4.5%;--battle-pad-top:6%;--battle-feed-bottom:3.2%;--battle-feed-height:16.8%;--battle-player-line:21.5%;--battle-foe-line:14%;border:3px solid #151d11;border-radius:10px;background:radial-gradient(circle at 74% 34%, rgba(255,255,255,.28), transparent 26%),radial-gradient(circle at 27% 78%, rgba(255,255,255,.24), transparent 24%),linear-gradient(180deg, #e7edd8 0%, #dce0c8 56%, #bcc7a5 56.4%, #b7c29f 100%);box-shadow:inset 0 0 0 2px rgba(10,18,14,.12)}
-  .attack-preview-stage-field::before{content:"";position:absolute;left:50%;bottom:4%;width:56%;height:11%;border-radius:50%;transform:translateX(-50%);background:radial-gradient(circle, rgba(39,57,32,.28), rgba(39,57,32,.06) 62%, transparent 75%)}
-  .attack-preview-stage-field::after{content:"";position:absolute;left:17%;bottom:var(--battle-player-line);width:34%;height:13%;border-radius:50%;background:radial-gradient(circle, rgba(39,57,32,.3), rgba(39,57,32,.06) 60%, transparent 76%)}
-  .attack-preview-hud{position:absolute;z-index:3;display:grid;gap:6px;min-width:182px;padding:2.4% 2.8%;background:#f8f5e8;color:#1e2b14;border:3px solid #151d11;border-radius:8px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
-  .attack-preview-hud.foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:24%;min-width:0}
-  .attack-preview-hud.player{right:var(--battle-pad-x);bottom:calc(var(--battle-player-line) + 1.5%);width:25%;min-width:0}
-  .attack-preview-hud-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;min-width:0}
-  .attack-preview-hud-name{font-size:1.08rem;font-weight:700;line-height:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .attack-preview-hud-level{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:#4a5d47}
-  .attack-preview-hp-row{display:flex;align-items:center;gap:10px}
-  .attack-preview-hp-label{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#556850}
-  .attack-preview-hp-bar{position:relative;flex:1;height:12px;background:#607154;border:2px solid #203120;border-radius:999px;overflow:hidden}
-  .attack-preview-hp-fill{position:absolute;inset:0 auto 0 0;width:100%;background:linear-gradient(90deg, #68d973 0%, #d6eb78 52%, #f2cb58 100%);transition:width 60ms linear}
-  .attack-preview-hp-value{font-size:.78rem;font-weight:700;color:#33452f}
-  .attack-preview-mon{position:absolute;display:flex;align-items:flex-end;justify-content:center;pointer-events:none}
-  .attack-preview-mon img{width:100%;height:100%;object-fit:contain;object-position:center bottom;image-rendering:pixelated;filter:drop-shadow(0 12px 0 rgba(255,255,255,.18)) drop-shadow(0 20px 18px rgba(0,0,0,.22));transition:transform 70ms linear, opacity 90ms linear, filter 80ms linear}
-  .attack-preview-mon.foe{top:calc(var(--battle-foe-line) + .5%);right:7.5%;width:19%;height:24%}
-  .attack-preview-mon.player{left:5.5%;bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 3.2%);width:24%;height:35%}
-  .attack-preview-mon.foe img{transform:translateX(2%) translateY(0)}
-  .attack-preview-mon.player img{transform:translateX(-2%) translateY(12%)}
-  .attack-preview-mon img.hurt{filter:brightness(1.8) contrast(1.3) drop-shadow(0 0 10px rgba(255,255,255,.75))}
-  .attack-preview-log{position:absolute;left:2.8%;right:2.8%;bottom:var(--battle-feed-bottom);min-height:var(--battle-feed-height);display:grid;place-items:center;padding:1.6% 2%;background:#f8f5e8;color:#213123;border:3px solid #243525;border-radius:6px;text-align:center;font-size:.98rem;line-height:1.3;box-shadow:0 10px 28px rgba(0,0,0,.16);z-index:4}
-  .attack-preview-stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .attack-preview-stage.desktop{width:min(72vw,1080px);max-width:100%;margin:0 auto}
+  .attack-preview-stage.mobile{width:min(320px,100%);max-width:100%;margin:0 auto}
+  .battle-shell{display:block;max-width:none;width:100%;margin:0 auto}
+  .battle-stage{position:relative;height:clamp(352px,28vw,430px);min-height:0;aspect-ratio:auto;--battle-pad-x:4.5%;--battle-pad-top:6%;--battle-feed-bottom:3.2%;--battle-feed-height:16.8%;--battle-player-line:21.5%;--battle-foe-line:14%;border:3px solid #151d11;border-radius:10px;overflow:hidden;background:linear-gradient(180deg,#e7f3cb 0%,#e7f3cb 54%,#cadc9a 54%,#cadc9a 100%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.2),0 24px 60px rgba(0,0,0,.22)}
+  .battle-stage::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 74% 34%,rgba(255,255,255,.28),transparent 26%),radial-gradient(circle at 27% 78%,rgba(255,255,255,.24),transparent 24%);pointer-events:none}
+  .battle-feed{position:absolute;left:2.8%;right:2.8%;bottom:var(--battle-feed-bottom);border:3px solid #151d11;border-radius:8px;padding:1.7% 2.1%;display:grid;align-content:center;min-height:var(--battle-feed-height);background:#f8f5e8;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);z-index:3}
+  .feed-line{color:#1e2b14;text-align:left;font-size:1.02rem;line-height:1.45;font-weight:700;text-transform:uppercase}
+  .combatant{position:absolute;inset:0;display:block;z-index:2;pointer-events:none}
+  .battle-status{position:absolute;padding:2.4% 2.8%;border:3px solid #151d11;border-radius:8px;background:#f8f5e8;color:#1e2b14;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);pointer-events:auto}
+  .battle-status-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:24%;max-width:none}
+  .battle-status-player{right:var(--battle-pad-x);bottom:calc(var(--battle-player-line) + 1.5%);width:25%;max-width:none}
+  .battle-status-top,.battle-status-meta,.battle-hp-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .battle-status-name{display:grid;gap:2px;min-width:0;flex:1 1 auto}
+  .battle-status-name-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
+  .battle-status-name-row strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .battle-status-meta{margin-top:4px;color:#4d5b41;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+  .battle-hp-row{margin-top:8px}
+  .hp-label{color:#1e2b14;font-size:.86rem;font-weight:700;letter-spacing:.08em}
+  .hp{height:12px;width:100%;border-radius:999px;background:#c7cbb8;overflow:hidden}
+  .battle-hp{height:14px;border:2px solid #1e2b14;background:#b7bf9c}
+  .hp-fill{height:100%;background:linear-gradient(90deg,#6eb24b,#9fd050);transition:width 60ms linear}
+  .hp-fill.hp-mid{background:linear-gradient(90deg,#d4bf48,#e9da79)}
+  .hp-fill.hp-low{background:linear-gradient(90deg,#b44b41,#de7c60)}
+  .battle-sprite-wrap{position:relative;display:flex;align-items:flex-end;justify-content:center}
+  .battle-sprite-foe{position:absolute;top:calc(var(--battle-foe-line) + 1.5%);right:5.5%;width:22%;height:31%}
+  .battle-sprite-player{position:absolute;left:5.5%;bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 3.2%);width:25%;height:38%}
+  .battle-shadow{position:absolute;left:50%;bottom:4%;width:56%;height:11%;border-radius:50%;background:radial-gradient(circle,rgba(34,49,20,.38) 0%,rgba(34,49,20,.16) 58%,transparent 74%);transform:translateX(-50%)}
+  .sprite.battle{width:100%;height:100%;object-fit:contain;object-position:center bottom;image-rendering:pixelated;filter:drop-shadow(0 12px 0 rgba(255,255,255,.18)) drop-shadow(0 20px 18px rgba(0,0,0,.22));transition:transform 70ms linear,opacity 90ms linear,filter 80ms linear}
+  .battle-sprite-foe .sprite.battle.front{transform:translateX(2%) translateY(0)}
+  .battle-sprite-player .sprite.battle.back{transform:translateX(-2%) translateY(12%)}
+  .sprite.battle.hurt{filter:brightness(1.8) contrast(1.3) drop-shadow(0 0 10px rgba(255,255,255,.75))}
+  .battle-stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   .attack-preview-controls{padding:18px 22px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center}
   .attack-preview-buttons{display:flex;flex-wrap:wrap;gap:10px}
   .primary-btn,.ghost-btn,.attack-move-chip{border:none;cursor:pointer;font:inherit}
@@ -119,7 +126,7 @@ const STYLES = `
   .attack-move-chip em{font-style:normal;font-size:.8rem;color:var(--muted)}
   .attack-move-chip.active{border-color:rgba(143,209,255,.6);box-shadow:0 0 0 1px rgba(143,209,255,.24);background:rgba(143,209,255,.08)}
   @media (max-width:1080px){.attack-preview-stage-grid{grid-template-columns:1fr}.attack-preview-header,.attack-preview-controls{grid-template-columns:1fr}.attack-preview-meta{justify-content:flex-start}}
-  @media (max-width:720px){.attack-preview-shell{width:min(100vw - 16px, 440px);padding:12px 0 20px;gap:12px}.attack-preview-header,.attack-preview-controls,.attack-preview-panel{padding:14px}.attack-preview-header h1,.attack-preview-current h3,.attack-preview-panel-head h2{font-size:1.55rem}.attack-preview-stage.desktop{aspect-ratio:430/316}.attack-preview-stage.mobile{max-width:252px}.attack-preview-stage-field{--battle-pad-x:3%;--battle-pad-top:4%;--battle-feed-bottom:3%;--battle-feed-height:17%;--battle-player-line:22%;--battle-foe-line:10.5%;border-radius:8px}.attack-preview-log{left:3%;right:3%;bottom:var(--battle-feed-bottom);min-height:var(--battle-feed-height);padding:2% 2.4%;border-width:2px;border-radius:6px;font-size:.8rem}.attack-preview-move-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:36vh}.attack-preview-hud{padding:8px 10px 8px;gap:4px;border-width:2px;border-radius:6px}.attack-preview-hud.foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:36%}.attack-preview-hud.player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:38%}.attack-preview-hud-name{font-size:.82rem}.attack-preview-hud-level{font-size:.6rem}.attack-preview-hp-label{font-size:.58rem}.attack-preview-hp-row{gap:6px}.attack-preview-hp-bar{height:9px;border-width:1px}.attack-preview-hp-value{font-size:.64rem}.attack-preview-mon.foe{top:calc(var(--battle-foe-line) - 1.5%);right:6%;width:29%;height:35%}.attack-preview-mon.player{left:7%;bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 4%);width:26%;height:30%}.attack-preview-mon.player img{transform:translateX(-4%) translateY(14%)}.attack-preview-mon.foe img{transform:translateX(4%) translateY(0)}.attack-preview-stage-field::before{width:72%;height:14%;bottom:6%}.attack-preview-stage-field::after{left:18%;bottom:var(--battle-player-line);width:38%;height:14%}}
+  @media (max-width:720px){.attack-preview-shell{width:min(100vw - 16px, 440px);padding:12px 0 20px;gap:12px}.attack-preview-header,.attack-preview-controls,.attack-preview-panel{padding:14px}.attack-preview-header h1,.attack-preview-current h3,.attack-preview-panel-head h2{font-size:1.55rem}.attack-preview-stage.desktop,.attack-preview-stage.mobile{width:100%}.attack-preview-move-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:36vh}.battle-stage{height:auto;min-height:34vh;border-radius:8px;--battle-pad-x:3%;--battle-pad-top:4%;--battle-feed-bottom:3%;--battle-feed-height:17%;--battle-player-line:22%;--battle-foe-line:10.5%}.battle-status{padding:8px 10px;border-width:2px;border-radius:6px}.battle-status-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:36%}.battle-status-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:38%}.battle-status-meta{font-size:.68rem;letter-spacing:.05em}.battle-hp{height:12px}.battle-sprite-foe{top:calc(var(--battle-foe-line) - 1.5%);right:6%;width:29%;height:35%}.battle-sprite-player{left:7%;bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 4%);width:26%;height:30%}.battle-shadow{width:72%;height:14%;bottom:6%}.battle-sprite-foe .sprite.battle.front{transform:translateX(4%) translateY(0)}.battle-sprite-player .sprite.battle.back{transform:translateX(-4%) translateY(14%)}.battle-feed{left:3%;right:3%;bottom:var(--battle-feed-bottom);min-height:var(--battle-feed-height);padding:2% 2.4%;border-width:2px;border-radius:6px}.feed-line{font-size:.8rem}}
 `;
 
 const FIXED_DAMAGE_MOVES = new Set(['bide', 'counter', 'dragonrage', 'nightshade', 'psywave', 'seismictoss', 'sonicboom', 'superfang']);
@@ -266,7 +273,7 @@ class BattleViewport {
     this.root = root;
     this.mode = mode;
     this.sheetImage = sheetImage;
-    this.canvas = root.querySelector('canvas');
+    this.canvas = root.querySelector('.battle-stage canvas');
     this.ctx = this.canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
     this.playerSprite = root.querySelector('.attack-preview-player');
@@ -275,7 +282,7 @@ class BattleViewport {
     this.foeHpFill = root.querySelector('[data-foe-hp-fill]');
     this.playerHpValue = root.querySelector('[data-player-hp-value]');
     this.foeHpValue = root.querySelector('[data-foe-hp-value]');
-    this.log = root.querySelector('.attack-preview-log');
+    this.log = root.querySelector('.feed-line');
   }
 
   metrics() {
@@ -1194,14 +1201,46 @@ async function main() {
           <article class="attack-preview-panel">
             <div class="attack-preview-panel-head"><div><div class="label">${mode === 'desktop' ? 'Desktop' : 'Mobile'}</div><h2>Battle View</h2></div><div class="attack-preview-status" data-status-${mode}></div></div>
             <div class="attack-preview-stage ${mode}" data-stage="${mode}">
-              <div class="attack-preview-stage-field">
-                <div class="attack-preview-hud foe"><div class="attack-preview-hud-head"><span class="attack-preview-hud-name">${SAMPLE.defender.name}</span><span class="attack-preview-hud-level">Lv100</span></div><div class="attack-preview-hp-row"><span class="attack-preview-hp-label">HP</span><div class="attack-preview-hp-bar"><div class="attack-preview-hp-fill" data-foe-hp-fill></div></div><span class="attack-preview-hp-value" data-foe-hp-value>100/100</span></div></div>
-                <div class="attack-preview-hud player"><div class="attack-preview-hud-head"><span class="attack-preview-hud-name">${SAMPLE.attacker.name}</span><span class="attack-preview-hud-level">Lv100</span></div><div class="attack-preview-hp-row"><span class="attack-preview-hp-label">HP</span><div class="attack-preview-hp-bar"><div class="attack-preview-hp-fill" data-player-hp-fill></div></div><span class="attack-preview-hp-value" data-player-hp-value>100/100</span></div></div>
-                <div class="attack-preview-mon foe"><img class="attack-preview-foe" src="${SAMPLE.defender.sprite}" alt="${SAMPLE.defender.name}"></div>
-                <div class="attack-preview-mon player"><img class="attack-preview-player" src="${SAMPLE.attacker.sprite}" alt="${SAMPLE.attacker.name}"></div>
-                <canvas></canvas>
-                <div class="attack-preview-log">Loading moves...</div>
-              </div>
+              <section class="battle-shell">
+                <div class="battle-stage">
+                  <div class="combatant combatant-foe">
+                    <div class="battle-status battle-status-foe">
+                      <div class="battle-status-top">
+                        <div class="battle-status-name">
+                          <div class="label">Opponent</div>
+                          <div class="battle-status-name-row"><strong>${SAMPLE.defender.name}</strong></div>
+                        </div>
+                      </div>
+                      <div class="battle-status-meta"><span>Lv100</span><span>OK</span></div>
+                      <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill" data-foe-hp-fill></div></div></div>
+                      <div class="tiny" data-foe-hp-value>100/100</div>
+                    </div>
+                    <div class="battle-sprite-wrap battle-sprite-foe">
+                      <div class="battle-shadow"></div>
+                      <img class="sprite battle front attack-preview-foe" src="${SAMPLE.defender.sprite}" alt="${SAMPLE.defender.name}">
+                    </div>
+                  </div>
+                  <div class="battle-feed"><div class="feed-line">Loading moves...</div></div>
+                  <div class="combatant combatant-player">
+                    <div class="battle-status battle-status-player">
+                      <div class="battle-status-top">
+                        <div class="battle-status-name">
+                          <div class="label">You</div>
+                          <div class="battle-status-name-row"><strong>${SAMPLE.attacker.name}</strong></div>
+                        </div>
+                      </div>
+                      <div class="battle-status-meta"><span>Lv100</span><span>OK</span></div>
+                      <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill" data-player-hp-fill></div></div></div>
+                      <div class="tiny" data-player-hp-value>100/100</div>
+                    </div>
+                    <div class="battle-sprite-wrap battle-sprite-player">
+                      <div class="battle-shadow"></div>
+                      <img class="sprite battle back attack-preview-player" src="${SAMPLE.attacker.sprite}" alt="${SAMPLE.attacker.name}">
+                    </div>
+                  </div>
+                  <canvas></canvas>
+                </div>
+              </section>
             </div>
           </article>
         `).join('')}
