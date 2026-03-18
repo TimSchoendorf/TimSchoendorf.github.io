@@ -597,7 +597,7 @@
     "power": 0,
     "accuracy": 55,
     "family": "status-target",
-    "variant": "status-target"
+    "variant": "disable"
   },
   {
     "id": "acid",
@@ -1365,7 +1365,7 @@
     "power": 0,
     "accuracy": 100,
     "family": "status-target",
-    "variant": "status-target"
+    "variant": "haze"
   },
   {
     "id": "reflect",
@@ -1833,7 +1833,7 @@
     "power": 170,
     "accuracy": 100,
     "family": "selfdestruct",
-    "variant": "selfdestruct"
+    "variant": "explosion"
   },
   {
     "id": "furyswipes",
