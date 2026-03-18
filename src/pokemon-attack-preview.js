@@ -293,12 +293,15 @@ class BattleViewport {
     this.ctx.imageSmoothingEnabled = false;
   }
 
-  spriteCenter(node) {
+  spriteImpactPoint(node, role) {
     const stageRect = this.stage.getBoundingClientRect();
     const rect = node.getBoundingClientRect();
+    const profile = role === 'foe'
+      ? {x: 0.26, y: 0.56}
+      : {x: 0.62, y: 0.42};
     return {
-      x: (rect.left - stageRect.left) + (rect.width / 2),
-      y: (rect.top - stageRect.top) + (rect.height / 2),
+      x: (rect.left - stageRect.left) + (rect.width * profile.x),
+      y: (rect.top - stageRect.top) + (rect.height * profile.y),
     };
   }
 
@@ -328,8 +331,8 @@ class BattleViewport {
       x: metrics.x + (112 * metrics.scale),
       y: metrics.y + (40 * metrics.scale),
     };
-    const actualPlayer = this.spriteCenter(this.playerSprite);
-    const actualFoe = this.spriteCenter(this.foeSprite);
+    const actualPlayer = this.spriteImpactPoint(this.playerSprite, 'player');
+    const actualFoe = this.spriteImpactPoint(this.foeSprite, 'foe');
     return {
       player: {
         original: originalPlayer,
