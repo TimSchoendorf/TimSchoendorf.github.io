@@ -41,6 +41,14 @@ function makeTeam(species, moves, level = 100) {
   return [{species, name: species, moves, level}];
 }
 
+function defaultChoiceForRequest(request) {
+  if (request.forceSwitch) {
+    const index = request.side.pokemon.findIndex((mon) => !mon.active && !mon.condition.endsWith(' fnt'));
+    return `switch ${index + 1}`;
+  }
+  return 'move 1';
+}
+
 async function runScenario({
   name,
   p1Team,
@@ -74,7 +82,7 @@ async function runScenario({
           if (!line.startsWith('|request|')) continue;
           const request = JSON.parse(line.slice(9));
           p1Requests.push(request);
-          const choice = p1Choices[p1Index] ?? 'move 1';
+          const choice = p1Choices[p1Index] ?? defaultChoiceForRequest(request);
           p1Index += 1;
           streams.p1.write(choice);
         }
@@ -86,7 +94,7 @@ async function runScenario({
           if (!line.startsWith('|request|')) continue;
           const request = JSON.parse(line.slice(9));
           p2Requests.push(request);
-          const choice = p2Choices[p2Index] ?? 'move 1';
+          const choice = p2Choices[p2Index] ?? defaultChoiceForRequest(request);
           p2Index += 1;
           streams.p2.write(choice);
         }
@@ -219,6 +227,76 @@ async function testTransformCopiesMoveSet() {
   assert(nextMoves.every((move) => move.pp === 5), 'Transform test: copied moves did not get the expected 5 PP');
 }
 
+async function testHyperBeamRechargeRules() {
+  const koResult = await runScenario({
+    name: 'hyper-beam-ko',
+    p1Team: makeTeam('Mewtwo', ['hyperbeam', 'splash']),
+    p2Team: [
+      {species: 'Magikarp', name: 'Magikarp', moves: ['splash'], level: 100},
+      {species: 'Mew', name: 'Mew', moves: ['splash'], level: 100},
+    ],
+    doneWhen: ({transcript, p1Requests, p2Requests}) =>
+      transcript.includes('|faint|p2a: Magikarp') &&
+      p2Requests.some((request) => !!request.forceSwitch) &&
+      p1Requests.length >= 2,
+  });
+  assert(koResult.transcript.includes('|faint|p2a: Magikarp'), 'Hyper Beam KO test: target did not faint');
+  assert(!koResult.transcript.includes('|-mustrecharge|p1a: Mewtwo'), 'Hyper Beam KO test: recharge triggered after a KO');
+
+  const surviveResult = await runScenario({
+    name: 'hyper-beam-survive',
+    p1Team: makeTeam('Mewtwo', ['hyperbeam']),
+    p2Team: makeTeam('Mew', ['splash']),
+    doneWhen: ({transcript}) => transcript.includes('|-mustrecharge|p1a: Mewtwo'),
+  });
+  assert(surviveResult.transcript.includes('|-mustrecharge|p1a: Mewtwo'), 'Hyper Beam survive test: recharge did not trigger when the target survived');
+}
+
+async function testSleepWakeConsumesTurn() {
+  const result = await runScenario({
+    name: 'sleep-wake-turn-loss',
+    p1Team: makeTeam('Snorlax', ['rest', 'splash']),
+    p2Team: makeTeam('Mewtwo', ['tackle']),
+    p1Choices: ['move 2', 'move 1', 'move 2', 'move 2', 'move 2'],
+    seed: [1, 2, 3, 4],
+    doneWhen: ({transcript}) => transcript.includes('|-curestatus|p1a: Snorlax|slp|[msg]') && transcript.includes('|turn|5'),
+  });
+  assert(result.transcript.includes('|-status|p1a: Snorlax|slp|[from] move: Rest'), 'Sleep test: Rest did not apply sleep');
+  assert(result.transcript.includes('|cant|p1a: Snorlax|slp'), 'Sleep test: sleeping turn was not skipped');
+  const wakeTurnSlice = result.transcript.slice(
+    result.transcript.indexOf('|-curestatus|p1a: Snorlax|slp|[msg]'),
+    result.transcript.indexOf('|turn|5')
+  );
+  assert(!wakeTurnSlice.includes('|move|p1a: Snorlax|'), 'Sleep test: Snorlax acted on the same turn it woke up');
+}
+
+async function countCriticalHits({withFocusEnergy, sampleSize}) {
+  let crits = 0;
+  for (let i = 1; i <= sampleSize; i += 1) {
+    const result = await runScenario({
+      name: `focus-energy-sample-${withFocusEnergy ? 'focus' : 'base'}-${i}`,
+      p1Team: makeTeam('Persian', ['tackle', 'focusenergy']),
+      p2Team: makeTeam('Mew', ['splash']),
+      p1Choices: withFocusEnergy ? ['move 2', 'move 1'] : ['move 1'],
+      seed: [i, 2, 3, 4],
+      doneWhen: ({transcript}) => withFocusEnergy ? transcript.includes('|turn|3') : transcript.includes('|turn|2'),
+      timeoutMs: 7000,
+    });
+    const marker = '|move|p1a: Persian|Tackle|p2a: Mew';
+    const markerIndex = result.transcript.lastIndexOf(marker);
+    const relevantSlice = markerIndex >= 0 ? result.transcript.slice(markerIndex, markerIndex + 220) : result.transcript;
+    if (relevantSlice.includes('|-crit|p2a: Mew')) crits += 1;
+  }
+  return crits;
+}
+
+async function testFocusEnergyBuggedCritRate() {
+  const sampleSize = 120;
+  const baseCrits = await countCriticalHits({withFocusEnergy: false, sampleSize});
+  const focusCrits = await countCriticalHits({withFocusEnergy: true, sampleSize});
+  assert(focusCrits < baseCrits / 2, `Focus Energy test: expected a much lower crit count after Focus Energy, got base=${baseCrits}, focus=${focusCrits}`);
+}
+
 async function main() {
   await testCounter();
   await testBide();
@@ -227,6 +305,9 @@ async function main() {
   await testMimicCopiesLastMove();
   await testMirrorMoveUsesLastIncomingMove();
   await testTransformCopiesMoveSet();
+  await testHyperBeamRechargeRules();
+  await testSleepWakeConsumesTurn();
+  await testFocusEnergyBuggedCritRate();
   console.log('Gen 1 mechanics regression tests passed.');
 }
 
