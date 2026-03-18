@@ -227,6 +227,9 @@ function describeResolution(move, attacker, defender) {
     if (move.variant === 'focusenergy') return `${attacker} sharpens its fighting spirit.`;
     if (move.variant === 'recover' || move.variant === 'softboiled') return `${attacker} restores itself.`;
     if (move.variant === 'acidarmor') return `${attacker} hardens into a fluid shield.`;
+    if (move.variant === 'glare') return `${defender} is pinned by the glare.`;
+    if (move.variant === 'flash') return `${defender}'s view is washed out.`;
+    if (move.variant === 'kinesis') return `${defender}'s aim is thrown off.`;
     if (move.variant === 'conversion') return `${attacker} shifts its type pattern.`;
     if (move.variant === 'mist') return `${attacker} is wrapped in mist.`;
     if (move.variant === 'harden' || move.variant === 'withdraw') return `${attacker} braces with extra defense.`;
@@ -664,6 +667,8 @@ class BattleViewport {
         this.drawEllipse(dx, dy, 18 + (t * 12), 10 + (t * 6), '', {alpha: 1 - t, stroke: '#ffe589', lineWidth: 2});
       }
       this.drawCircle(dx, dy, 8 + (Math.sin(progress * Math.PI) * 3), '', {alpha: 0.5, stroke: '#fff4bf', lineWidth: 2});
+      this.drawPolyline([[dx - 18, dy - 14], [dx, dy], [dx + 18, dy - 14]], '#fff5c7', 2, {alpha: 0.46});
+      this.drawPolyline([[dx - 18, dy + 14], [dx, dy], [dx + 18, dy + 14]], '#fff5c7', 2, {alpha: 0.46});
       return;
     }
     if (variant === 'poisongas' || variant === 'sludge' || variant === 'smokescreen') {
@@ -686,17 +691,19 @@ class BattleViewport {
       return;
     }
     if (variant === 'kinesis') {
-      const midX = lerp(ax, dx, 0.66);
-      const midY = lerp(ay - 2, dy + 8, 0.62);
+      const midX = lerp(ax, dx, 0.76);
+      const midY = lerp(ay - 4, dy + 4, 0.72);
       const wobble = Math.sin(progress * Math.PI * 3) * 6;
-      this.drawPolyline([[midX - 12, midY + 18], [midX - 1 + wobble * 0.2, midY - 2], [midX + 10, midY - 28]], '#efece3', 5, {alpha: 0.98});
-      this.drawCircle(midX + 12, midY - 34, 8, '', {alpha: 0.96, stroke: '#efece3', lineWidth: 3});
-      this.drawPolyline([[midX - 7, midY + 16], [midX + wobble * 0.18, midY], [midX + 12, midY - 24]], '#fff9f0', 2, {alpha: 0.54});
-      this.drawPolyline([[midX + 10, midY - 34], [dx - 8, dy - 8], [dx + 12, dy + 10]], '#dcc8ff', 2, {alpha: 0.64});
-      this.drawEllipse(dx, dy, 24 + wobble * 0.2, 12, '', {alpha: 0.64, stroke: '#d4b7ff', lineWidth: 2});
-      this.drawEllipse(dx, dy, 36 + wobble * 0.2, 18, '', {alpha: 0.4, stroke: '#e8d9ff', lineWidth: 2});
+      this.drawPolyline([[midX - 14, midY + 22], [midX - 1 + wobble * 0.2, midY - 2], [midX + 12, midY - 34]], '#efece3', 6, {alpha: 0.98});
+      this.drawCircle(midX + 14, midY - 40, 10, '', {alpha: 0.96, stroke: '#efece3', lineWidth: 3});
+      this.drawPolyline([[midX - 9, midY + 18], [midX + wobble * 0.18, midY], [midX + 14, midY - 28]], '#fff9f0', 2, {alpha: 0.54});
+      this.drawPolyline([[midX - 10, midY + 16], [midX + 3, midY - 4], [midX + 12, midY - 26]], '#d8d1c5', 2, {alpha: 0.42});
+      this.drawPolyline([[midX + 12, midY - 40], [dx - 8, dy - 8], [dx + 12, dy + 10]], '#dcc8ff', 2, {alpha: 0.64});
+      this.drawEllipse(dx, dy, 28 + wobble * 0.2, 14, '', {alpha: 0.7, stroke: '#d4b7ff', lineWidth: 2});
+      this.drawEllipse(dx, dy, 40 + wobble * 0.2, 20, '', {alpha: 0.46, stroke: '#e8d9ff', lineWidth: 2});
       this.drawPolyline([[dx - 16, dy], [dx + 16, dy]], '#f2e6ff', 2, {alpha: 0.52});
       this.drawPolyline([[dx, dy - 14], [dx, dy + 14]], '#f2e6ff', 2, {alpha: 0.52});
+      this.drawCircle(dx, dy, 8 + (Math.sin(progress * Math.PI) * 3), '#f4ebff', {alpha: 0.26});
       return;
     }
     if (variant === 'psychic' || variant === 'nightshade') {
@@ -777,6 +784,7 @@ class BattleViewport {
       }
       this.drawCircle(ax, ay - 12, 22, '', {alpha: 0.34, stroke: '#eaf4ff', lineWidth: 2});
       this.drawCircle(ax, ay - 12, 8 + (Math.sin(progress * Math.PI) * 3), '#f4fbff', {alpha: 0.34});
+      this.drawRect(ax, ay - 12, 12, 12, 'rgba(255,255,255,.22)', {alpha: 0.8, stroke: '#f7fbff', lineWidth: 2, rotation: progress * Math.PI / 2});
       return;
     }
     if (variant === 'mist') {
@@ -788,6 +796,7 @@ class BattleViewport {
       }
       this.drawEllipse(ax, ay - 14, 40, 20, '', {alpha: 0.32, stroke: '#ecf7ff', lineWidth: 2});
       this.drawEllipse(ax, ay + 4, 52, 18, 'rgba(236,247,255,.12)', {alpha: 0.28, stroke: '#f5fbff', lineWidth: 2});
+      this.drawPolyline([[ax - 30, ay - 4], [ax - 6, ay - 12], [ax + 14, ay - 2], [ax + 32, ay - 10]], '#f5fbff', 2, {alpha: 0.22});
       return;
     }
     if (variant === 'harden') {
@@ -796,6 +805,7 @@ class BattleViewport {
       this.drawStar(ax + 18, ay - 2, 8, '#eefaff', {alpha: 0.66, stroke: '#fffef8', lineWidth: 1});
       this.drawPolyline([[ax - 24, ay - 14], [ax - 8, ay - 34], [ax + 10, ay - 28], [ax + 24, ay - 10], [ax + 4, ay + 8], [ax - 18, ay + 4], [ax - 24, ay - 14]], '#eefaff', 2, {alpha: 0.44});
       this.drawEllipse(ax, ay - 14, 24, 14, '', {alpha: 0.24, stroke: '#eefaff', lineWidth: 2});
+      this.drawCircle(ax, ay - 14, 6, '#f8fdff', {alpha: 0.2});
       return;
     }
     if (variant === 'withdraw') {
@@ -803,6 +813,7 @@ class BattleViewport {
       this.drawPolyline([[ax - 24, ay + 4], [ax, ay - 32], [ax + 24, ay + 4]], '#eefaff', 4, {alpha: 0.92});
       this.drawPolyline([[ax - 16, ay + 4], [ax, ay - 18], [ax + 16, ay + 4]], '#eefaff', 2, {alpha: 0.74});
       this.drawEllipse(ax, ay + 6, 18, 6, 'rgba(238,250,255,.12)', {alpha: 0.5, stroke: '#eefaff', lineWidth: 2});
+      this.drawRect(ax, ay - 2, 12, 8, 'rgba(238,250,255,.12)', {alpha: 0.36, stroke: '#eefaff', lineWidth: 1});
       return;
     }
     if (variant === 'substitute') {
