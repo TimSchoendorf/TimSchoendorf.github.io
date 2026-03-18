@@ -77,20 +77,20 @@ const STYLES = `
   .attack-preview-header p,.attack-preview-current p{margin:10px 0 0;max-width:72ch;color:var(--muted);line-height:1.4}
   .attack-preview-meta{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
   .attack-preview-meta span,.attack-preview-status{padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#e3eedf;font-size:.92rem}
-  .attack-preview-stage-grid{display:grid;grid-template-columns:minmax(0,1.18fr) minmax(300px,.82fr);gap:16px;align-items:start}
+  .attack-preview-stage-grid{display:grid;grid-template-columns:minmax(0,1.08fr) minmax(340px,.92fr);gap:16px;align-items:start}
   .attack-preview-panel{padding:18px;display:grid;gap:14px;overflow:hidden}
   .attack-preview-panel-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
-  .attack-preview-stage{border-radius:24px;padding:14px;background:linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.06)}
-  .attack-preview-stage.desktop{aspect-ratio:16/10}
-  .attack-preview-stage.mobile{aspect-ratio:430/932;max-width:300px;width:100%;margin:0 auto}
-  .attack-preview-stage-field{position:relative;width:100%;height:100%;overflow:hidden;border-radius:22px;background:radial-gradient(circle at 68% 20%, rgba(255,255,255,.16), transparent 28%),linear-gradient(180deg, #e7edd8 0%, #dce0c8 56%, #bcc7a5 56.4%, #b7c29f 100%);box-shadow:inset 0 0 0 2px rgba(10,18,14,.12)}
-  .attack-preview-stage-field::before{content:"";position:absolute;left:50%;bottom:15%;width:32%;height:11%;border-radius:50%;transform:translateX(-50%);background:radial-gradient(circle, rgba(39,57,32,.28), rgba(39,57,32,.06) 62%, transparent 75%)}
-  .attack-preview-stage-field::after{content:"";position:absolute;left:16%;bottom:28%;width:34%;height:13%;border-radius:50%;background:radial-gradient(circle, rgba(39,57,32,.3), rgba(39,57,32,.06) 60%, transparent 76%)}
-  .attack-preview-hud{position:absolute;z-index:3;display:grid;gap:6px;min-width:182px;padding:12px 14px 10px;background:rgba(243,247,232,.96);color:#223126;border:3px solid #233323;border-radius:18px;box-shadow:0 10px 28px rgba(0,0,0,.14)}
-  .attack-preview-hud.foe{top:6%;left:5%}
-  .attack-preview-hud.player{right:5%;bottom:28%}
-  .attack-preview-hud-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
-  .attack-preview-hud-name{font-size:1.08rem;font-weight:700;line-height:1}
+  .attack-preview-stage{padding:0;background:transparent;border:none}
+  .attack-preview-stage.desktop{aspect-ratio:1080/430}
+  .attack-preview-stage.mobile{aspect-ratio:430/316;max-width:320px;width:100%;margin:0 auto}
+  .attack-preview-stage-field{position:relative;width:100%;height:100%;overflow:hidden;min-height:0;aspect-ratio:auto;--battle-pad-x:4.5%;--battle-pad-top:6%;--battle-feed-bottom:3.2%;--battle-feed-height:16.8%;--battle-player-line:21.5%;--battle-foe-line:14%;border:3px solid #151d11;border-radius:10px;background:radial-gradient(circle at 74% 34%, rgba(255,255,255,.28), transparent 26%),radial-gradient(circle at 27% 78%, rgba(255,255,255,.24), transparent 24%),linear-gradient(180deg, #e7edd8 0%, #dce0c8 56%, #bcc7a5 56.4%, #b7c29f 100%);box-shadow:inset 0 0 0 2px rgba(10,18,14,.12)}
+  .attack-preview-stage-field::before{content:"";position:absolute;left:50%;bottom:4%;width:56%;height:11%;border-radius:50%;transform:translateX(-50%);background:radial-gradient(circle, rgba(39,57,32,.28), rgba(39,57,32,.06) 62%, transparent 75%)}
+  .attack-preview-stage-field::after{content:"";position:absolute;left:17%;bottom:var(--battle-player-line);width:34%;height:13%;border-radius:50%;background:radial-gradient(circle, rgba(39,57,32,.3), rgba(39,57,32,.06) 60%, transparent 76%)}
+  .attack-preview-hud{position:absolute;z-index:3;display:grid;gap:6px;min-width:182px;padding:2.4% 2.8%;background:#f8f5e8;color:#1e2b14;border:3px solid #151d11;border-radius:8px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6)}
+  .attack-preview-hud.foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:24%;min-width:0}
+  .attack-preview-hud.player{right:var(--battle-pad-x);bottom:calc(var(--battle-player-line) + 1.5%);width:25%;min-width:0}
+  .attack-preview-hud-head{display:flex;justify-content:space-between;align-items:baseline;gap:10px;min-width:0}
+  .attack-preview-hud-name{font-size:1.08rem;font-weight:700;line-height:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .attack-preview-hud-level{font-size:.78rem;letter-spacing:.12em;text-transform:uppercase;color:#4a5d47}
   .attack-preview-hp-row{display:flex;align-items:center;gap:10px}
   .attack-preview-hp-label{font-size:.72rem;letter-spacing:.18em;text-transform:uppercase;color:#556850}
@@ -99,10 +99,12 @@ const STYLES = `
   .attack-preview-hp-value{font-size:.78rem;font-weight:700;color:#33452f}
   .attack-preview-mon{position:absolute;display:flex;align-items:flex-end;justify-content:center;pointer-events:none}
   .attack-preview-mon img{width:100%;height:100%;object-fit:contain;object-position:center bottom;image-rendering:pixelated;filter:drop-shadow(0 12px 0 rgba(255,255,255,.18)) drop-shadow(0 20px 18px rgba(0,0,0,.22));transition:transform 70ms linear, opacity 90ms linear, filter 80ms linear}
-  .attack-preview-mon.foe{top:14%;right:7%;width:27%;height:30%}
-  .attack-preview-mon.player{left:6%;bottom:17%;width:30%;height:34%}
+  .attack-preview-mon.foe{top:calc(var(--battle-foe-line) + .5%);right:7.5%;width:19%;height:24%}
+  .attack-preview-mon.player{left:5.5%;bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 3.2%);width:24%;height:35%}
+  .attack-preview-mon.foe img{transform:translateX(2%) translateY(0)}
+  .attack-preview-mon.player img{transform:translateX(-2%) translateY(12%)}
   .attack-preview-mon img.hurt{filter:brightness(1.8) contrast(1.3) drop-shadow(0 0 10px rgba(255,255,255,.75))}
-  .attack-preview-log{position:absolute;left:4%;right:4%;bottom:4%;min-height:80px;display:grid;place-items:center;padding:12px 16px;background:rgba(249,249,240,.93);color:#213123;border:3px solid #243525;border-radius:20px;text-align:center;font-size:1rem;line-height:1.3;box-shadow:0 10px 28px rgba(0,0,0,.16);z-index:4}
+  .attack-preview-log{position:absolute;left:2.8%;right:2.8%;bottom:var(--battle-feed-bottom);min-height:var(--battle-feed-height);display:grid;place-items:center;padding:1.6% 2%;background:#f8f5e8;color:#213123;border:3px solid #243525;border-radius:6px;text-align:center;font-size:.98rem;line-height:1.3;box-shadow:0 10px 28px rgba(0,0,0,.16);z-index:4}
   .attack-preview-stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
   .attack-preview-controls{padding:18px 22px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center}
   .attack-preview-buttons{display:flex;flex-wrap:wrap;gap:10px}
@@ -117,7 +119,7 @@ const STYLES = `
   .attack-move-chip em{font-style:normal;font-size:.8rem;color:var(--muted)}
   .attack-move-chip.active{border-color:rgba(143,209,255,.6);box-shadow:0 0 0 1px rgba(143,209,255,.24);background:rgba(143,209,255,.08)}
   @media (max-width:1080px){.attack-preview-stage-grid{grid-template-columns:1fr}.attack-preview-header,.attack-preview-controls{grid-template-columns:1fr}.attack-preview-meta{justify-content:flex-start}}
-  @media (max-width:720px){.attack-preview-shell{width:min(100vw - 16px, 440px);padding:12px 0 20px;gap:12px}.attack-preview-header,.attack-preview-controls,.attack-preview-panel{padding:14px}.attack-preview-header h1,.attack-preview-current h3,.attack-preview-panel-head h2{font-size:1.55rem}.attack-preview-stage.desktop{aspect-ratio:430/350}.attack-preview-log{min-height:68px;font-size:.92rem}.attack-preview-stage.mobile{max-width:252px}.attack-preview-move-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:36vh}.attack-preview-hud{min-width:122px;padding:8px 10px 8px;gap:4px;border-width:2px;border-radius:14px}.attack-preview-hud.foe{top:5%;left:4%}.attack-preview-hud.player{right:4%;bottom:24%}.attack-preview-hud-name{font-size:.82rem}.attack-preview-hud-level{font-size:.6rem}.attack-preview-hp-label{font-size:.58rem}.attack-preview-hp-row{gap:6px}.attack-preview-hp-bar{height:9px;border-width:1px}.attack-preview-hp-value{font-size:.64rem}.attack-preview-mon.foe{top:16%;right:6%;width:31%;height:26%}.attack-preview-mon.player{left:4%;bottom:18%;width:34%;height:31%}}
+  @media (max-width:720px){.attack-preview-shell{width:min(100vw - 16px, 440px);padding:12px 0 20px;gap:12px}.attack-preview-header,.attack-preview-controls,.attack-preview-panel{padding:14px}.attack-preview-header h1,.attack-preview-current h3,.attack-preview-panel-head h2{font-size:1.55rem}.attack-preview-stage.desktop{aspect-ratio:430/316}.attack-preview-stage.mobile{max-width:252px}.attack-preview-stage-field{--battle-pad-x:3%;--battle-pad-top:4%;--battle-feed-bottom:3%;--battle-feed-height:17%;--battle-player-line:22%;--battle-foe-line:10.5%;border-radius:8px}.attack-preview-log{left:3%;right:3%;bottom:var(--battle-feed-bottom);min-height:var(--battle-feed-height);padding:2% 2.4%;border-width:2px;border-radius:6px;font-size:.8rem}.attack-preview-move-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:36vh}.attack-preview-hud{padding:8px 10px 8px;gap:4px;border-width:2px;border-radius:6px}.attack-preview-hud.foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:36%}.attack-preview-hud.player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:38%}.attack-preview-hud-name{font-size:.82rem}.attack-preview-hud-level{font-size:.6rem}.attack-preview-hp-label{font-size:.58rem}.attack-preview-hp-row{gap:6px}.attack-preview-hp-bar{height:9px;border-width:1px}.attack-preview-hp-value{font-size:.64rem}.attack-preview-mon.foe{top:calc(var(--battle-foe-line) - 1.5%);right:6%;width:29%;height:35%}.attack-preview-mon.player{left:7%;bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 4%);width:26%;height:30%}.attack-preview-mon.player img{transform:translateX(-4%) translateY(14%)}.attack-preview-mon.foe img{transform:translateX(4%) translateY(0)}.attack-preview-stage-field::before{width:72%;height:14%;bottom:6%}.attack-preview-stage-field::after{left:18%;bottom:var(--battle-player-line);width:38%;height:14%}}
 `;
 
 const FIXED_DAMAGE_MOVES = new Set(['bide', 'counter', 'dragonrage', 'nightshade', 'psywave', 'seismictoss', 'sonicboom', 'superfang']);
@@ -278,7 +280,11 @@ class BattleViewport {
 
   metrics() {
     const mobile = this.mode === 'mobile';
-    return {attacker: mobile ? {x: 0.24, y: 0.73} : {x: 0.22, y: 0.72}, defender: mobile ? {x: 0.76, y: 0.27} : {x: 0.78, y: 0.29}, scale: mobile ? 2.2 : 2.6};
+    return {
+      attacker: mobile ? {x: 0.2, y: 0.69} : {x: 0.175, y: 0.64},
+      defender: mobile ? {x: 0.795, y: 0.265} : {x: 0.83, y: 0.24},
+      scale: mobile ? 2.2 : 2.6,
+    };
   }
 
   resize() {
