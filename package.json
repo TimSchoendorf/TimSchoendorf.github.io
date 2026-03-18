@@ -10,6 +10,7 @@
     "build:pokemon-attack-preview:bundle": "esbuild src/pokemon-attack-preview.js --bundle --platform=browser --format=iife --minify --outfile=games/pokemon-attack-preview.js",
     "build:pokemon-attack-preview": "npm run build:pokemon-attack-preview:data && npm run build:pokemon-attack-preview:bundle",
     "build:pokemon-draft": "npm run build:pokemon-draft:data && npm run build:pokemon-draft:bundle",
+    "check:pokemon-attack-preview": "node scripts/check-pokemon-attack-preview.mjs",
     "check:pokemon-draft": "node scripts/check-pokemon-draft.mjs",
     "check:pokemon-draft:mechanics": "node scripts/check-pokemon-gen1-mechanics.mjs",
     "check:pokemon-draft:moves": "node scripts/check-pokemon-gen1-moves.mjs",

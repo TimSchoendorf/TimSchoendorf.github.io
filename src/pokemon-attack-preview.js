@@ -1,144 +1,137 @@
 const DATA_PATH = './pokemon-attack-preview-data.json';
-const SHEET_PATH = '../assets/pokemon-attack-spritesheet.png';
 const PLAYER_SPRITE = '../assets/pokemon-rby-clean/red-green/back/6.png';
 const FOE_SPRITE = '../assets/pokemon-rby-clean/red-green/9.png';
+const FRAME_MS = 70;
 
 const SAMPLE = {
-  attacker: {name: 'Charizard', sprite: PLAYER_SPRITE},
-  defender: {name: 'Blastoise', sprite: FOE_SPRITE},
+  player: {name: 'Charizard', sprite: PLAYER_SPRITE},
+  foe: {name: 'Blastoise', sprite: FOE_SPRITE},
 };
 
-const ATLAS = {
-  star: {x: 72, y: 16, w: 16, h: 16},
-  spark: {x: 96, y: 16, w: 16, h: 16},
-  slash: {x: 24, y: 0, w: 16, h: 16},
-  horn: {x: 168, y: 0, w: 16, h: 16},
-  coin: {x: 192, y: 16, w: 16, h: 16},
+const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
+const lerp = (a, b, t) => a + ((b - a) * t);
+
+const FIXED_DAMAGE_MOVES = new Set(['bide', 'counter', 'dragonrage', 'nightshade', 'psywave', 'seismictoss', 'sonicboom', 'superfang']);
+const OHKO_MOVES = new Set(['fissure', 'guillotine', 'horndrill']);
+
+const SPECIAL_EFFECT_DURATION = {
+  SE_DELAY_ANIMATION_10: 10 * FRAME_MS,
+  SE_DARK_SCREEN_FLASH: 4 * FRAME_MS,
+  SE_DARK_SCREEN_PALETTE: 0,
+  SE_RESET_SCREEN_PALETTE: 0,
+  SE_FLASH_SCREEN_LONG: 10 * FRAME_MS,
+  SE_SHAKE_SCREEN: 6 * FRAME_MS,
+  SE_WATER_DROPLETS_EVERYWHERE: 10 * FRAME_MS,
+  SE_DARKEN_MON_PALETTE: 6 * FRAME_MS,
+  SE_LIGHT_SCREEN_PALETTE: 8 * FRAME_MS,
+  SE_BLINK_MON: 6 * FRAME_MS,
+  SE_FLASH_MON_PIC: 4 * FRAME_MS,
+  SE_HIDE_MON_PIC: 0,
+  SE_SHOW_MON_PIC: 0,
+  SE_MOVE_MON_HORIZONTALLY: 5 * FRAME_MS,
+  SE_RESET_MON_POSITION: 3 * FRAME_MS,
+  SE_SLIDE_MON_OFF: 8 * FRAME_MS,
+  SE_SLIDE_MON_HALF_OFF: 7 * FRAME_MS,
+  SE_SLIDE_MON_UP: 6 * FRAME_MS,
+  SE_SLIDE_MON_DOWN: 6 * FRAME_MS,
+  SE_SLIDE_MON_DOWN_AND_HIDE: 8 * FRAME_MS,
+  SE_SQUISH_MON_PIC: 6 * FRAME_MS,
+  SE_BOUNCE_UP_AND_DOWN: 8 * FRAME_MS,
+  SE_MINIMIZE_MON: 8 * FRAME_MS,
+  SE_SUBSTITUTE_MON: 0,
+  SE_TRANSFORM_MON: 8 * FRAME_MS,
+  SE_PETALS_FALLING: 10 * FRAME_MS,
+  SE_LEAVES_FALLING: 10 * FRAME_MS,
+  SE_SHAKE_ENEMY_HUD: 5 * FRAME_MS,
+  SE_SHAKE_BACK_AND_FORTH: 6 * FRAME_MS,
+  SE_WAVY_SCREEN: 10 * FRAME_MS,
+  SE_SPIRAL_BALLS_INWARD: 10 * FRAME_MS,
+  SE_SHOOT_BALLS_UPWARD: 8 * FRAME_MS,
+  SE_SHOOT_MANY_BALLS_UPWARD: 9 * FRAME_MS,
+  SE_SHOW_ENEMY_MON_PIC: 0,
+  SE_HIDE_ENEMY_MON_PIC: 0,
+  SE_BLINK_ENEMY_MON: 6 * FRAME_MS,
+  SE_SLIDE_ENEMY_MON_OFF: 8 * FRAME_MS,
 };
 
-const FAMILY = {
-  impact: {duration: 1450, hitAt: 0.48, attackerMotion: 'lunge', targetMotion: 'shake', effect: {type: 'burst'}},
-  slash: {duration: 1320, hitAt: 0.45, attackerMotion: 'lunge', targetMotion: 'shake', effect: {type: 'slash'}},
-  horn: {duration: 1480, hitAt: 0.58, attackerMotion: 'lunge', targetMotion: 'shake', effect: {type: 'spikes'}},
-  coin: {duration: 1580, hitAt: 0.64, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'coins'}},
-  kick: {duration: 1360, hitAt: 0.52, attackerMotion: 'lunge', targetMotion: 'shake', effect: {type: 'burst'}},
-  wind: {duration: 1560, hitAt: 0.62, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'wind'}},
-  vine: {duration: 1640, hitAt: 0.68, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'vine'}},
-  bind: {duration: 1680, hitAt: 0.62, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'rings'}},
-  sand: {duration: 1500, hitAt: 0.58, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'dust'}},
-  fang: {duration: 1320, hitAt: 0.46, attackerMotion: 'lunge', targetMotion: 'shake', effect: {type: 'fang'}},
-  fire: {duration: 1650, hitAt: 0.7, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'fire'}},
-  fireblast: {duration: 1760, hitAt: 0.74, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'fireblast'}},
-  water: {duration: 1540, hitAt: 0.62, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'rain'}},
-  bubble: {duration: 1560, hitAt: 0.66, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'bubbles'}},
-  surf: {duration: 1710, hitAt: 0.72, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'surf'}},
-  hydropump: {duration: 1720, hitAt: 0.66, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'hydro'}},
-  ice: {duration: 1600, hitAt: 0.68, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'ice'}},
-  electric: {duration: 1580, hitAt: 0.66, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'electric'}},
-  beam: {duration: 1560, hitAt: 0.62, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'beam'}},
-  rock: {duration: 1520, hitAt: 0.68, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'rocks'}},
-  seismic: {duration: 1730, hitAt: 0.72, attackerMotion: 'lunge', targetMotion: 'toss', effect: {type: 'seismic'}},
-  leech: {duration: 1780, hitAt: 0.44, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'drain'}},
-  petal: {duration: 1680, hitAt: 0.7, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'petal'}},
-  string: {duration: 1620, hitAt: 0.66, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'string'}},
-  transform: {duration: 1780, hitAt: 0.46, attackerMotion: 'vanish', targetMotion: 'none', effect: {type: 'self'}},
-  barrier: {duration: 1450, hitAt: 0.42, attackerMotion: 'none', targetMotion: 'none', effect: {type: 'barrier'}},
-  minimize: {duration: 1450, hitAt: 0.42, attackerMotion: 'none', targetMotion: 'none', effect: {type: 'ringSelf'}},
-  defensecurl: {duration: 1450, hitAt: 0.42, attackerMotion: 'curl', targetMotion: 'none', effect: {type: 'ringSelf'}},
-  selfdestruct: {duration: 1880, hitAt: 0.72, attackerMotion: 'none', targetMotion: 'shake', effect: {type: 'explode'}},
-  smog: {duration: 1650, hitAt: 0.72, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'cloud', color: '#7b7a89'}},
-  swift: {duration: 1650, hitAt: 0.76, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'swift'}},
-  heal: {duration: 1450, hitAt: 0.4, attackerMotion: 'none', targetMotion: 'none', effect: {type: 'heal'}},
-  kiss: {duration: 1500, hitAt: 0.72, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'kiss'}},
-  triattack: {duration: 1650, hitAt: 0.74, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'tri'}},
-  substitute: {duration: 1600, hitAt: 0.44, attackerMotion: 'none', targetMotion: 'none', effect: {type: 'substitute'}},
-  confusion: {duration: 1660, hitAt: 0.72, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'confusion'}},
-  sleep: {duration: 1500, hitAt: 0.66, attackerMotion: 'hop', targetMotion: 'none', effect: {type: 'sleep'}},
-  poison: {duration: 1500, hitAt: 0.68, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'cloud', color: '#8456bf'}},
-  sound: {duration: 1450, hitAt: 0.58, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'sound'}},
-  'status-self': {duration: 1380, hitAt: 0.36, attackerMotion: 'none', targetMotion: 'none', effect: {type: 'self'}},
-  'status-target': {duration: 1460, hitAt: 0.62, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'statusTarget'}},
-  dig: {duration: 1650, hitAt: 0.74, attackerMotion: 'dig', targetMotion: 'shake', effect: {type: 'rocks'}},
-  fly: {duration: 1750, hitAt: 0.78, attackerMotion: 'fly', targetMotion: 'shake', effect: {type: 'swoop'}},
-  skullbash: {duration: 1820, hitAt: 0.82, attackerMotion: 'charge', targetMotion: 'shake', effect: {type: 'burst'}},
-  teleport: {duration: 1550, hitAt: 0.48, attackerMotion: 'vanish', targetMotion: 'none', effect: {type: 'self'}},
-  psywave: {duration: 1650, hitAt: 0.72, attackerMotion: 'hop', targetMotion: 'shake', effect: {type: 'psywave'}},
+const MOVE_SPECIFIC_DURATION = {
+  AnimationFlashScreen: 4 * FRAME_MS,
+  DoBlizzardSpecialEffects: 10 * FRAME_MS,
+  DoExplodeSpecialEffects: 8 * FRAME_MS,
+  DoGrowlSpecialEffects: 6 * FRAME_MS,
+  DoRockSlideSpecialEffects: 8 * FRAME_MS,
+  FlashScreenEveryEightFrameBlocks: 6 * FRAME_MS,
+  FlashScreenEveryFourFrameBlocks: 8 * FRAME_MS,
 };
 
 const STYLES = `
-  :root{color-scheme:dark;--bg:#07120d;--panel:#0f211a;--line:rgba(173,209,188,.16);--text:#eef6ee;--muted:#b7cfbe;--gold:#e5c965;--accent:#8fd1ff}
+  :root{color-scheme:dark;--bg:#07120d;--panel:#11231c;--line:rgba(173,209,188,.15);--text:#eef6ee;--muted:#b6cdbd;--gold:#e5c965;--accent:#8fd1ff}
   *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;font-family:Georgia,"Times New Roman",serif;background:radial-gradient(circle at top left, rgba(206,175,86,.18), transparent 26%),radial-gradient(circle at top right, rgba(60,126,110,.2), transparent 24%),linear-gradient(180deg, #08140f 0%, #0d1914 100%);color:var(--text)}
+  body{margin:0;min-height:100vh;font-family:Georgia,"Times New Roman",serif;background:radial-gradient(circle at top left, rgba(206,175,86,.18), transparent 26%),radial-gradient(circle at top right, rgba(60,126,110,.2), transparent 24%),linear-gradient(180deg,#08140f 0%,#0d1914 100%);color:var(--text)}
+  button{font:inherit}
   .label{font-size:.74rem;letter-spacing:.24em;text-transform:uppercase;color:rgba(235,241,231,.74)}
-  .attack-preview-shell{width:min(1420px,calc(100vw - 28px));margin:0 auto;padding:22px 0 30px;display:grid;gap:18px}
-  .attack-preview-header,.attack-preview-controls,.attack-preview-panel,.attack-preview-move-list{background:linear-gradient(180deg, rgba(19,37,31,.96), rgba(12,25,20,.98));border:1px solid var(--line);border-radius:28px;box-shadow:0 24px 60px rgba(0,0,0,.25)}
-  .attack-preview-header{padding:24px 26px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end}
-  .attack-preview-header h1,.attack-preview-current h3,.attack-preview-panel-head h2{margin:4px 0 0;font-size:clamp(1.8rem,2vw + 1rem,3rem);line-height:.95}
-  .attack-preview-header p,.attack-preview-current p{margin:10px 0 0;max-width:72ch;color:var(--muted);line-height:1.4}
-  .attack-preview-meta{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
-  .attack-preview-meta span,.attack-preview-status{padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#e3eedf;font-size:.92rem}
-  .attack-preview-stage-grid{display:grid;grid-template-columns:1fr;gap:16px;align-items:start}
-  .attack-preview-panel{padding:18px;display:grid;gap:14px;overflow:hidden}
-  .attack-preview-panel-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
-  .attack-preview-stage{padding:0;background:transparent;border:none}
-  .attack-preview-stage.desktop{width:min(72vw,1080px);max-width:100%;margin:0 auto}
-  .attack-preview-stage.mobile{width:min(320px,100%);max-width:100%;margin:0 auto}
-  .battle-shell{display:block;max-width:none;width:100%;margin:0 auto}
-  .battle-stage{position:relative;height:clamp(352px,28vw,430px);min-height:0;aspect-ratio:auto;--battle-pad-x:4.5%;--battle-pad-top:6%;--battle-feed-bottom:3.2%;--battle-feed-height:16.8%;--battle-player-line:21.5%;--battle-foe-line:14%;border:3px solid #151d11;border-radius:10px;overflow:hidden;background:linear-gradient(180deg,#e7f3cb 0%,#e7f3cb 54%,#cadc9a 54%,#cadc9a 100%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.2),0 24px 60px rgba(0,0,0,.22)}
+  .preview-shell{width:min(1420px,calc(100vw - 28px));margin:0 auto;padding:20px 0 32px;display:grid;gap:18px}
+  .preview-card,.preview-moves{background:linear-gradient(180deg, rgba(19,37,31,.96), rgba(12,25,20,.98));border:1px solid var(--line);border-radius:28px;box-shadow:0 24px 60px rgba(0,0,0,.25)}
+  .preview-card{padding:22px 24px}
+  .preview-header{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:18px;align-items:end}
+  .preview-header h1,.preview-stage-head h2{margin:4px 0 0;font-size:clamp(1.8rem,2vw + 1rem,3rem);line-height:.95}
+  .preview-header p{margin:10px 0 0;max-width:72ch;color:var(--muted);line-height:1.45}
+  .preview-meta{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end}
+  .preview-meta span,.preview-current span{padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.04);color:#e3eedf;font-size:.92rem}
+  .preview-controls{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center}
+  .preview-current-head{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-end}
+  .preview-current h2{margin:6px 0 0;font-size:clamp(1.4rem,1.5vw + .9rem,2.2rem)}
+  .preview-current p{margin:8px 0 0;color:var(--muted)}
+  .preview-buttons{display:flex;flex-wrap:wrap;gap:10px}
+  .btn-primary,.btn-ghost,.move-chip{border:none;cursor:pointer}
+  .btn-primary,.btn-ghost{padding:12px 18px;border-radius:999px;font-weight:700}
+  .btn-primary{background:linear-gradient(180deg,#f0d56f,#d8bb57);color:#223125}
+  .btn-ghost{background:rgba(255,255,255,.06);color:var(--text);border:1px solid rgba(255,255,255,.08)}
+  .btn-ghost.active{background:rgba(143,209,255,.16);border-color:rgba(143,209,255,.4)}
+  .preview-stage-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,320px);gap:16px;align-items:start}
+  .preview-stage-stack{display:grid;gap:16px}
+  .preview-stage-panel{padding:18px;display:grid;gap:12px}
+  .preview-stage-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+  .preview-stage{width:100%}
+  .preview-stage.desktop{max-width:1080px;margin:0 auto}
+  .preview-stage.mobile{max-width:320px;margin:0 auto}
+  .battle-stage{position:relative;height:clamp(352px,28vw,430px);border:3px solid #151d11;border-radius:10px;overflow:hidden;background:linear-gradient(180deg,#e7f3cb 0%,#e7f3cb 54%,#cadc9a 54%,#cadc9a 100%);box-shadow:inset 0 0 0 2px rgba(255,255,255,.2),0 24px 60px rgba(0,0,0,.22)}
   .battle-stage::before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 74% 34%,rgba(255,255,255,.28),transparent 26%),radial-gradient(circle at 27% 78%,rgba(255,255,255,.24),transparent 24%);pointer-events:none}
-  .battle-feed{position:absolute;left:2.8%;right:2.8%;bottom:var(--battle-feed-bottom);border:3px solid #151d11;border-radius:8px;padding:1.7% 2.1%;display:grid;align-content:center;min-height:var(--battle-feed-height);background:#f8f5e8;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);z-index:3}
+  .battle-field{position:absolute;inset:0 0 21% 0}
+  .battle-layer{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+  .battle-feed{position:absolute;left:2.8%;right:2.8%;bottom:3.2%;border:3px solid #151d11;border-radius:8px;padding:1.7% 2.1%;display:grid;align-content:center;min-height:16.8%;background:#f8f5e8;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);z-index:3}
   .feed-line{color:#1e2b14;text-align:left;font-size:1.02rem;line-height:1.45;font-weight:700;text-transform:uppercase}
-  .combatant{position:absolute;inset:0;display:block;z-index:2;pointer-events:none}
-  .battle-status{position:absolute;padding:2.4% 2.8%;border:3px solid #151d11;border-radius:8px;background:#f8f5e8;color:#1e2b14;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);pointer-events:auto}
-  .battle-status-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:24%;max-width:none}
-  .battle-status-player{right:var(--battle-pad-x);bottom:calc(var(--battle-player-line) + 1.5%);width:25%;max-width:none}
+  .battle-status{position:absolute;padding:2.4% 2.8%;border:3px solid #151d11;border-radius:8px;background:#f8f5e8;color:#1e2b14;box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);z-index:3}
+  .battle-status-foe{top:6%;left:4.5%;width:24%}
+  .battle-status-player{right:4.5%;bottom:24%;width:25%}
   .battle-status-top,.battle-status-meta,.battle-hp-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
-  .battle-status-name{display:grid;gap:2px;min-width:0;flex:1 1 auto}
-  .battle-status-name-row{display:flex;align-items:center;justify-content:space-between;gap:8px;min-width:0}
-  .battle-status-name-row strong{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .battle-status-meta{margin-top:4px;color:#4d5b41;font-size:.8rem;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
   .battle-hp-row{margin-top:8px}
   .hp-label{color:#1e2b14;font-size:.86rem;font-weight:700;letter-spacing:.08em}
-  .hp{height:12px;width:100%;border-radius:999px;background:#c7cbb8;overflow:hidden}
-  .battle-hp{height:14px;border:2px solid #1e2b14;background:#b7bf9c}
-  .hp-fill{height:100%;background:linear-gradient(90deg,#6eb24b,#9fd050);transition:width 60ms linear}
+  .hp{height:14px;width:100%;border-radius:999px;border:2px solid #1e2b14;background:#b7bf9c;overflow:hidden}
+  .hp-fill{height:100%;background:linear-gradient(90deg,#6eb24b,#9fd050);transition:width 80ms linear}
   .hp-fill.hp-mid{background:linear-gradient(90deg,#d4bf48,#e9da79)}
   .hp-fill.hp-low{background:linear-gradient(90deg,#b44b41,#de7c60)}
-  .battle-sprite-wrap{position:relative;display:flex;align-items:flex-end;justify-content:center}
-  .battle-sprite-foe{position:absolute;top:calc(var(--battle-foe-line) + 1.5%);right:5.5%;width:22%;height:31%}
-  .battle-sprite-player{position:absolute;left:5.5%;bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 3.2%);width:25%;height:38%}
+  .battle-sprite-wrap{position:absolute;display:flex;align-items:flex-end;justify-content:center;z-index:2}
+  .battle-sprite-foe{top:15.5%;right:5.5%;width:22%;height:31%}
+  .battle-sprite-player{left:5.5%;bottom:14.1%;width:25%;height:38%}
   .battle-shadow{position:absolute;left:50%;bottom:4%;width:56%;height:11%;border-radius:50%;background:radial-gradient(circle,rgba(34,49,20,.38) 0%,rgba(34,49,20,.16) 58%,transparent 74%);transform:translateX(-50%)}
   .sprite.battle{width:100%;height:100%;object-fit:contain;object-position:center bottom;image-rendering:pixelated;filter:drop-shadow(0 12px 0 rgba(255,255,255,.18)) drop-shadow(0 20px 18px rgba(0,0,0,.22));transition:transform 70ms linear,opacity 90ms linear,filter 80ms linear}
   .battle-sprite-foe .sprite.battle.front{transform:translateX(2%) translateY(0)}
   .battle-sprite-player .sprite.battle.back{transform:translateX(-2%) translateY(12%)}
-  .sprite.battle.hurt{filter:brightness(1.8) contrast(1.3) drop-shadow(0 0 10px rgba(255,255,255,.75))}
-  .battle-stage canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
-  .attack-preview-controls{padding:18px 22px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center}
-  .attack-preview-buttons{display:flex;flex-wrap:wrap;gap:10px}
-  .primary-btn,.ghost-btn,.attack-move-chip{border:none;cursor:pointer;font:inherit}
-  .primary-btn,.ghost-btn{padding:12px 18px;border-radius:999px;font-weight:700}
-  .primary-btn{background:linear-gradient(180deg, #f0d56f, #d8bb57);color:#223125}
-  .ghost-btn{background:rgba(255,255,255,.06);color:var(--text);border:1px solid rgba(255,255,255,.08)}
-  .attack-preview-move-list{padding:16px;display:grid;grid-template-columns:repeat(auto-fit, minmax(165px, 1fr));gap:10px;max-height:42vh;overflow:auto}
-  .attack-move-chip{display:grid;gap:4px;text-align:left;padding:12px;border-radius:18px;background:rgba(255,255,255,.04);color:var(--text);border:1px solid rgba(255,255,255,.07)}
-  .attack-move-chip strong{font-size:.78rem;letter-spacing:.14em;color:#f2d977}
-  .attack-move-chip span{font-size:1rem;font-weight:700}
-  .attack-move-chip em{font-style:normal;font-size:.8rem;color:var(--muted)}
-  .attack-move-chip.active{border-color:rgba(143,209,255,.6);box-shadow:0 0 0 1px rgba(143,209,255,.24);background:rgba(143,209,255,.08)}
-  @media (max-width:1080px){.attack-preview-stage-grid{grid-template-columns:1fr}.attack-preview-header,.attack-preview-controls{grid-template-columns:1fr}.attack-preview-meta{justify-content:flex-start}}
-  @media (max-width:720px){.attack-preview-shell{width:min(100vw - 16px, 440px);padding:12px 0 20px;gap:12px}.attack-preview-header,.attack-preview-controls,.attack-preview-panel{padding:14px}.attack-preview-header h1,.attack-preview-current h3,.attack-preview-panel-head h2{font-size:1.55rem}.attack-preview-stage.desktop,.attack-preview-stage.mobile{width:100%}.attack-preview-move-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:36vh}.battle-stage{height:auto;min-height:34vh;border-radius:8px;--battle-pad-x:3%;--battle-pad-top:4%;--battle-feed-bottom:3%;--battle-feed-height:17%;--battle-player-line:22%;--battle-foe-line:10.5%}.battle-status{padding:8px 10px;border-width:2px;border-radius:6px}.battle-status-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:36%}.battle-status-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:38%}.battle-status-meta{font-size:.68rem;letter-spacing:.05em}.battle-hp{height:12px}.battle-sprite-foe{top:calc(var(--battle-foe-line) - 1.5%);right:6%;width:29%;height:35%}.battle-sprite-player{left:7%;bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 4%);width:26%;height:30%}.battle-shadow{width:72%;height:14%;bottom:6%}.battle-sprite-foe .sprite.battle.front{transform:translateX(4%) translateY(0)}.battle-sprite-player .sprite.battle.back{transform:translateX(-4%) translateY(14%)}.battle-feed{left:3%;right:3%;bottom:var(--battle-feed-bottom);min-height:var(--battle-feed-height);padding:2% 2.4%;border-width:2px;border-radius:6px}.feed-line{font-size:.8rem}}
+  .sprite.battle.hurt{filter:brightness(1.85) contrast(1.35) drop-shadow(0 0 10px rgba(255,255,255,.75))}
+  .preview-moves{padding:16px;display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;max-height:68vh;overflow:auto}
+  .move-chip{display:grid;gap:4px;text-align:left;padding:12px;border-radius:18px;background:rgba(255,255,255,.04);color:var(--text);border:1px solid rgba(255,255,255,.07)}
+  .move-chip strong{font-size:.78rem;letter-spacing:.14em;color:#f2d977}
+  .move-chip span{font-size:1rem;font-weight:700}
+  .move-chip em{font-style:normal;font-size:.8rem;color:var(--muted)}
+  .move-chip.active{border-color:rgba(143,209,255,.6);box-shadow:0 0 0 1px rgba(143,209,255,.24);background:rgba(143,209,255,.08)}
+  @media (max-width:1080px){.preview-header,.preview-controls,.preview-stage-grid{grid-template-columns:1fr}.preview-meta{justify-content:flex-start}.preview-moves{max-height:32vh}}
+  @media (max-width:720px){.preview-shell{width:min(100vw - 16px, 440px);padding:12px 0 20px;gap:12px}.preview-card,.preview-moves{border-radius:22px}.preview-card{padding:14px}.preview-header h1,.preview-stage-head h2{font-size:1.55rem}.preview-stage.mobile,.preview-stage.desktop{max-width:100%}.preview-moves{grid-template-columns:repeat(2,minmax(0,1fr));max-height:34vh}.battle-stage{height:auto;min-height:34vh;border-radius:8px}.battle-status{padding:8px 10px;border-width:2px;border-radius:6px}.battle-status-foe{top:4%;left:3%;width:36%}.battle-status-player{right:3%;bottom:22%;width:38%}.battle-status-meta{font-size:.68rem;letter-spacing:.05em}.battle-sprite-foe{top:11%;right:6%;width:29%;height:35%}.battle-sprite-player{left:7%;bottom:13.5%;width:26%;height:30%}.battle-feed{left:3%;right:3%;bottom:3%;min-height:17%;padding:2% 2.4%;border-width:2px;border-radius:6px}.feed-line{font-size:.8rem}}
 `;
 
-const FIXED_DAMAGE_MOVES = new Set(['bide', 'counter', 'dragonrage', 'nightshade', 'psywave', 'seismictoss', 'sonicboom', 'superfang']);
-const OHKO_MOVES = new Set(['fissure', 'guillotine', 'horndrill']);
-const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
-const lerp = (a, b, t) => a + ((b - a) * t);
-const easeOutQuad = (t) => 1 - ((1 - t) * (1 - t));
-const easeInOut = (t) => (t < 0.5 ? 2 * t * t : 1 - ((-2 * t + 2) ** 2) / 2);
-const damagesMove = (move) => move.power > 0 || FIXED_DAMAGE_MOVES.has(move.id) || OHKO_MOVES.has(move.id);
-
 function estimateDamage(move) {
-  if (!damagesMove(move)) return 0;
+  if (!move || move.category === 'Status') return 0;
   if (move.id === 'superfang') return 0.5;
   if (move.id === 'sonicboom') return 0.22;
   if (move.id === 'dragonrage') return 0.28;
@@ -147,151 +140,98 @@ function estimateDamage(move) {
   return clamp(0.18 + (Math.max(20, move.power || 40) / 240), 0.2, 0.62);
 }
 
-function describeWindup(move) {
-  switch (move.variant) {
-    case 'thunder': return 'A heavy bolt starts to form overhead.';
-    case 'thunderbolt': return 'Electric charge spikes across the field.';
-    case 'thundershock': return 'A short electric pulse snaps forward.';
-    case 'thunderwave': return 'Paralyzing waves spread outward.';
-    case 'watergun': return 'Water gathers high above the target.';
-    case 'bubblebeam': return 'A tight stream of bubbles rushes in.';
-    case 'hydropump': return 'Water pressure builds below the target.';
-    case 'surf': return 'A wave rises across the arena.';
-    case 'ember': return 'Small flames spit forward.';
-    case 'flamethrower': return 'A stream of fire surges ahead.';
-    case 'firespin': return 'A ring of fire begins to tighten.';
-    case 'fireblast': return 'Flames gather into a blazing crest.';
-    case 'hypnosis': return 'A hypnotic ring forms around the target.';
-    case 'sing': return 'A note drifts softly toward the target.';
-    case 'lovelykiss': return 'A kiss floats toward the target.';
-    case 'powder-sleep': return 'Sleep powder drifts across the field.';
-    case 'powder-poison': return 'Poison powder starts to fall.';
-    case 'powder-spore': return 'Heavy spores rain down on the target.';
-    case 'rest': return 'The user settles into rest.';
-    case 'doubleteam': return 'Afterimages begin to split apart.';
-    case 'minimize': return 'The user compresses into a smaller outline.';
-    case 'transform': return 'The user starts to copy the opposing form.';
-    case 'selfdestruct': return 'The user swells with unstable energy.';
-    case 'explosion': return 'Energy compresses into a massive blast point.';
-    case 'reflect': return 'A reflective wall flashes into place.';
-    case 'lightscreen': return 'A light screen shimmers into place.';
-    case 'haze': return 'A cold haze spreads over the field.';
-    case 'disable': return 'A sealing mark forms around the target.';
-    case 'bide': return 'Energy is stored behind a tight stance.';
-    case 'counter': return 'The user braces for a sharp counterblow.';
-    case 'hyperbeam': return 'A blinding beam swells at the user\'s side.';
-    case 'teleport': return 'The user begins to blink out of sight.';
-    case 'metronome': return 'A wild wag starts an unknown effect.';
-    case 'mimic': return 'A copy pattern forms over the target.';
-    case 'mirrormove': return 'The foe\'s motion is reflected back.';
-    case 'focusenergy': return 'Energy narrows into a sharp focal point.';
-    case 'dreameater': return 'A dream-hungry aura reaches for the target.';
-    case 'leechseed': return 'Seeds drift in and prepare to latch on.';
-    case 'drain-seed': return 'Green energy begins to siphon back.';
-    case 'drain-bite': return 'A draining strike reaches for the target.';
-    case 'recover': return 'Soft recovery light circles the user.';
-    case 'softboiled': return 'A nourishing egg glow settles in.';
-    case 'supersonic': return 'Piercing sound rings out in jagged waves.';
-    case 'stringshot': return 'Sticky thread stretches across the field.';
-    case 'acidarmor': return 'The user softens into a liquid shield.';
-    case 'flash': return 'A blinding burst starts to fill the target view.';
-    case 'glare': return 'A harsh stare locks onto the target.';
-    case 'kinesis': return 'A bent spoon trace wobbles through the air.';
-    case 'conversion': return 'Type symbols begin to cycle around the user.';
-    case 'mist': return 'A pale veil starts to settle around the user.';
-    case 'harden': return 'The body tightens with a rigid sheen.';
-    case 'withdraw': return 'A shell-like guard draws in around the user.';
-    case 'boneclub': return 'A heavy bone arcs toward the target.';
-    case 'bonemerang': return 'A bone spins out and curves back again.';
-    case 'fissure': return 'The ground beneath the target begins to split.';
-    case 'guillotine': return 'A lethal chopping line drops into place.';
-    case 'horndrill': return 'A spiraling drill thrust bores forward.';
-    case 'wrap': return 'The target is about to be wrapped tight.';
-    case 'clamp': return 'The trap closes from both sides.';
-  }
-  switch (move.family) {
-    case 'beam': return 'Energy focuses into a straight beam.';
-    case 'sleep': return 'Drowsy powder drifts toward the target.';
-    case 'confusion': return 'Psychic rings start to spiral.';
-    case 'barrier': return 'A defensive wall flashes into place.';
-    case 'substitute': return 'A stand-in begins to appear.';
-    case 'string': return 'Sticky thread races across the field.';
-    case 'swift': return 'Stars line up around the user.';
-    default: return damagesMove(move) ? 'The strike closes in.' : 'Status energy gathers around the target.';
-  }
+function isDamaging(move) {
+  return move.category !== 'Status' || FIXED_DAMAGE_MOVES.has(move.id) || OHKO_MOVES.has(move.id);
 }
 
 function describeResolution(move, attacker, defender) {
-  if (!damagesMove(move)) {
-    if (move.family === 'sleep') return `${defender} is lulled by the effect.`;
-    if (move.family === 'poison') return `${defender} is left in a toxic cloud.`;
-    if (move.family === 'substitute') return `${attacker} hides behind a substitute.`;
-    if (move.variant === 'doubleteam') return `${attacker} is surrounded by afterimages.`;
-    if (move.variant === 'minimize') return `${attacker} becomes harder to pin down.`;
-    if (move.variant === 'transform') return `${attacker} takes on the opposing shape.`;
-    if (move.variant === 'metronome') return `${attacker} triggers a strange effect.`;
-    if (move.variant === 'mimic') return `${attacker} copies the foe's technique.`;
-    if (move.variant === 'mirrormove') return `${attacker} mirrors the last motion.`;
-    if (move.variant === 'teleport') return `${attacker} slips from view for a moment.`;
-    if (move.variant === 'focusenergy') return `${attacker} sharpens its fighting spirit.`;
-    if (move.variant === 'recover' || move.variant === 'softboiled') return `${attacker} restores itself.`;
-    if (move.variant === 'acidarmor') return `${attacker} hardens into a fluid shield.`;
-    if (move.variant === 'glare') return `${defender} is pinned by the glare.`;
-    if (move.variant === 'flash') return `${defender}'s view is washed out.`;
-    if (move.variant === 'kinesis') return `${defender}'s aim is thrown off.`;
-    if (move.variant === 'conversion') return `${attacker} shifts its type pattern.`;
-    if (move.variant === 'mist') return `${attacker} is wrapped in mist.`;
-    if (move.variant === 'harden' || move.variant === 'withdraw') return `${attacker} braces with extra defense.`;
-    if (move.family === 'barrier') return `${attacker} is covered by a barrier.`;
-    if (move.variant === 'selfdestruct' || move.variant === 'explosion') return `${attacker} is engulfed in the blast.`;
-    if (move.variant === 'rest') return `${attacker} drifts into sleep.`;
-    return `${move.name} finishes its status animation.`;
+  if (!isDamaging(move)) {
+    if (move.type === 'Psychic') return `${defender} is wrapped in a psychic effect.`;
+    if (move.type === 'Poison') return `${defender} is caught in a toxic effect.`;
+    if (move.id === 'transform') return `${attacker} changes form.`;
+    if (move.id === 'substitute') return `${attacker} hides behind a substitute.`;
+    if (move.id === 'recover' || move.id === 'softboiled' || move.id === 'rest') return `${attacker} restores itself.`;
+    return `${move.name} finishes its effect.`;
   }
   if (OHKO_MOVES.has(move.id)) return `${defender} is taken out in one hit.`;
   return `${defender} reels from ${move.name}.`;
 }
 
-function buildFrameState(move, side, progress) {
-  const family = FAMILY[move.family] || FAMILY.impact;
-  const attacker = side === 'player' ? SAMPLE.attacker.name : SAMPLE.defender.name;
-  const defender = side === 'player' ? SAMPLE.defender.name : SAMPLE.attacker.name;
-  const hitAt = family.hitAt ?? 0.6;
-  const impactEnd = Math.min(0.94, hitAt + (damagesMove(move) ? 0.16 : 0.08));
-  const damageProgress = clamp((progress - hitAt) / Math.max(0.05, impactEnd - hitAt), 0, 1);
-  const hpLoss = estimateDamage(move) * damageProgress;
-  const playerHp = side === 'foe' ? 1 - hpLoss : 1;
-  const foeHp = side === 'player' ? 1 - hpLoss : 1;
-  let logText = `${attacker} used ${move.name}!`;
-  if (progress >= 0.18 && progress < hitAt) logText = describeWindup(move);
-  if (progress >= hitAt && progress < impactEnd) logText = damagesMove(move) ? `${move.name} hits ${defender}!` : describeWindup(move);
-  if (progress >= impactEnd) logText = describeResolution(move, attacker, defender);
-  return {logText, playerHp, foeHp, hitActive: damagesMove(move) && progress >= hitAt && progress <= impactEnd};
+function buildTimeline(move, side, source) {
+  const segments = [];
+  let cursor = 0;
+  for (const command of move.commands) {
+    if (command.kind === 'special') {
+      const duration = SPECIAL_EFFECT_DURATION[command.effect] ?? (4 * FRAME_MS);
+      segments.push({...command, start: cursor, end: cursor + duration});
+      cursor += duration;
+      continue;
+    }
+    for (let index = 0; index < command.frames[side].length; index += 1) {
+      const frame = command.frames[side][index];
+      const duration = Math.max(FRAME_MS, frame.durationFrames * (source.effectFrameMs || FRAME_MS));
+      segments.push({
+        kind: 'subframe',
+        animationId: command.animationId,
+        subanimation: command.subanimation,
+        moveSpecificEffect: command.moveSpecificEffect,
+        frameIndex: index,
+        frame,
+        start: cursor,
+        end: cursor + duration,
+      });
+      cursor += duration;
+    }
+  }
+  const impactTime = isDamaging(move) ? cursor : null;
+  const resolveTime = impactTime === null ? cursor + 260 : impactTime + 280;
+  return {segments, impactTime, resolveTime, total: resolveTime + 520};
+}
+
+function injectStyles() {
+  if (document.getElementById('attack-preview-styles')) return;
+  const style = document.createElement('style');
+  style.id = 'attack-preview-styles';
+  style.textContent = STYLES;
+  document.head.appendChild(style);
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+    image.src = src;
+  });
 }
 
 class BattleViewport {
-  constructor(root, mode, sheetImage) {
+  constructor(root, mode, tilesets) {
     this.root = root;
     this.mode = mode;
-    this.sheetImage = sheetImage;
-    this.canvas = root.querySelector('.battle-stage canvas');
+    this.tilesets = tilesets;
+    this.stage = root.querySelector('.battle-stage');
+    this.field = root.querySelector('.battle-field');
+    this.feed = root.querySelector('.feed-line');
+    this.canvas = root.querySelector('canvas');
     this.ctx = this.canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
     this.playerSprite = root.querySelector('.attack-preview-player');
     this.foeSprite = root.querySelector('.attack-preview-foe');
+    this.playerStatus = root.querySelector('.battle-status-player');
+    this.foeStatus = root.querySelector('.battle-status-foe');
     this.playerHpFill = root.querySelector('[data-player-hp-fill]');
     this.foeHpFill = root.querySelector('[data-foe-hp-fill]');
     this.playerHpValue = root.querySelector('[data-player-hp-value]');
     this.foeHpValue = root.querySelector('[data-foe-hp-value]');
-    this.log = root.querySelector('.feed-line');
-  }
-
-  metrics() {
-    const mobile = this.mode === 'mobile';
-    return {
-      attacker: mobile ? {x: 0.2, y: 0.69} : {x: 0.175, y: 0.64},
-      defender: mobile ? {x: 0.795, y: 0.265} : {x: 0.83, y: 0.24},
-      scale: mobile ? 2.2 : 2.6,
-    };
   }
 
   resize() {
@@ -302,1036 +242,576 @@ class BattleViewport {
     this.ctx.imageSmoothingEnabled = false;
   }
 
-  setLog(text) { this.log.textContent = text; }
-
-  updateHud(state) {
-    const playerHp = Math.max(0, Math.round(state.playerHp * 100));
-    const foeHp = Math.max(0, Math.round(state.foeHp * 100));
-    this.playerHpFill.style.width = `${playerHp}%`;
-    this.foeHpFill.style.width = `${foeHp}%`;
-    this.playerHpValue.textContent = `${playerHp}/100`;
-    this.foeHpValue.textContent = `${foeHp}/100`;
+  fieldMetrics(source) {
+    const stageRect = this.stage.getBoundingClientRect();
+    const fieldRect = this.field.getBoundingClientRect();
+    const width = fieldRect.width;
+    const height = fieldRect.height;
+    const scale = Math.min(width / source.coordinateSpace.width, height / source.coordinateSpace.height);
+    const renderWidth = source.coordinateSpace.width * scale;
+    const renderHeight = source.coordinateSpace.height * scale;
+    return {
+      x: fieldRect.left - stageRect.left + ((width - renderWidth) / 2),
+      y: fieldRect.top - stageRect.top + ((height - renderHeight) / 2),
+      width: renderWidth,
+      height: renderHeight,
+      scale,
+    };
   }
 
-  clearMotion() {
+  resetSprites() {
+    this.stage.style.transform = '';
+    this.field.style.transform = '';
+    for (const node of [this.playerSprite, this.foeSprite, this.playerStatus, this.foeStatus]) {
+      node.style.transform = '';
+      node.style.opacity = '';
+      node.style.filter = '';
+    }
     this.playerSprite.classList.remove('hurt');
     this.foeSprite.classList.remove('hurt');
-    this.playerSprite.style.transform = '';
-    this.foeSprite.style.transform = '';
-    this.playerSprite.style.opacity = '';
-    this.foeSprite.style.opacity = '';
   }
 
-  drawMonGhost(side, x, y, width, height, alpha = 0.4) {
-    const image = side === 'player' ? this.playerSprite : this.foeSprite;
+  applyHp(fill, value, ratio) {
+    const percent = Math.round(clamp(ratio, 0, 1) * 100);
+    fill.style.width = `${percent}%`;
+    fill.classList.toggle('hp-mid', percent <= 50 && percent > 20);
+    fill.classList.toggle('hp-low', percent <= 20);
+    value.textContent = `${percent}/100`;
+  }
+
+  drawSpriteTile(sprite, metrics) {
+    const image = this.tilesets[sprite.tileset] || this.tilesets[0];
+    if (!image) return;
+    const tileSize = 8;
+    const tileX = (sprite.tile % 16) * tileSize;
+    const tileY = Math.floor(sprite.tile / 16) * tileSize;
+    const drawX = metrics.x + (sprite.x * metrics.scale);
+    const drawY = metrics.y + (sprite.y * metrics.scale);
+    const size = tileSize * metrics.scale;
     this.ctx.save();
-    this.ctx.globalAlpha = alpha;
-    this.ctx.drawImage(image, x - (width / 2), y - height, width, height);
+    this.ctx.translate(drawX + (size / 2), drawY + (size / 2));
+    this.ctx.scale(sprite.flipX ? -1 : 1, sprite.flipY ? -1 : 1);
+    this.ctx.drawImage(image, tileX, tileY, tileSize, tileSize, -(size / 2), -(size / 2), size, size);
     this.ctx.restore();
   }
 
-  drawSprite(name, x, y, scale, {alpha = 1, rotation = 0, flipX = false} = {}) {
-    const sprite = ATLAS[name];
-    if (!sprite) return;
+  drawFlash(color, alpha) {
+    if (alpha <= 0) return;
     this.ctx.save();
     this.ctx.globalAlpha = alpha;
-    this.ctx.translate(x, y);
-    this.ctx.rotate(rotation);
-    this.ctx.scale(flipX ? -1 : 1, 1);
-    this.ctx.drawImage(this.sheetImage, sprite.x, sprite.y, sprite.w, sprite.h, -(sprite.w * scale) / 2, -(sprite.h * scale) / 2, sprite.w * scale, sprite.h * scale);
+    this.ctx.fillStyle = color;
+    this.ctx.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
     this.ctx.restore();
   }
 
-  drawCircle(x, y, radius, fill, {alpha = 1, stroke = '', lineWidth = 0} = {}) {
+  drawGlow(x, y, radius, color, alpha = 0.35) {
     this.ctx.save();
-    this.ctx.globalAlpha = alpha;
+    const gradient = this.ctx.createRadialGradient(x, y, radius * 0.15, x, y, radius);
+    gradient.addColorStop(0, `${color}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`);
+    gradient.addColorStop(1, `${color}00`);
+    this.ctx.fillStyle = gradient;
     this.ctx.beginPath();
     this.ctx.arc(x, y, radius, 0, Math.PI * 2);
-    if (fill) {
-      this.ctx.fillStyle = fill;
-      this.ctx.fill();
-    }
-    if (stroke && lineWidth) {
-      this.ctx.lineWidth = lineWidth;
-      this.ctx.strokeStyle = stroke;
-      this.ctx.stroke();
-    }
+    this.ctx.fill();
     this.ctx.restore();
   }
 
-  drawRect(x, y, width, height, fill, {alpha = 1, rotation = 0, stroke = '', lineWidth = 0} = {}) {
-    this.ctx.save();
-    this.ctx.globalAlpha = alpha;
-    this.ctx.translate(x, y);
-    this.ctx.rotate(rotation);
-    this.ctx.fillStyle = fill;
-    this.ctx.fillRect(-width / 2, -height / 2, width, height);
-    if (stroke && lineWidth) {
-      this.ctx.lineWidth = lineWidth;
-      this.ctx.strokeStyle = stroke;
-      this.ctx.strokeRect(-width / 2, -height / 2, width, height);
-    }
-    this.ctx.restore();
-  }
-
-  drawEllipse(x, y, radiusX, radiusY, fill, {alpha = 1, rotation = 0, stroke = '', lineWidth = 0} = {}) {
-    this.ctx.save();
-    this.ctx.globalAlpha = alpha;
-    this.ctx.translate(x, y);
-    this.ctx.rotate(rotation);
-    this.ctx.beginPath();
-    this.ctx.ellipse(0, 0, radiusX, radiusY, 0, 0, Math.PI * 2);
-    if (fill) {
-      this.ctx.fillStyle = fill;
-      this.ctx.fill();
-    }
-    if (stroke && lineWidth) {
-      this.ctx.lineWidth = lineWidth;
-      this.ctx.strokeStyle = stroke;
-      this.ctx.stroke();
-    }
-    this.ctx.restore();
-  }
-
-  drawStar(x, y, radius, fill, {alpha = 1, rotation = 0, stroke = '', lineWidth = 0} = {}) {
-    this.ctx.save();
-    this.ctx.globalAlpha = alpha;
-    this.ctx.translate(x, y);
-    this.ctx.rotate(rotation);
-    this.ctx.beginPath();
-    for (let index = 0; index < 10; index += 1) {
-      const angle = (-Math.PI / 2) + ((Math.PI / 5) * index);
-      const pointRadius = index % 2 === 0 ? radius : radius * 0.45;
-      const px = Math.cos(angle) * pointRadius;
-      const py = Math.sin(angle) * pointRadius;
-      if (index === 0) this.ctx.moveTo(px, py);
-      else this.ctx.lineTo(px, py);
-    }
-    this.ctx.closePath();
-    if (fill) {
-      this.ctx.fillStyle = fill;
-      this.ctx.fill();
-    }
-    if (stroke && lineWidth) {
-      this.ctx.lineWidth = lineWidth;
-      this.ctx.strokeStyle = stroke;
-      this.ctx.stroke();
-    }
-    this.ctx.restore();
-  }
-
-  drawPolyline(points, color, lineWidth, {alpha = 1} = {}) {
-    this.ctx.save();
-    this.ctx.globalAlpha = alpha;
-    this.ctx.strokeStyle = color;
-    this.ctx.lineWidth = lineWidth;
-    this.ctx.lineCap = 'round';
-    this.ctx.lineJoin = 'round';
-    this.ctx.beginPath();
-    this.ctx.moveTo(points[0][0], points[0][1]);
-    for (let index = 1; index < points.length; index += 1) this.ctx.lineTo(points[index][0], points[index][1]);
-    this.ctx.stroke();
-    this.ctx.restore();
-  }
-
-  drawBurst(centerX, centerY, count, spread, time, color = '#fff0a8') {
-    for (let index = 0; index < count; index += 1) {
-      const angle = (Math.PI * 2 * index) / count + (time * 5);
-      const radius = spread * easeOutQuad(clamp((time - 0.08) / 0.72, 0, 1));
-      this.drawCircle(centerX + Math.cos(angle) * radius, centerY + Math.sin(angle) * radius, 4 + (Math.sin(index + time) * 1.5), color, {alpha: 1 - time});
-    }
-  }
-
-  applySpriteState(state) {
-    const {progress, side, family, hitActive} = state;
-    const profile = FAMILY[family.family];
-    if (!profile) return;
-    const attacker = side === 'player' ? this.playerSprite : this.foeSprite;
-    const target = side === 'player' ? this.foeSprite : this.playerSprite;
-    const local = clamp(progress / (profile.hitAt || 0.5), 0, 1);
-    let tx = 0;
-    let ty = 0;
-
-    if (profile.attackerMotion === 'lunge') {
-      tx = (side === 'player' ? 1 : -1) * Math.sin(local * Math.PI) * 30;
-      ty = -Math.sin(local * Math.PI) * 8;
-    } else if (profile.attackerMotion === 'hop') {
-      ty = -Math.sin(local * Math.PI) * 18;
-    } else if (profile.attackerMotion === 'fly') {
-      tx = (side === 'player' ? 1 : -1) * Math.sin(local * Math.PI) * 18;
-      ty = -Math.sin(local * Math.PI) * 44;
-    } else if (profile.attackerMotion === 'dig') {
-      ty = Math.sin(local * Math.PI) * 32;
-      attacker.style.opacity = progress > 0.24 && progress < 0.62 ? '0.1' : '';
-    } else if (profile.attackerMotion === 'charge') {
-      tx = (side === 'player' ? 1 : -1) * Math.max(0, progress - 0.55) * 98;
-      ty = -Math.sin(Math.min(progress, 0.55) / 0.55 * Math.PI) * 14;
-    } else if (profile.attackerMotion === 'vanish') {
-      attacker.style.opacity = String(progress < 0.52 ? 1 - (progress * 1.8) : 0.15 + ((progress - 0.52) * 1.6));
-    } else if (profile.attackerMotion === 'curl') {
-      attacker.style.transform = 'scale(0.92)';
-    }
-
-    if (profile.attackerMotion !== 'curl') attacker.style.transform = `translate(${tx}px, ${ty}px)`;
-
-    const hitAt = profile.hitAt ?? 0.6;
-    const hurtWindow = hitActive && progress >= hitAt && progress <= Math.min(hitAt + 0.18, 1);
-    target.classList.toggle('hurt', hurtWindow && Math.floor(progress * 24) % 2 === 0);
-
-    if (profile.targetMotion === 'shake' && hurtWindow) {
-      const shakeX = (Math.floor(progress * 70) % 2 === 0 ? 1 : -1) * 8;
-      target.style.transform = `translate(${shakeX}px, 0px)`;
-    } else if (profile.targetMotion === 'toss' && hurtWindow) {
-      const toss = Math.sin(((progress - hitAt) / 0.18) * Math.PI) * 22;
-      target.style.transform = `translate(0px, ${-toss}px)`;
-    } else {
-      target.style.transform = '';
-    }
-  }
-
-  renderEffect(state) {
-    const {family, side, progress} = state;
-    const profile = FAMILY[family.family];
-    if (!profile) return;
-    const effect = profile.effect;
-    const variant = family.variant || family.id || family.family;
-    const metrics = this.metrics();
-    const width = this.canvas.clientWidth;
-    const height = this.canvas.clientHeight;
-    const attacker = side === 'player' ? metrics.attacker : metrics.defender;
-    const defender = side === 'player' ? metrics.defender : metrics.attacker;
-    const ax = attacker.x * width;
-    const ay = attacker.y * height;
-    const dx = defender.x * width;
-    const dy = defender.y * height;
-    const dir = side === 'player' ? 1 : -1;
-    const hitAt = profile.hitAt ?? 0.6;
-    const localToHit = clamp(progress / hitAt, 0, 1);
-    const p = easeInOut(localToHit);
-
-    if (variant === 'thunder') {
-      const strikeX = dx + (Math.sin(progress * Math.PI * 10) * 4);
-      const strikeY = dy - 14;
-      this.drawPolyline([[strikeX - 6, strikeY - 82], [strikeX + 8, strikeY - 48], [strikeX - 5, strikeY - 20], [strikeX + 10, strikeY + 8], [strikeX - 2, strikeY + 38]], '#fff6a0', 8, {alpha: 0.98});
-      this.drawPolyline([[strikeX + 16, strikeY - 70], [strikeX + 4, strikeY - 36], [strikeX + 18, strikeY - 6]], '#ffe056', 5, {alpha: 0.88});
-      if (progress > hitAt) this.drawBurst(dx, dy, 10, 30, (progress - hitAt) / (1 - hitAt), '#fff685');
-      return;
-    }
-    if (variant === 'thundershock') {
-      const x = lerp(ax, dx, p);
-      const y = lerp(ay, dy, p);
-      this.drawPolyline([[x - 12, y - 20], [x + 2, y - 8], [x - 6, y + 6], [x + 8, y + 18]], '#fff18b', 4, {alpha: 0.95});
-      return;
-    }
-    if (variant === 'thunderwave' || variant === 'stunspore') {
-      for (let index = 0; index < 3; index += 1) {
-        const t = clamp(progress - (index * 0.08), 0, 1);
-        const radius = 12 + (t * 20);
-        const color = variant === 'stunspore' ? '#f2e97a' : '#c6d8ff';
-        this.drawCircle(dx, dy, radius, '', {alpha: 1 - t, stroke: color, lineWidth: 3});
+  drawScreenParticles(kind, progress, metrics, side) {
+    const ctx = this.ctx;
+    const centerX = metrics.x + (metrics.width * (side === 'player' ? 0.26 : 0.74));
+    const centerY = metrics.y + (metrics.height * (side === 'player' ? 0.78 : 0.3));
+    if (kind === 'leaves' || kind === 'petals') {
+      const color = kind === 'leaves' ? '#8fc45f' : '#f0a7bf';
+      for (let index = 0; index < 12; index += 1) {
+        const x = metrics.x + ((index * 19 + progress * 240) % metrics.width);
+        const y = metrics.y + (((index * 13) + (progress * metrics.height * 1.3)) % metrics.height);
+        ctx.save();
+        ctx.fillStyle = color;
+        ctx.translate(x, y);
+        ctx.rotate((progress * 6) + index);
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 5 * metrics.scale, 2.5 * metrics.scale, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
       }
-      if (variant === 'stunspore') {
-        for (let index = 0; index < 6; index += 1) {
-          const t = clamp(progress * 1.1 - (index * 0.05), 0, 1);
-          this.drawCircle(lerp(ax, dx, t) + ((index - 3) * 6), lerp(ay - 14, dy, t), 3, '#efe48a', {alpha: 0.9});
-        }
+    }
+    if (kind === 'droplets') {
+      ctx.save();
+      ctx.fillStyle = '#94d8ff';
+      for (let index = 0; index < 18; index += 1) {
+        const x = metrics.x + (((index * 17) + progress * 120) % metrics.width);
+        const y = metrics.y + (((index * 9) + progress * metrics.height * 1.6) % metrics.height);
+        ctx.fillRect(x, y, 2 * metrics.scale, 6 * metrics.scale);
       }
-      return;
+      ctx.restore();
     }
-    if (variant === 'watergun') {
-      for (let index = 0; index < 4; index += 1) {
-        const t = clamp(localToHit - (index * 0.05), 0, 1);
-        const x = dx + ((index - 1) * 8);
-        const y = lerp(dy - 96 - (index * 8), dy, easeOutQuad(t));
-        this.drawPolyline([[x, y - 14], [x, y + 12]], '#d8f7ff', 7, {alpha: 0.96});
-        this.drawPolyline([[x, y - 14], [x, y + 12]], '#7fd7ff', 3, {alpha: 0.96});
-      }
-      if (progress > hitAt) this.drawBurst(dx, dy, 6, 18, (progress - hitAt) / (1 - hitAt), '#d8f7ff');
-      return;
-    }
-    if (variant === 'bubblebeam') {
-      for (let index = 0; index < 7; index += 1) {
-        const t = clamp(progress * 1.16 - (index * 0.05), 0, 1);
-        const x = lerp(ax, dx, t) + (Math.sin(index + t * Math.PI * 2) * 10);
-        const y = lerp(ay, dy, t) + ((index - 3) * 4);
-        this.drawCircle(x, y, 7, '', {alpha: 1 - (t * 0.32), stroke: '#bceeff', lineWidth: 3});
-      }
-      return;
-    }
-    if (variant === 'waterfall') {
-      const baseY = dy + 70;
-      for (let index = -1; index <= 1; index += 1) {
-        const x = dx + (index * 10);
-        const top = lerp(baseY, dy - 20, easeOutQuad(localToHit));
-        this.drawPolyline([[x, baseY], [x, top]], '#dff9ff', 8, {alpha: 0.9});
-      }
-      return;
-    }
-    if (variant === 'ember' || variant === 'firepunch') {
-      for (let index = 0; index < 3; index += 1) {
-        const t = clamp(progress * 1.06 - (index * 0.08), 0, 1);
-        const x = lerp(ax, dx, t);
-        const y = lerp(ay, dy, t) + ((index - 1) * 10);
-        this.drawCircle(x, y, 8, '#f49a36', {alpha: 0.94, stroke: '#ffe58b', lineWidth: 2});
-      }
-      return;
-    }
-    if (variant === 'flamethrower' || variant === 'dragonrage') {
-      const ex = lerp(ax, dx, easeOutQuad(localToHit));
-      const ey = lerp(ay, dy, easeOutQuad(localToHit));
-      const outer = variant === 'dragonrage' ? '#ffd36b' : '#ffb14c';
-      const inner = variant === 'dragonrage' ? '#9f5fff' : '#ff6f2d';
-      this.drawPolyline([[ax, ay], [ex, ey]], outer, 12, {alpha: 0.92});
-      this.drawPolyline([[ax, ay], [ex, ey]], inner, 6, {alpha: 0.96});
-      return;
-    }
-    if (variant === 'firespin') {
-      for (let index = 0; index < 7; index += 1) {
-        const angle = (Math.PI * 2 * index) / 7 + (progress * Math.PI * 2.2);
-        const radius = 18 + (progress * 22);
-        this.drawCircle(dx + Math.cos(angle) * radius, dy + Math.sin(angle) * (radius * 0.8), 7, '#ff9e3e', {alpha: 0.9, stroke: '#ffe27e', lineWidth: 2});
-      }
-      return;
-    }
-    if (variant === 'hypnosis') {
-      for (let index = 0; index < 4; index += 1) {
-        const t = clamp(progress - (index * 0.08), 0, 1);
-        this.drawCircle(dx, dy, 10 + (t * 22), '', {alpha: 1 - t, stroke: '#d6b0ff', lineWidth: 3});
-      }
-      return;
-    }
-    if (variant === 'sing') {
-      for (let index = 0; index < 3; index += 1) {
-        const t = clamp(progress - (index * 0.08), 0, 1);
-        const x = lerp(ax, dx, t);
-        const y = lerp(ay - 10, dy - 10, t) + (Math.sin((t * 8) + index) * 12);
-        this.drawPolyline([[x - 8, y + 10], [x - 8, y - 10], [x + 6, y - 5]], '#f3f3f0', 3, {alpha: 1 - t});
-        this.drawCircle(x + 7, y + 3, 5, '#f3f3f0', {alpha: 1 - t});
-      }
-      return;
-    }
-    if (variant === 'lovelykiss') {
-      for (let index = 0; index < 4; index += 1) {
-        const t = clamp(progress * 1.08 - (index * 0.07), 0, 1);
-        const x = lerp(ax, dx, t);
-        const y = lerp(ay, dy, t) + ((index - 1.5) * 10);
-        this.drawCircle(x, y, 8, '#ff8dc7', {alpha: 0.92, stroke: '#ffd2eb', lineWidth: 2});
-      }
-      return;
-    }
-    if (variant === 'rest') {
-      this.drawCircle(ax, ay - 10, 18 + (Math.sin(progress * Math.PI) * 6), 'rgba(241, 248, 255, .14)', {alpha: 0.55, stroke: '#f6f6f4', lineWidth: 2});
-      for (let index = 0; index < 3; index += 1) {
-        const t = clamp(progress - (index * 0.12), 0, 1);
-        const x = ax + 10 + (index * 8);
-        const y = ay - 18 - (t * 32);
-        this.ctx.save();
-        this.ctx.globalAlpha = 1 - t;
-        this.ctx.fillStyle = '#f6f6f4';
-        this.ctx.font = this.mode === 'mobile' ? 'bold 14px Georgia' : 'bold 18px Georgia';
-        this.ctx.fillText('Z', x, y);
-        this.ctx.restore();
-      }
-      return;
-    }
-    if (variant === 'recover') {
-      this.drawCircle(ax, ay - 12, 18 + (Math.sin(progress * Math.PI) * 8), '', {alpha: 0.8, stroke: '#b7ffab', lineWidth: 3});
-      this.drawCircle(ax, ay - 12, 32, '', {alpha: 0.35, stroke: '#e8ffe3', lineWidth: 2});
-      for (let index = 0; index < 6; index += 1) {
-        const angle = ((Math.PI * 2 * index) / 6) + (progress * Math.PI * 2);
-        this.drawCircle(ax + Math.cos(angle) * 20, ay - 12 + Math.sin(angle) * 20, 4, '#cbffb9', {alpha: 0.9});
-      }
-      return;
-    }
-    if (variant === 'softboiled') {
-      this.drawEllipse(ax, ay - 20, 12, 16, '#fff1d0', {alpha: 0.88, stroke: '#ffd58f', lineWidth: 2});
-      this.drawCircle(ax, ay - 20, 24 + (Math.sin(progress * Math.PI) * 8), '', {alpha: 0.4, stroke: '#ffe8b4', lineWidth: 2});
-      return;
-    }
-    if (variant === 'powder-sleep' || variant === 'powder-poison' || variant === 'powder-spore') {
-      const color = variant === 'powder-poison' ? '#c7a1f0' : variant === 'powder-spore' ? '#efe8a1' : '#f3f3f0';
-      for (let index = 0; index < 10; index += 1) {
-        const t = clamp(progress * 1.05 - (index * 0.04), 0, 1);
-        const x = dx + (((index % 5) - 2) * 9);
-        const y = lerp(dy - 76 - Math.floor(index / 5) * 18, dy + 18, easeOutQuad(t));
-        this.drawCircle(x, y, 3 + (index % 2), color, {alpha: 0.9 - (t * 0.35)});
-      }
-      return;
-    }
-    if (variant === 'flash') {
-      this.drawCircle(dx, dy, 22 + (Math.sin(progress * Math.PI) * 10), '#fff8d3', {alpha: 0.72});
-      this.drawBurst(dx, dy, 10, 38, progress, '#fff8d3');
-      this.drawPolyline([[dx - 34, dy], [dx + 34, dy]], '#fffef2', 4, {alpha: 0.76});
-      this.drawPolyline([[dx, dy - 34], [dx, dy + 34]], '#fffef2', 4, {alpha: 0.76});
-      return;
-    }
-    if (variant === 'glare') {
-      const eyeY = ay - 20;
-      this.drawPolyline([[ax - 10, eyeY], [ax - 2, eyeY - 4], [ax + 6, eyeY]], '#ffe589', 3, {alpha: 0.92});
-      this.drawPolyline([[ax + 2, eyeY], [ax + 10, eyeY - 4], [ax + 18, eyeY]], '#ffe589', 3, {alpha: 0.92});
-      for (let index = 0; index < 2; index += 1) {
-        const startX = ax + (index === 0 ? -2 : 12);
-        const startY = eyeY - 2;
-        const beamY = dy + (index === 0 ? -8 : 8);
-        this.drawPolyline([[startX, startY], [lerp(startX, dx - (dir * 14), 0.35), lerp(startY, beamY, 0.35)], [dx, beamY]], '#ffe589', 3, {alpha: 0.7});
-      }
-      for (let index = 0; index < 3; index += 1) {
-        const t = clamp(progress - (index * 0.08), 0, 1);
-        this.drawEllipse(dx, dy, 18 + (t * 12), 10 + (t * 6), '', {alpha: 1 - t, stroke: '#ffe589', lineWidth: 2});
-      }
-      this.drawCircle(dx, dy, 8 + (Math.sin(progress * Math.PI) * 3), '', {alpha: 0.5, stroke: '#fff4bf', lineWidth: 2});
-      this.drawPolyline([[dx - 18, dy - 14], [dx, dy], [dx + 18, dy - 14]], '#fff5c7', 2, {alpha: 0.46});
-      this.drawPolyline([[dx - 18, dy + 14], [dx, dy], [dx + 18, dy + 14]], '#fff5c7', 2, {alpha: 0.46});
-      return;
-    }
-    if (variant === 'poisongas' || variant === 'sludge' || variant === 'smokescreen') {
-      const color = variant === 'sludge' ? '#5d5068' : variant === 'smokescreen' ? '#8a8795' : '#7c63a4';
-      for (let index = 0; index < 5; index += 1) {
-        const t = clamp(progress - (index * 0.06), 0, 1);
-        const x = lerp(ax, dx, t) + (index * 6 * dir);
-        const y = lerp(ay, dy, t) - (index * 5);
-        this.drawCircle(x, y, 11 + (index * 2), color, {alpha: 0.86 - (t * 0.4)});
-      }
-      if (variant === 'poisongas') this.drawCircle(dx, dy, 24, '', {alpha: 0.36, stroke: '#b88aff', lineWidth: 2});
-      if (variant === 'smog') this.drawEllipse(dx, dy, 32, 18, 'rgba(120,120,134,.16)', {alpha: 0.46, stroke: '#8a8795', lineWidth: 2});
-      return;
-    }
-    if (variant === 'confuseray') {
-      for (let index = 0; index < 4; index += 1) {
-        const t = clamp(progress - (index * 0.05), 0, 1);
-        this.drawCircle(dx, dy, 10 + (t * 20), '', {alpha: 1 - t, stroke: '#f2f6ff', lineWidth: 2});
-      }
-      return;
-    }
-    if (variant === 'kinesis') {
-      const midX = lerp(ax, dx, 0.76);
-      const midY = lerp(ay - 4, dy + 4, 0.72);
-      const wobble = Math.sin(progress * Math.PI * 3) * 6;
-      this.drawPolyline([[midX - 14, midY + 22], [midX - 1 + wobble * 0.2, midY - 2], [midX + 12, midY - 34]], '#efece3', 6, {alpha: 0.98});
-      this.drawCircle(midX + 14, midY - 40, 10, '', {alpha: 0.96, stroke: '#efece3', lineWidth: 3});
-      this.drawPolyline([[midX - 9, midY + 18], [midX + wobble * 0.18, midY], [midX + 14, midY - 28]], '#fff9f0', 2, {alpha: 0.54});
-      this.drawPolyline([[midX - 10, midY + 16], [midX + 3, midY - 4], [midX + 12, midY - 26]], '#d8d1c5', 2, {alpha: 0.42});
-      this.drawPolyline([[midX + 12, midY - 40], [dx - 8, dy - 8], [dx + 12, dy + 10]], '#dcc8ff', 2, {alpha: 0.64});
-      this.drawEllipse(dx, dy, 28 + wobble * 0.2, 14, '', {alpha: 0.7, stroke: '#d4b7ff', lineWidth: 2});
-      this.drawEllipse(dx, dy, 40 + wobble * 0.2, 20, '', {alpha: 0.46, stroke: '#e8d9ff', lineWidth: 2});
-      this.drawPolyline([[dx - 16, dy], [dx + 16, dy]], '#f2e6ff', 2, {alpha: 0.52});
-      this.drawPolyline([[dx, dy - 14], [dx, dy + 14]], '#f2e6ff', 2, {alpha: 0.52});
-      this.drawCircle(dx, dy, 8 + (Math.sin(progress * Math.PI) * 3), '#f4ebff', {alpha: 0.26});
-      return;
-    }
-    if (variant === 'psychic' || variant === 'nightshade') {
-      for (let index = 0; index < 5; index += 1) {
-        const y = dy - 36 + (index * 18);
-        const amp = 10 + (index * 2);
-        const phase = progress * Math.PI * 4 + index;
-        this.drawPolyline([[dx - 34, y + Math.sin(phase) * amp], [dx, y - Math.sin(phase) * amp], [dx + 34, y + Math.sin(phase + 1.2) * amp]], variant === 'nightshade' ? '#9c79ff' : '#d4b7ff', 3, {alpha: 0.78});
-      }
-      if (variant === 'psychic') {
-        this.drawCircle(dx, dy, 20 + (Math.sin(progress * Math.PI) * 8), '', {alpha: 0.55, stroke: '#f0dcff', lineWidth: 2});
-        this.drawEllipse(dx, dy, 48, 22, '', {alpha: 0.45, stroke: '#edd8ff', lineWidth: 2});
-      }
-      if (variant === 'nightshade') this.drawEllipse(dx, dy, 42, 18, 'rgba(92, 48, 142, .18)', {alpha: 0.6, stroke: '#7f61c9', lineWidth: 2});
-      return;
-    }
-    if (variant === 'psybeam') {
-      const ex = lerp(ax, dx, easeOutQuad(localToHit));
-      const ey = lerp(ay, dy, easeOutQuad(localToHit));
-      this.drawPolyline([[ax, ay], [ex, ey]], '#ff8fd7', 10, {alpha: 0.88});
-      this.drawPolyline([[ax, ay], [ex, ey]], '#7be2ff', 5, {alpha: 0.92});
-      return;
-    }
-    if (variant === 'psywave') {
-      for (let index = 0; index < 4; index += 1) {
-        const t = clamp(progress - (index * 0.08), 0, 1);
-        const x = lerp(ax, dx, t);
-        const y = lerp(ay, dy, t) + (Math.sin((t * Math.PI * 4) + index) * 14);
-        this.drawCircle(x, y, 9 + (t * 10), '', {alpha: 1 - t, stroke: '#b78cff', lineWidth: 3});
-      }
-      return;
-    }
-    if (variant === 'doubleteam') {
-      const ghosts = [
-        {x: ax - 44, y: ay + 10, alpha: 0.46},
-        {x: ax + 42, y: ay + 4, alpha: 0.42},
-        {x: ax + 10, y: ay - 28, alpha: 0.34},
-        {x: ax - 8, y: ay - 14, alpha: 0.24},
-      ];
-      for (const ghost of ghosts) {
-        this.drawMonGhost(side, ghost.x, ghost.y + 14, this.mode === 'mobile' ? 42 : 60, this.mode === 'mobile' ? 42 : 60, ghost.alpha);
-      }
-      this.drawBurst(ax, ay - 10, 7, 18, progress, '#f3fbff');
-      return;
-    }
-    if (variant === 'minimize') {
-      const pulse = 0.55 + (Math.sin(progress * Math.PI) * 0.12);
-      this.drawCircle(ax, ay - 10, 16 + (progress * 10), '', {alpha: 0.8, stroke: '#eef7ff', lineWidth: 3});
-      this.drawRect(ax, ay - 10, 26 * pulse, 26 * pulse, 'rgba(225,245,255,.18)', {alpha: 0.5, stroke: '#eef7ff', lineWidth: 2});
-      this.drawEllipse(ax, ay - 10, 24 + (progress * 8), 10 + (Math.sin(progress * Math.PI) * 4), '', {alpha: 0.5, stroke: '#d6ebff', lineWidth: 2});
-      this.drawEllipse(ax, ay - 10, 14 + (Math.sin(progress * Math.PI) * 3), 6 + (Math.sin(progress * Math.PI) * 2), 'rgba(214,235,255,.16)', {alpha: 0.48, stroke: '#eef7ff', lineWidth: 1});
-      this.drawRect(ax, ay - 10, 16 * pulse, 16 * pulse, 'rgba(225,245,255,.08)', {alpha: 0.58, stroke: '#f6fbff', lineWidth: 2});
-      this.drawMonGhost(side, ax, ay + 8, this.mode === 'mobile' ? 26 : 38, this.mode === 'mobile' ? 26 : 38, 0.18);
-      this.drawRect(ax, ay - 10, 11 + (pulse * 4), 11 + (pulse * 4), 'rgba(246,251,255,.14)', {alpha: 0.72, stroke: '#ffffff', lineWidth: 1});
-      return;
-    }
-    if (variant === 'transform') {
-      const t = progress < 0.5 ? progress / 0.5 : (progress - 0.5) / 0.5;
-      if (progress < 0.5) {
-        this.drawBurst(ax, ay - 6, 8, 22, progress * 2, '#d9f6ff');
-        this.drawCircle(ax, ay - 8, 18 + (progress * 16), '', {alpha: 0.9 - progress, stroke: '#d9f6ff', lineWidth: 3});
-      } else {
-        this.drawBurst(ax, ay - 6, 8, 22, t, '#d9f6ff');
-        this.drawMonGhost(side === 'player' ? 'foe' : 'player', ax, ay + 10, this.mode === 'mobile' ? 42 : 58, this.mode === 'mobile' ? 42 : 58, 0.35 + (t * 0.25));
-      }
-      return;
-    }
-    if (variant === 'conversion') {
-      const colors = ['#ffe17a', '#7be2ff', '#ff93cc', '#b8ff8f'];
-      for (let index = 0; index < 4; index += 1) {
-        const angle = ((Math.PI * 2 * index) / 4) + (progress * Math.PI * 1.8);
-        const radius = 20 + (Math.sin(progress * Math.PI) * 8);
-        this.drawRect(ax + Math.cos(angle) * radius, ay - 12 + Math.sin(angle) * radius, 16, 16, `${colors[index]}88`, {alpha: 0.92, stroke: colors[index], lineWidth: 2, rotation: angle});
-      }
-      for (let index = 0; index < 4; index += 1) {
-        const angle = ((Math.PI * 2 * index) / 4) - (progress * Math.PI * 1.2);
-        this.drawPolyline([[ax, ay - 12], [ax + Math.cos(angle) * 24, ay - 12 + Math.sin(angle) * 24]], colors[index], 2, {alpha: 0.56});
-      }
-      this.drawCircle(ax, ay - 12, 22, '', {alpha: 0.34, stroke: '#eaf4ff', lineWidth: 2});
-      this.drawCircle(ax, ay - 12, 8 + (Math.sin(progress * Math.PI) * 3), '#f4fbff', {alpha: 0.34});
-      this.drawRect(ax, ay - 12, 12, 12, 'rgba(255,255,255,.22)', {alpha: 0.8, stroke: '#f7fbff', lineWidth: 2, rotation: progress * Math.PI / 2});
-      return;
-    }
-    if (variant === 'mist') {
+    if (kind === 'spiral') {
+      ctx.save();
+      ctx.fillStyle = '#ffe57b';
       for (let index = 0; index < 8; index += 1) {
-        const t = clamp(progress - (index * 0.04), 0, 1);
-        const x = ax + (((index % 4) - 1.5) * 18);
-        const y = ay - 36 + (Math.floor(index / 4) * 20) - (t * 6);
-        this.drawCircle(x, y, 16 + ((index % 2) * 6), '#ecf7ff', {alpha: 0.38});
+        const angle = (progress * Math.PI * 4) + ((Math.PI * 2 * index) / 8);
+        const radius = lerp(metrics.width * 0.18, 2 * metrics.scale, progress);
+        const x = centerX + Math.cos(angle) * radius;
+        const y = centerY + Math.sin(angle) * radius;
+        ctx.beginPath();
+        ctx.arc(x, y, 3.4 * metrics.scale, 0, Math.PI * 2);
+        ctx.fill();
       }
-      this.drawEllipse(ax, ay - 14, 40, 20, '', {alpha: 0.32, stroke: '#ecf7ff', lineWidth: 2});
-      this.drawEllipse(ax, ay + 4, 52, 18, 'rgba(236,247,255,.12)', {alpha: 0.28, stroke: '#f5fbff', lineWidth: 2});
-      this.drawPolyline([[ax - 30, ay - 4], [ax - 6, ay - 12], [ax + 14, ay - 2], [ax + 32, ay - 10]], '#f5fbff', 2, {alpha: 0.22});
-      return;
+      ctx.restore();
     }
-    if (variant === 'harden') {
-      this.drawStar(ax, ay - 14, 14 + (Math.sin(progress * Math.PI) * 3), '#eefaff', {alpha: 0.88, stroke: '#fffef8', lineWidth: 2, rotation: progress});
-      this.drawStar(ax - 16, ay - 26, 8, '#eefaff', {alpha: 0.66, stroke: '#fffef8', lineWidth: 1});
-      this.drawStar(ax + 18, ay - 2, 8, '#eefaff', {alpha: 0.66, stroke: '#fffef8', lineWidth: 1});
-      this.drawPolyline([[ax - 24, ay - 14], [ax - 8, ay - 34], [ax + 10, ay - 28], [ax + 24, ay - 10], [ax + 4, ay + 8], [ax - 18, ay + 4], [ax - 24, ay - 14]], '#eefaff', 2, {alpha: 0.44});
-      this.drawEllipse(ax, ay - 14, 24, 14, '', {alpha: 0.24, stroke: '#eefaff', lineWidth: 2});
-      this.drawCircle(ax, ay - 14, 6, '#f8fdff', {alpha: 0.2});
-      return;
-    }
-    if (variant === 'withdraw') {
-      this.drawEllipse(ax, ay - 8, 30, 20, 'rgba(220, 240, 255, .16)', {alpha: 0.78, stroke: '#eefaff', lineWidth: 3});
-      this.drawPolyline([[ax - 24, ay + 4], [ax, ay - 32], [ax + 24, ay + 4]], '#eefaff', 4, {alpha: 0.92});
-      this.drawPolyline([[ax - 16, ay + 4], [ax, ay - 18], [ax + 16, ay + 4]], '#eefaff', 2, {alpha: 0.74});
-      this.drawEllipse(ax, ay + 6, 18, 6, 'rgba(238,250,255,.12)', {alpha: 0.5, stroke: '#eefaff', lineWidth: 2});
-      this.drawRect(ax, ay - 2, 12, 8, 'rgba(238,250,255,.12)', {alpha: 0.36, stroke: '#eefaff', lineWidth: 1});
-      return;
-    }
-    if (variant === 'substitute') {
-      const x = ax;
-      const y = ay - 20;
-      this.drawRect(x, y, 46, 56, 'rgba(127,215,144,.3)', {stroke: '#c4ffd0', lineWidth: 3, alpha: 0.9});
-      this.drawMonGhost(side, x, y + 12, this.mode === 'mobile' ? 30 : 42, this.mode === 'mobile' ? 30 : 42, 0.24);
-      return;
-    }
-    if (variant === 'reflect' || variant === 'lightscreen') {
-      const x = ax;
-      const y = ay - 28;
-      const color = variant === 'reflect' ? '#dff5ff' : '#fff2a8';
-      const fill = variant === 'reflect' ? 'rgba(201, 241, 255, .32)' : 'rgba(255, 237, 147, .28)';
-      this.drawRect(x, y, 92, 102, fill, {stroke: color, lineWidth: 4, alpha: 0.84});
-      this.drawRect(x, y, 76, 88, 'rgba(255,255,255,.12)', {stroke: color, lineWidth: 2, alpha: 0.5});
-      this.drawPolyline([[x - 34, y - 38], [x - 10, y + 6], [x + 14, y - 36]], color, 2, {alpha: 0.48});
-      this.drawPolyline([[x - 10, y - 42], [x + 14, y + 4], [x + 38, y - 36]], color, 2, {alpha: 0.34});
-      if (variant === 'lightscreen') {
-        this.drawPolyline([[x - 36, y - 34], [x, y - 50], [x + 36, y - 34]], '#fff8b8', 3, {alpha: 0.96});
-        this.drawPolyline([[x - 36, y + 34], [x, y + 50], [x + 36, y + 34]], '#fff8b8', 3, {alpha: 0.76});
-      }
-      if (variant === 'reflect') {
-        this.drawPolyline([[x - 30, y - 22], [x, y - 40], [x + 30, y - 22]], '#e6fbff', 3, {alpha: 0.92});
-        this.drawPolyline([[x - 30, y + 22], [x, y + 40], [x + 30, y + 22]], '#e6fbff', 3, {alpha: 0.78});
-      }
-      return;
-    }
-    if (variant === 'wrap' || variant === 'bind' || variant === 'clamp' || variant === 'constrict') {
-      const baseX = dx;
-      const baseY = dy - 2;
-      const stroke = variant === 'clamp' ? '#eef7ff' : variant === 'bind' ? '#c6f2bf' : variant === 'wrap' ? '#f0f0d2' : '#b6efb0';
-      for (let index = 0; index < 3; index += 1) {
-        const t = clamp(progress - (index * 0.06), 0, 1);
-        const alpha = 0.9 - (index * 0.14);
-        const radiusX = variant === 'constrict' ? 30 - (index * 3) : variant === 'clamp' ? 34 - (index * 2) : 38 - (index * 4);
-        const radiusY = variant === 'wrap' ? 18 + (index * 5) : variant === 'clamp' ? 30 + (index * 4) : 22 + (index * 4);
-        this.drawEllipse(baseX, baseY, radiusX + (t * 2), radiusY, '', {alpha, stroke, lineWidth: 4});
-        if (variant === 'wrap') {
-          this.drawPolyline([[baseX - radiusX, baseY - radiusY + 6], [baseX, baseY], [baseX + radiusX, baseY + radiusY - 6]], stroke, 4, {alpha: alpha - 0.08});
-        } else if (variant === 'bind') {
-          this.drawPolyline([[baseX - radiusX + 6, baseY - radiusY], [baseX - 3, baseY + 4], [baseX + radiusX - 6, baseY - radiusY]], stroke, 4, {alpha: alpha - 0.05});
-        } else if (variant === 'constrict') {
-          this.drawPolyline([[baseX - radiusX, baseY + 4], [baseX, baseY - radiusY], [baseX + radiusX, baseY + 4]], stroke, 4, {alpha: alpha - 0.06});
-          this.drawPolyline([[baseX - radiusX + 8, baseY - 6], [baseX, baseY + radiusY], [baseX + radiusX - 8, baseY - 6]], stroke, 3, {alpha: alpha - 0.1});
-        }
-      }
-      if (variant === 'clamp') {
-        this.drawPolyline([[baseX - 42, baseY - 34], [baseX - 8, baseY], [baseX - 42, baseY + 34]], '#f5f5ee', 6, {alpha: 0.96});
-        this.drawPolyline([[baseX + 42, baseY - 34], [baseX + 8, baseY], [baseX + 42, baseY + 34]], '#f5f5ee', 6, {alpha: 0.96});
-        this.drawCircle(baseX, baseY, 12, '', {alpha: 0.72, stroke: '#f5f5ee', lineWidth: 3});
-      }
-      return;
-    }
-    if (variant === 'haze') {
-      for (let index = 0; index < 8; index += 1) {
-        const t = clamp(progress - (index * 0.04), 0, 1);
-        const x = dx + (((index % 4) - 1.5) * 18);
-        const y = dy - 30 + (Math.floor(index / 4) * 28) - (t * 8);
-        this.drawCircle(x, y, 18 + ((index % 2) * 4), '#dbe7ef', {alpha: 0.44});
-      }
-      return;
-    }
-    if (variant === 'disable') {
-      this.drawCircle(dx, dy, 26 + (Math.sin(progress * Math.PI) * 8), '', {alpha: 0.8, stroke: '#f6d57a', lineWidth: 3});
-      this.drawPolyline([[dx - 18, dy - 18], [dx + 18, dy + 18]], '#f6d57a', 4, {alpha: 0.8});
-      this.drawPolyline([[dx - 18, dy + 18], [dx + 18, dy - 18]], '#f6d57a', 4, {alpha: 0.8});
-      return;
-    }
-    if (variant === 'bide') {
-      const charge = 18 + (Math.sin(progress * Math.PI) * 10);
-      this.drawCircle(ax, ay - 10, charge, '', {alpha: 0.85, stroke: '#ffb66a', lineWidth: 4});
-      this.drawCircle(ax, ay - 10, charge + 14, '', {alpha: 0.46, stroke: '#ffe0a1', lineWidth: 3});
-      for (let index = 0; index < 6; index += 1) {
-        const angle = ((Math.PI * 2 * index) / 6) + (progress * 3.5);
-        this.drawCircle(ax + Math.cos(angle) * (charge + 10), ay - 10 + Math.sin(angle) * (charge * 0.7), 4, '#ffd27f', {alpha: 0.82});
-      }
-      return;
-    }
-    if (variant === 'counter') {
-      const x = lerp(ax, dx, Math.min(1, p * 1.06));
-      const y = lerp(ay, dy, Math.min(1, p * 1.06));
-      this.drawPolyline([[x - 34, y + 24], [x + 34, y - 24]], '#ffd697', 7, {alpha: 0.96});
-      this.drawPolyline([[x - 34, y - 24], [x + 34, y + 24]], '#ff7b63', 5, {alpha: 0.92});
-      this.drawCircle(dx, dy, 18 + (Math.sin(progress * Math.PI) * 6), '', {alpha: 0.52, stroke: '#ffe1ab', lineWidth: 2});
-      return;
-    }
-    if (variant === 'hyperbeam') {
-      const ex = lerp(ax, dx, easeOutQuad(localToHit));
-      const ey = lerp(ay, dy, easeOutQuad(localToHit));
-      this.drawCircle(ax, ay, 16 + (Math.sin(progress * Math.PI) * 8), '#ffe182', {alpha: 0.46});
-      this.drawPolyline([[ax, ay], [ex, ey]], '#fff4a7', 18, {alpha: 0.9});
-      this.drawPolyline([[ax, ay], [ex, ey]], '#ffcc53', 10, {alpha: 0.94});
-      this.drawPolyline([[ax, ay], [ex, ey]], '#fffef0', 4, {alpha: 0.98});
-      if (progress > hitAt) this.drawBurst(dx, dy, 12, 38, (progress - hitAt) / (1 - hitAt), '#fff4a7');
-      return;
-    }
-    if (variant === 'teleport') {
-      for (let index = 0; index < 4; index += 1) {
-        const t = clamp(progress - (index * 0.07), 0, 1);
-        this.drawCircle(ax, ay - 10, 10 + (t * 24), '', {alpha: 1 - t, stroke: '#d5f7ff', lineWidth: 3});
-      }
-      this.drawBurst(ax, ay - 10, 6, 24, progress, '#dffcff');
-      return;
-    }
-    if (variant === 'metronome') {
-      const handX = ax + 8;
-      const handY = ay - 22;
-      const wag = Math.sin(progress * Math.PI * 3) * 12;
-      this.drawPolyline([[handX, handY + 14], [handX + wag * 0.35, handY - 10], [handX + wag, handY - 28]], '#ffe59c', 5, {alpha: 0.95});
-      this.drawCircle(handX + wag, handY - 32, 6, '#fff0bb', {alpha: 0.92, stroke: '#ffd76f', lineWidth: 2});
-      this.drawStar(ax + 26, ay - 50, 8, '#ffe17a', {alpha: 0.7, rotation: progress, stroke: '#fff5c5', lineWidth: 2});
-      return;
-    }
-    if (variant === 'mimic') {
-      const copyX = lerp(dx, ax, progress);
-      const copyY = lerp(dy - 8, ay - 12, progress);
-      this.drawRect(dx, dy - 6, 34, 34, 'rgba(238,244,255,.12)', {alpha: 0.48, stroke: '#e7f1ff', lineWidth: 2});
-      this.drawRect(copyX, copyY, 24, 24, 'rgba(238,244,255,.18)', {alpha: 0.72, stroke: '#e7f1ff', lineWidth: 2});
-      this.drawPolyline([[dx, dy], [copyX, copyY], [ax, ay - 8]], '#e7f1ff', 3, {alpha: 0.7});
-      return;
-    }
-    if (variant === 'mirrormove') {
-      this.drawMonGhost(side === 'player' ? 'foe' : 'player', ax + (dir * 18), ay + 8, this.mode === 'mobile' ? 38 : 54, this.mode === 'mobile' ? 38 : 54, 0.42);
-      this.drawPolyline([[ax - 6, ay - 30], [dx - 10, dy - 12], [dx, dy]], '#e6f6ff', 3, {alpha: 0.68});
-      this.drawBurst(dx, dy, 6, 18, progress, '#eefbff');
-      return;
-    }
-    if (variant === 'focusenergy') {
-      this.drawCircle(ax, ay - 14, 18 + (Math.sin(progress * Math.PI) * 6), '', {alpha: 0.88, stroke: '#ffd17b', lineWidth: 3});
-      this.drawStar(ax, ay - 14, 12 + (Math.sin(progress * Math.PI) * 2), '#ffd17b', {alpha: 0.78, stroke: '#fff0b6', lineWidth: 2, rotation: progress * 1.5});
-      this.drawPolyline([[ax - 24, ay - 14], [ax + 24, ay - 14]], '#ffe09d', 2, {alpha: 0.72});
-      this.drawPolyline([[ax, ay - 38], [ax, ay + 10]], '#ffe09d', 2, {alpha: 0.72});
-      return;
-    }
-    if (variant === 'dreameater') {
+    if (kind === 'balls-up') {
+      ctx.save();
+      ctx.fillStyle = '#ffe57b';
       for (let index = 0; index < 5; index += 1) {
-        const t = clamp(progress - (index * 0.05), 0, 1);
-        const x = lerp(dx, ax, t);
-        const y = lerp(dy - 6, ay - 10, t) + (Math.sin((t * Math.PI * 4) + index) * 10);
-        this.drawCircle(x, y, 7, '#c28dff', {alpha: 0.72, stroke: '#f0d5ff', lineWidth: 2});
+        const offset = index * 10 * metrics.scale;
+        const y = centerY - ((progress * 48 * metrics.scale) + offset);
+        ctx.beginPath();
+        ctx.arc(centerX + ((index - 2) * 6 * metrics.scale), y, 3 * metrics.scale, 0, Math.PI * 2);
+        ctx.fill();
       }
-      this.drawEllipse(dx, dy - 2, 34, 16, '', {alpha: 0.36, stroke: '#c28dff', lineWidth: 2});
-      return;
+      ctx.restore();
     }
-    if (variant === 'leechseed') {
-      for (let index = 0; index < 4; index += 1) {
-        const t = clamp(progress * 1.08 - (index * 0.07), 0, 1);
-        const x = lerp(ax, dx, t) + ((index - 1.5) * 8);
-        const y = lerp(ay - 8, dy, t) - (Math.sin(t * Math.PI) * 10);
-        this.drawEllipse(x, y, 8, 12, '#b7d86b', {alpha: 0.94, stroke: '#eef6b2', lineWidth: 2, rotation: (index - 1.5) * 0.25});
-      }
-      if (progress > 0.42) {
-        const grow = clamp((progress - 0.42) / 0.58, 0, 1);
-        this.drawPolyline([[dx - 10, dy + 14], [dx - 12, dy + (20 + (grow * 12))], [dx - 6, dy + (34 + (grow * 16))]], '#7cb35a', 3, {alpha: 0.86});
-        this.drawPolyline([[dx + 8, dy + 12], [dx + 12, dy + (20 + (grow * 12))], [dx + 10, dy + (36 + (grow * 14))]], '#7cb35a', 3, {alpha: 0.86});
-        this.drawPolyline([[dx - 2, dy + 10], [dx + 4, dy + 24], [dx - 2, dy + 40]], '#7cb35a', 2, {alpha: 0.72});
-        this.drawEllipse(dx, dy + 6, 28 + (grow * 6), 12 + (grow * 2), '', {alpha: 0.52, stroke: '#b7d86b', lineWidth: 2});
-        this.drawCircle(dx - 8, dy + 18, 4, '#c7ea7f', {alpha: 0.7});
-        this.drawCircle(dx + 10, dy + 20, 4, '#c7ea7f', {alpha: 0.7});
-        this.drawCircle(dx + 2, dy + 30, 4, '#c7ea7f', {alpha: 0.64});
-      }
-      return;
-    }
-    if (variant === 'drain-seed') {
-      for (let index = 0; index < 6; index += 1) {
-        const outbound = progress < 0.42;
-        const t = outbound ? clamp(progress / 0.42 - (index * 0.05), 0, 1) : clamp((progress - 0.42) / 0.58 - (index * 0.05), 0, 1);
-        const x = outbound ? lerp(ax, dx, t) : lerp(dx, ax, t);
-        const y = outbound ? lerp(ay - 8, dy, t) : lerp(dy, ay - 8, t);
-        this.drawCircle(x, y + (Math.sin(index + progress * 8) * 8), index === 0 ? 6 : 4, '#aef07a', {alpha: 0.88, stroke: '#f2ffd8', lineWidth: index === 0 ? 1 : 0});
-      }
-      return;
-    }
-    if (variant === 'drain-bite') {
-      const x = lerp(ax, dx, p);
-      const y = lerp(ay, dy, p);
-      this.drawPolyline([[x - (dir * 16), y - 8], [x, y], [x - (dir * 16), y + 8]], '#f7f7ef', 4, {alpha: 0.94});
-      this.drawPolyline([[x + (dir * 16), y - 8], [x, y], [x + (dir * 16), y + 8]], '#f7f7ef', 4, {alpha: 0.94});
-      for (let index = 0; index < 4; index += 1) {
-        const t = clamp((progress - 0.22) / 0.7 - (index * 0.06), 0, 1);
-        this.drawCircle(lerp(dx, ax, t), lerp(dy, ay - 8, t), 4, '#aef07a', {alpha: 0.76});
-      }
-      return;
-    }
-    if (variant === 'supersonic') {
-      for (let index = 0; index < 4; index += 1) {
-        const t = clamp(progress - (index * 0.06), 0, 1);
-        const x = lerp(ax, dx, easeOutQuad(t));
-        const y = lerp(ay, dy, t) + (Math.sin((t * 10) + index) * 18);
-        this.drawPolyline([[x - 10, y + 12], [x - 10, y - 12], [x + 8, y - 6]], '#ece6ff', 3, {alpha: 1 - t});
-        this.drawCircle(x + 10, y + 2, 6, '', {alpha: 1 - t, stroke: '#c6b3ff', lineWidth: 2});
-      }
-      return;
-    }
-    if (variant === 'stringshot') {
-      const x = lerp(ax, dx, easeOutQuad(localToHit));
-      const y = lerp(ay, dy, easeOutQuad(localToHit));
-      for (let index = -1; index <= 1; index += 1) {
-        this.drawPolyline([[ax, ay + (index * 6)], [x, y + (index * 8)]], '#f3f3f0', 3, {alpha: 0.98});
-      }
-      this.drawEllipse(dx, dy, 24, 14, '', {alpha: 0.42, stroke: '#f3f3f0', lineWidth: 2});
-      return;
-    }
-    if (variant === 'acidarmor') {
-      this.drawEllipse(ax, ay - 10, 22 + (Math.sin(progress * Math.PI) * 6), 28, 'rgba(216, 201, 255, .16)', {alpha: 0.62, stroke: '#d4b7ff', lineWidth: 2});
-      this.drawPolyline([[ax - 14, ay - 34], [ax - 8, ay - 8], [ax - 16, ay + 18]], '#d4b7ff', 3, {alpha: 0.72});
-      this.drawPolyline([[ax + 14, ay - 34], [ax + 8, ay - 8], [ax + 16, ay + 18]], '#d4b7ff', 3, {alpha: 0.72});
-      return;
-    }
-    if (variant === 'boneclub') {
-      const x = lerp(ax, dx, easeOutQuad(localToHit));
-      const y = lerp(ay, dy, easeOutQuad(localToHit));
-      this.drawPolyline([[x - 12, y + 8], [x + 12, y - 8]], '#f4efe2', 5, {alpha: 0.96});
-      this.drawCircle(x - 14, y + 10, 4, '#f4efe2', {alpha: 0.96});
-      this.drawCircle(x + 14, y - 10, 4, '#f4efe2', {alpha: 0.96});
-      if (progress > hitAt) this.drawBurst(dx, dy, 7, 22, (progress - hitAt) / (1 - hitAt), '#fff3d2');
-      return;
-    }
-    if (variant === 'bonemerang') {
-      for (let phase = 0; phase < 2; phase += 1) {
-        const t = phase === 0 ? clamp(progress / 0.5, 0, 1) : clamp((progress - 0.5) / 0.5, 0, 1);
-        const x = phase === 0 ? lerp(ax, dx, t) : lerp(dx, ax, t);
-        const y = phase === 0 ? lerp(ay - 12, dy - 10, t) - (Math.sin(t * Math.PI) * 16) : lerp(dy - 10, ay - 12, t) - (Math.sin(t * Math.PI) * 16);
-        this.drawPolyline([[x - 12, y + 7], [x + 12, y - 7]], '#f4efe2', 5, {alpha: 0.92});
-        this.drawCircle(x - 14, y + 9, 4, '#f4efe2', {alpha: 0.92});
-        this.drawCircle(x + 14, y - 9, 4, '#f4efe2', {alpha: 0.92});
-        this.drawPolyline([[x - 22, y + 14], [x, y], [x + 22, y - 14]], '#fff6e8', 2, {alpha: 0.34});
-        this.drawPolyline([[x - 28, y + 18], [x - 8, y + 6], [x + 16, y - 10]], '#f0dec0', 2, {alpha: 0.22});
-      }
-      this.drawPolyline([[ax + 6, ay - 10], [lerp(ax, dx, 0.5), lerp(ay, dy, 0.5) - 28], [dx - 8, dy - 6]], '#ead7b2', 2, {alpha: 0.34});
-      this.drawPolyline([[dx - 8, dy - 6], [lerp(dx, ax, 0.5), lerp(dy, ay, 0.5) - 28], [ax + 8, ay - 10]], '#ead7b2', 2, {alpha: 0.24});
-      if (progress > hitAt) this.drawBurst(dx, dy, 8, 20, (progress - hitAt) / (1 - hitAt), '#fff0c2');
-      return;
-    }
-    if (variant === 'fissure') {
-      const groundY = dy + 30;
-      this.drawPolyline([[dx - 34, groundY], [dx - 12, groundY - 12], [dx + 6, groundY + 8], [dx + 26, groundY - 16]], '#7d6543', 4, {alpha: 0.92});
-      this.drawPolyline([[dx - 22, groundY + 4], [dx - 8, groundY - 18], [dx + 10, groundY + 2]], '#caa47a', 2, {alpha: 0.6});
-      this.drawPolyline([[dx - 40, groundY + 6], [dx - 22, groundY - 8], [dx - 6, groundY + 10], [dx + 12, groundY - 12], [dx + 34, groundY + 4]], '#5f4a30', 2, {alpha: 0.56});
-      this.drawCircle(dx - 18, groundY - 6, 5, '#caa47a', {alpha: 0.48});
-      this.drawCircle(dx + 12, groundY - 10, 6, '#caa47a', {alpha: 0.42});
-      return;
-    }
-    if (variant === 'guillotine') {
-      this.drawPolyline([[dx - 24, dy - 42], [dx + 18, dy + 32]], '#f7f7ef', 6, {alpha: 0.96});
-      this.drawPolyline([[dx + 24, dy - 42], [dx - 18, dy + 32]], '#ff7d7d', 3, {alpha: 0.86});
-      this.drawCircle(dx, dy, 18 + (Math.sin(progress * Math.PI) * 4), '', {alpha: 0.34, stroke: '#ffd8d8', lineWidth: 2});
-      return;
-    }
-    if (variant === 'horndrill') {
-      for (let index = 0; index < 4; index += 1) {
-        const t = clamp(progress - (index * 0.05), 0, 1);
-        const x = lerp(ax, dx, t);
-        const y = lerp(ay, dy, t);
-        const size = 18 - (index * 3);
-        this.drawPolyline([[x - size, y + size * 0.45], [x + size, y], [x - size, y - size * 0.45]], '#f5f5ee', 3, {alpha: 0.88 - (index * 0.12)});
-        this.drawPolyline([[x - size * 0.6, y + size * 0.75], [x + size * 0.1, y], [x - size * 0.6, y - size * 0.75]], '#e2e2db', 2, {alpha: 0.52 - (index * 0.08)});
-      }
-      this.drawCircle(dx, dy, 10, '', {alpha: 0.22, stroke: '#f7f7ef', lineWidth: 2});
-      return;
-    }
-    if (variant === 'selfdestruct' || variant === 'explosion') {
-      const centerX = lerp(ax, dx, variant === 'explosion' ? 0.54 : 0.5);
-      const centerY = lerp(ay, dy, variant === 'explosion' ? 0.54 : 0.5);
-      const radius = (variant === 'explosion' ? 46 : 30) + (easeOutQuad(progress) * (variant === 'explosion' ? 86 : 58));
-      this.drawCircle(centerX, centerY, radius, '#ffd061', {alpha: 0.52});
-      this.drawCircle(centerX, centerY, radius * 0.68, variant === 'explosion' ? '#ff6f42' : '#ff8f51', {alpha: 0.8});
-      for (let index = 0; index < (variant === 'explosion' ? 10 : 6); index += 1) {
-        const angle = ((Math.PI * 2 * index) / (variant === 'explosion' ? 10 : 6)) + (progress * 4);
-        const dist = radius * 0.7;
-        this.drawRect(centerX + Math.cos(angle) * dist, centerY + Math.sin(angle) * dist, 10, 18, '#ffc870', {alpha: 0.78 - (progress * 0.3), rotation: angle});
-      }
-      this.drawBurst(centerX, centerY, variant === 'explosion' ? 16 : 12, variant === 'explosion' ? 82 : 60, progress, '#ffcf75');
-      return;
-    }
-
-    if (effect.type === 'burst') { const x = lerp(ax, dx, p); const y = lerp(ay, dy, p); this.drawBurst(x, y, 8, 18, progress, '#fff0a8'); if (progress > hitAt) this.drawBurst(dx, dy, 8, 30, (progress - hitAt) / (1 - hitAt), '#ffd478'); return; }
-    if (effect.type === 'slash') { const x = lerp(ax, dx, p); const y = lerp(ay, dy, p); this.drawPolyline([[x - 30, y + 20], [x + 30, y - 22]], '#f7f7ef', 5, {alpha: 0.95}); this.drawPolyline([[x - 24, y + 26], [x + 24, y - 16]], '#ff6767', 2, {alpha: 0.78}); return; }
-    if (effect.type === 'spikes') { for (let index = 0; index < 3; index += 1) { const t = clamp(progress * 1.18 - (index * 0.08), 0, 1); const x = lerp(ax, dx, t); const y = lerp(ay, dy, t) + ((index - 1) * 10); this.drawPolyline([[x - (dir * 10), y + 8], [x + (dir * 12), y], [x - (dir * 10), y - 8]], '#f5f5ee', 4, {alpha: 1 - Math.max(0, progress - hitAt)}); } return; }
-    if (effect.type === 'coins') { for (let index = 0; index < 3; index += 1) { const t = clamp(progress * 1.2 - (index * 0.08), 0, 1); const x = lerp(ax, dx, t); const y = lerp(ay, dy, t) - (Math.sin(t * Math.PI) * 58) + (index * 7); this.drawCircle(x, y, 8, '#f1d15b', {stroke: '#fff2a4', lineWidth: 2, alpha: 0.96}); } return; }
-    if (effect.type === 'wind') { for (let index = 0; index < 4; index += 1) { const t = clamp(progress - (index * 0.08), 0, 1); const x = lerp(ax, dx, easeOutQuad(t)); const y = lerp(ay, dy, t) + (Math.sin((t * 9) + index) * 14); this.drawPolyline([[x - 18, y - 8], [x - 4, y], [x + 10, y - 10], [x + 18, y]], '#f4f4ef', 3, {alpha: 1 - t}); } return; }
-    if (effect.type === 'vine') { for (let index = 0; index < 7; index += 1) { const t = index / 6; const swing = Math.sin((progress * 8) + (index * 0.7)) * 9; const x = lerp(ax, dx, t); const y = lerp(ay, dy, t) + swing; this.drawPolyline([[x - 5, y + 6], [x, y - 4], [x + 6, y + 7]], '#78c95f', 3, {alpha: 0.9}); } return; }
-    if (effect.type === 'rings') { for (let index = 0; index < 3; index += 1) { const t = clamp(progress - (index * 0.09), 0, 1); this.drawCircle(dx, dy, 12 + (t * 24), '', {alpha: 1 - t, stroke: '#f6fbf6', lineWidth: 3}); } return; }
-    if (effect.type === 'dust') { for (let index = 0; index < 10; index += 1) { const t = clamp(progress * 1.12 - (index * 0.04), 0, 1); const x = lerp(ax, dx, t) + ((index - 5) * 5); const y = lerp(ay, dy, t) + (Math.sin(index + progress * 9) * 10); this.drawCircle(x, y, 4 + (index % 3), '#b99865', {alpha: 0.85 - (t * 0.4)}); } return; }
-    if (effect.type === 'fang') { const x = lerp(ax, dx, p); const y = lerp(ay, dy, p); this.drawPolyline([[x - (dir * 18), y - 8], [x - (dir * 4), y], [x - (dir * 18), y + 8]], '#f7f7ef', 4, {alpha: 0.95}); this.drawPolyline([[x + (dir * 18), y - 8], [x + (dir * 4), y], [x + (dir * 18), y + 8]], '#f7f7ef', 4, {alpha: 0.95}); return; }
-    if (effect.type === 'fire') { for (let index = 0; index < 4; index += 1) { const t = clamp(progress * 1.1 - (index * 0.08), 0, 1); const x = lerp(ax, dx, t); const y = lerp(ay, dy, t) + ((index - 1.5) * 12) - (Math.sin(t * Math.PI) * 12); this.drawCircle(x, y, 10 + ((index % 2) * 3), '#f79b35', {alpha: 0.92, stroke: '#ffe579', lineWidth: 2}); } if (progress > hitAt) this.drawBurst(dx, dy, 10, 32, (progress - hitAt) / (1 - hitAt), '#ffca6e'); return; }
-    if (effect.type === 'fireblast') { const cx = lerp(ax, dx, p); const cy = lerp(ay, dy, p); const arm = 22 + (Math.sin(progress * Math.PI) * 12); this.drawPolyline([[cx - arm, cy], [cx + arm, cy]], '#ffe785', 8, {alpha: 0.92}); this.drawPolyline([[cx, cy - arm], [cx, cy + arm]], '#ffe785', 8, {alpha: 0.92}); this.drawPolyline([[cx - arm * 0.72, cy - arm * 0.72], [cx + arm * 0.72, cy + arm * 0.72]], '#ff8d3f', 6, {alpha: 0.92}); this.drawPolyline([[cx - arm * 0.72, cy + arm * 0.72], [cx + arm * 0.72, cy - arm * 0.72]], '#ff8d3f', 6, {alpha: 0.92}); this.drawCircle(cx, cy, 10, '#fff0a8', {alpha: 0.9}); if (progress > hitAt) { this.drawBurst(dx, dy, 12, 42, (progress - hitAt) / (1 - hitAt), '#ffcb62'); this.drawCircle(dx, dy, 28, '#ffd269', {alpha: 0.2}); } return; }
-    if (effect.type === 'rain') { for (let index = 0; index < 4; index += 1) { const t = clamp(localToHit - (index * 0.06), 0, 1); const x = dx + ((index - 1.5) * 10); const y = lerp(dy - 90 - (index * 10), dy, easeOutQuad(t)); this.drawCircle(x, y, 7, '#69c5ff', {alpha: 0.94, stroke: '#d8f6ff', lineWidth: 2}); } return; }
-    if (effect.type === 'bubbles') { for (let index = 0; index < 6; index += 1) { const t = clamp(progress * 1.12 - (index * 0.06), 0, 1); const x = lerp(ax, dx, t) + (Math.sin(index + t * Math.PI * 2) * 18); const y = lerp(ay, dy, t) - (index * 3); this.drawCircle(x, y, 8 + (index % 3), '', {alpha: 1 - (t * 0.4), stroke: '#c6efff', lineWidth: 3}); } return; }
-    if (effect.type === 'surf') { for (let index = 0; index < 5; index += 1) { const t = clamp(progress * 1.2 - (index * 0.07), 0, 1); const x = lerp(ax - 44, dx + 44, t); const y = lerp(ay, dy + 16, t); this.drawRect(x, y, 36, 12, '#bceeff', {alpha: 0.92 - (t * 0.55), rotation: dir * 0.16}); } return; }
-    if (effect.type === 'hydro') { const rise = easeOutQuad(localToHit); const baseY = dy + 68; for (let index = -1; index <= 1; index += 1) { const x = dx + (index * 18); const top = lerp(baseY, dy - 10, rise); this.drawPolyline([[x, baseY], [x - (index * 4), top]], '#d7fbff', 10, {alpha: 0.9}); this.drawPolyline([[x, baseY], [x - (index * 4), top]], '#69cbff', 5, {alpha: 0.96}); } return; }
-    if (effect.type === 'ice') { for (let index = 0; index < 5; index += 1) { const t = clamp(progress * 1.1 - (index * 0.06), 0, 1); const x = lerp(ax, dx, t) + ((index - 2) * 10); const y = lerp(ay, dy, t) - (index * 4); this.drawPolyline([[x, y - 10], [x - 8, y + 4], [x + 8, y + 4], [x, y - 10]], '#e8ffff', 3, {alpha: 1 - (t * 0.3)}); } return; }
-    if (effect.type === 'electric') { const strikeX = lerp(ax, dx, localToHit); const strikeY = lerp(ay - 60, dy, easeOutQuad(localToHit)); this.drawPolyline([[strikeX - 12, strikeY - 38], [strikeX + 2, strikeY - 18], [strikeX - 8, strikeY - 2], [strikeX + 8, strikeY + 14], [strikeX - 2, strikeY + 30]], '#fff685', 6, {alpha: 0.96}); this.drawPolyline([[strikeX + 8, strikeY - 54], [strikeX - 8, strikeY - 26], [strikeX + 4, strikeY - 6], [strikeX - 10, strikeY + 16]], '#f1d742', 4, {alpha: 0.9}); if (progress > hitAt) this.drawBurst(dx, dy, 8, 24, (progress - hitAt) / (1 - hitAt), '#fff685'); return; }
-    if (effect.type === 'beam') { const ex = lerp(ax, dx, easeOutQuad(localToHit)); const ey = lerp(ay, dy, easeOutQuad(localToHit)); this.drawPolyline([[ax, ay], [ex, ey]], '#dff7ff', 12, {alpha: 0.9}); this.drawPolyline([[ax, ay], [ex, ey]], '#8fd5ff', 6, {alpha: 0.95}); if (progress > hitAt) this.drawBurst(dx, dy, 8, 32, (progress - hitAt) / (1 - hitAt), '#d8f7ff'); return; }
-    if (effect.type === 'rocks') { for (let index = 0; index < 5; index += 1) { const t = clamp(progress * 1.14 - (index * 0.08), 0, 1); const x = lerp(ax + (dir * 30), dx + (((index % 2) * 24) - 12), t); const y = lerp(ay - 80 - (index * 18), dy - 12, easeOutQuad(t)); this.drawCircle(x, y, 7 + ((index % 2) * 3), '#8a6b4b', {stroke: '#d1b18c', lineWidth: 2}); } return; }
-    if (effect.type === 'seismic') { const x = lerp(ax, dx, p); const y = lerp(ay, dy, p) - (Math.sin(progress * Math.PI) * 26); this.drawCircle(x, y, 18, '#111', {alpha: 0.75, stroke: '#d8d8d8', lineWidth: 2}); return; }
-    if (effect.type === 'drain') { for (let index = 0; index < 5; index += 1) { const outbound = progress < 0.52; const t = outbound ? clamp(progress * 1.28 - (index * 0.06), 0, 1) : clamp((progress - 0.52) / 0.48 - (index * 0.06), 0, 1); const x = outbound ? lerp(ax, dx, t) : lerp(dx, ax, t); const y = outbound ? lerp(ay, dy, t) : lerp(dy, ay, t); this.drawCircle(x, y + (Math.sin(index + progress * 10) * 10), index === 0 ? 6 : 4, index === 0 ? '#a4ff75' : '#f1fff1', {alpha: 0.9}); } return; }
-    if (effect.type === 'petal') { for (let index = 0; index < 8; index += 1) { const angle = (Math.PI * 2 * index) / 8 + (progress * Math.PI * 2.6); const radius = 18 + (Math.sin(progress * Math.PI) * 18); const x = dx + Math.cos(angle) * radius; const y = dy + Math.sin(angle) * radius; this.drawRect(x, y, 9, 16, '#ff8eb4', {alpha: 0.9, rotation: angle}); } return; }
-    if (effect.type === 'string') { const x = lerp(ax, dx, easeOutQuad(localToHit)); const y = lerp(ay, dy, easeOutQuad(localToHit)); for (let index = -1; index <= 1; index += 1) this.drawPolyline([[ax, ay + (index * 6)], [x, y + (index * 7)]], '#f3f3f0', 2, {alpha: 0.96}); return; }
-    if (effect.type === 'barrier') { const x = ax; const y = ay - 18; this.drawRect(x - 14, y, 18, 72, 'rgba(220,240,255,.18)', {stroke: '#eefaff', lineWidth: 3, alpha: 0.82}); this.drawRect(x + 14, y, 18, 72, 'rgba(220,240,255,.18)', {stroke: '#eefaff', lineWidth: 3, alpha: 0.66}); this.drawBurst(x, y, 6, 24, progress, '#eefaff'); return; }
-    if (effect.type === 'ringSelf') { const x = ax; const y = ay - 18; this.drawCircle(x, y, 14 + (Math.sin(progress * Math.PI) * 10), '', {stroke: '#f1f7f1', lineWidth: 3, alpha: 0.85}); return; }
-    if (effect.type === 'explode') { const centerX = lerp(ax, dx, 0.52); const centerY = lerp(ay, dy, 0.52); const radius = 34 + (easeOutQuad(progress) * 72); this.drawCircle(centerX, centerY, radius, '#ffd061', {alpha: 0.48}); this.drawCircle(centerX, centerY, radius * 0.68, '#ff8f51', {alpha: 0.78}); this.drawBurst(centerX, centerY, 12, 66, progress, '#ffcf75'); return; }
-    if (effect.type === 'cloud') { for (let index = 0; index < 4; index += 1) { const t = clamp(progress - (index * 0.08), 0, 1); const x = lerp(ax, dx, t) + (index * 6 * dir); const y = lerp(ay, dy, t) - (index * 4); this.drawCircle(x, y, 12 + (index * 2), effect.color, {alpha: 0.88 - (t * 0.45)}); } return; }
-    if (effect.type === 'swift') { for (let index = 0; index < 5; index += 1) { const t = clamp(progress * 1.16 - (index * 0.08), 0, 1); const x = lerp(ax, dx, t); const y = lerp(ay, dy, t) + (Math.sin((index * 0.9) + (t * Math.PI * 2)) * 18); this.drawStar(x, y, 9, '#fff0a8', {stroke: '#ffd36a', lineWidth: 2, rotation: t * 0.7, alpha: 1 - Math.max(0, (progress - hitAt) * 1.5)}); } return; }
-    if (effect.type === 'heal') { const x = ax; const y = ay - 18; for (let index = 0; index < 6; index += 1) { const angle = (Math.PI * 2 * index) / 6 + (progress * Math.PI * 2); const radius = 12 + (Math.sin(progress * Math.PI) * 8); this.drawCircle(x + Math.cos(angle) * radius, y + Math.sin(angle) * radius, 4, '#b7ffab', {alpha: 0.85}); } return; }
-    if (effect.type === 'kiss') { for (let index = 0; index < 4; index += 1) { const t = clamp(progress * 1.1 - (index * 0.07), 0, 1); const x = lerp(ax, dx, t); const y = lerp(ay, dy, t) + ((index - 1.5) * 10); this.drawCircle(x, y, 8, '#ff8dc7', {alpha: 0.92, stroke: '#ffd2eb', lineWidth: 2}); } return; }
-    if (effect.type === 'tri') { const colors = ['#ff9d45', '#7be2ff', '#ffe46d']; for (let index = 0; index < 3; index += 1) { const t = clamp(progress * 1.06 - (index * 0.06), 0, 1); const x = lerp(ax, dx, t); const y = lerp(ay, dy, t) + ((index - 1) * 18); this.drawRect(x, y, 22, 10, colors[index], {alpha: 0.92, rotation: (index - 1) * 0.7}); } return; }
-    if (effect.type === 'substitute') { const x = ax; const y = ay - 20; this.drawRect(x, y, 42, 54, 'rgba(127,215,144,.28)', {stroke: '#c4ffd0', lineWidth: 3, alpha: 0.86}); return; }
-    if (effect.type === 'confusion') { for (let index = 0; index < 5; index += 1) { const angle = (Math.PI * 2 * index) / 5 + (progress * Math.PI * 2.4); const radius = 12 + (progress * 28); const x = dx + Math.cos(angle) * radius; const y = dy + Math.sin(angle) * radius; this.drawCircle(x, y, 6, '#d9b0ff', {alpha: 1 - progress}); } return; }
-    if (effect.type === 'sleep') { for (let index = 0; index < 3; index += 1) { const t = clamp(progress - (index * 0.12), 0, 1); const x = dx + (index * 10); const y = dy - 8 - (t * 42); this.ctx.save(); this.ctx.globalAlpha = 1 - t; this.ctx.fillStyle = '#f6f6f4'; this.ctx.font = this.mode === 'mobile' ? 'bold 14px Georgia' : 'bold 18px Georgia'; this.ctx.fillText('Z', x, y); this.ctx.restore(); } return; }
-    if (effect.type === 'sound') { for (let index = 0; index < 3; index += 1) { const t = clamp(progress - (index * 0.08), 0, 1); const x = lerp(ax, dx, easeOutQuad(t)); const y = lerp(ay, dy, t) + (Math.sin((t * 8) + index) * 14); this.drawPolyline([[x - 8, y + 10], [x - 8, y - 10], [x + 6, y - 5]], '#f3f3f0', 3, {alpha: 1 - t}); this.drawCircle(x + 7, y + 3, 5, '#f3f3f0', {alpha: 1 - t}); } return; }
-    if (effect.type === 'statusTarget') { for (let index = 0; index < 4; index += 1) { const angle = (Math.PI * 2 * index) / 4 + (progress * Math.PI * 2); const x = dx + Math.cos(angle) * 22; const y = dy + Math.sin(angle) * 22; this.drawCircle(x, y, 9, '', {alpha: 1 - progress, stroke: '#eef7ff', lineWidth: 2}); } return; }
-    if (effect.type === 'self') { const x = ax; const y = ay - 18; this.drawBurst(x, y, 6, 26, progress, '#e8fbff'); return; }
-    if (effect.type === 'swoop') { for (let index = 0; index < 3; index += 1) { const t = clamp(progress * 1.1 - (index * 0.08), 0, 1); const x = lerp(ax, dx, t); const y = lerp(ay - 46, dy, t) - (Math.sin(t * Math.PI) * 22); this.drawPolyline([[x - 16, y + 8], [x - 4, y], [x + 12, y - 10]], '#f2f2ed', 3, {alpha: 1 - Math.max(0, progress - hitAt)}); } return; }
-    if (effect.type === 'psywave') { for (let index = 0; index < 4; index += 1) { const t = clamp(progress - (index * 0.08), 0, 1); const x = lerp(ax, dx, t); const y = lerp(ay, dy, t); this.drawCircle(x, y, 10 + (t * 16), '', {alpha: 1 - t, stroke: '#b78cff', lineWidth: 3}); } }
   }
 
-  render(state) {
-    this.clearMotion();
+  applySpecialEffect(effect, progress, scene) {
+    const attackerNode = scene.side === 'player' ? this.playerSprite : this.foeSprite;
+    const defenderNode = scene.side === 'player' ? this.foeSprite : this.playerSprite;
+    const metrics = scene.metrics;
+
+    switch (effect) {
+      case 'SE_DARK_SCREEN_FLASH':
+      case 'AnimationFlashScreen':
+        this.drawFlash('#fff2a8', 0.24 + (Math.sin(progress * Math.PI) * 0.36));
+        break;
+      case 'SE_FLASH_SCREEN_LONG':
+      case 'FlashScreenEveryFourFrameBlocks':
+      case 'FlashScreenEveryEightFrameBlocks':
+        this.drawFlash(progress < 0.5 ? '#f2e7a8' : '#d6e3ff', 0.24 + (Math.sin(progress * Math.PI * 4) * 0.18));
+        break;
+      case 'SE_DARK_SCREEN_PALETTE':
+        this.drawFlash('#1a1f33', 0.34);
+        break;
+      case 'SE_DARKEN_MON_PALETTE':
+        defenderNode.style.filter = 'brightness(.55) saturate(.8)';
+        break;
+      case 'SE_LIGHT_SCREEN_PALETTE':
+        this.drawFlash('#d7f0ff', 0.14);
+        this.drawGlow(
+          metrics.x + (metrics.width * (scene.side === 'player' ? 0.26 : 0.74)),
+          metrics.y + (metrics.height * (scene.side === 'player' ? 0.78 : 0.32)),
+          metrics.width * 0.14,
+          '#bfe8ff',
+          0.45,
+        );
+        break;
+      case 'SE_SHAKE_SCREEN':
+        this.stage.style.transform = `translate(${Math.sin(progress * Math.PI * 10) * 5}px, 0px)`;
+        break;
+      case 'SE_WATER_DROPLETS_EVERYWHERE':
+        this.drawScreenParticles('droplets', progress, metrics, scene.side);
+        break;
+      case 'DoBlizzardSpecialEffects':
+        this.drawScreenParticles('petals', progress, metrics, scene.side);
+        break;
+      case 'SE_PETALS_FALLING':
+        this.drawScreenParticles('petals', progress, metrics, scene.side);
+        break;
+      case 'SE_LEAVES_FALLING':
+        this.drawScreenParticles('leaves', progress, metrics, scene.side);
+        break;
+      case 'SE_SPIRAL_BALLS_INWARD':
+        this.drawScreenParticles('spiral', progress, metrics, scene.side);
+        break;
+      case 'SE_SHOOT_BALLS_UPWARD':
+      case 'SE_SHOOT_MANY_BALLS_UPWARD':
+        this.drawScreenParticles('balls-up', progress, metrics, scene.side);
+        break;
+      case 'SE_MOVE_MON_HORIZONTALLY':
+        attackerNode.style.transform = `translate(${scene.side === 'player' ? 18 : -18}px, 0px)`;
+        break;
+      case 'SE_RESET_MON_POSITION':
+        attackerNode.style.transform = '';
+        break;
+      case 'SE_BLINK_MON':
+        attackerNode.style.opacity = Math.floor(progress * 10) % 2 === 0 ? '0.15' : '1';
+        break;
+      case 'SE_FLASH_MON_PIC':
+        attackerNode.classList.toggle('hurt', Math.floor(progress * 10) % 2 === 0);
+        break;
+      case 'SE_HIDE_MON_PIC':
+        attackerNode.style.opacity = '0';
+        break;
+      case 'SE_SHOW_MON_PIC':
+        attackerNode.style.opacity = '1';
+        break;
+      case 'SE_HIDE_ENEMY_MON_PIC':
+        defenderNode.style.opacity = '0';
+        break;
+      case 'SE_SHOW_ENEMY_MON_PIC':
+        defenderNode.style.opacity = '1';
+        break;
+      case 'SE_BLINK_ENEMY_MON':
+        defenderNode.style.opacity = Math.floor(progress * 10) % 2 === 0 ? '0.15' : '1';
+        break;
+      case 'SE_SLIDE_MON_OFF':
+        attackerNode.style.transform = `translate(${lerp(0, scene.side === 'player' ? -90 : 90, progress)}px, 0px)`;
+        attackerNode.style.opacity = String(1 - progress);
+        break;
+      case 'SE_SLIDE_MON_HALF_OFF':
+        attackerNode.style.transform = `translate(${lerp(0, scene.side === 'player' ? -42 : 42, progress)}px, 0px)`;
+        break;
+      case 'SE_SLIDE_ENEMY_MON_OFF':
+        defenderNode.style.transform = `translate(${lerp(0, scene.side === 'player' ? 80 : -80, progress)}px, 0px)`;
+        defenderNode.style.opacity = String(1 - progress);
+        break;
+      case 'SE_SLIDE_MON_UP':
+        attackerNode.style.transform = `translate(0px, ${lerp(0, -34, progress)}px)`;
+        break;
+      case 'SE_SLIDE_MON_DOWN':
+        attackerNode.style.transform = `translate(0px, ${lerp(0, 34, progress)}px)`;
+        break;
+      case 'SE_SLIDE_MON_DOWN_AND_HIDE':
+        attackerNode.style.transform = `translate(0px, ${lerp(0, 46, progress)}px)`;
+        attackerNode.style.opacity = String(1 - progress);
+        break;
+      case 'SE_SQUISH_MON_PIC':
+        attackerNode.style.transform = `scaleY(${lerp(1, .4, progress)})`;
+        break;
+      case 'SE_BOUNCE_UP_AND_DOWN':
+        attackerNode.style.transform = `translate(0px, ${Math.sin(progress * Math.PI * 2) * -18}px)`;
+        break;
+      case 'SE_MINIMIZE_MON':
+        attackerNode.style.transform = `scale(${lerp(1, .45, progress)})`;
+        break;
+      case 'SE_SUBSTITUTE_MON':
+        attackerNode.style.filter = 'sepia(.6) saturate(.4) brightness(1.15)';
+        break;
+      case 'SE_TRANSFORM_MON':
+        attackerNode.style.filter = `brightness(${1 + (Math.sin(progress * Math.PI * 6) * .8)}) saturate(1.3)`;
+        break;
+      case 'SE_SHAKE_ENEMY_HUD':
+        this.foeStatus.style.transform = `translate(${Math.sin(progress * Math.PI * 12) * 4}px, 0px)`;
+        break;
+      case 'SE_SHAKE_BACK_AND_FORTH':
+        attackerNode.style.transform = `translate(${Math.sin(progress * Math.PI * 10) * 12}px, 0px)`;
+        break;
+      case 'SE_WAVY_SCREEN':
+        this.field.style.transform = `translateX(${Math.sin(progress * Math.PI * 8) * 4}px)`;
+        break;
+      case 'DoExplodeSpecialEffects':
+        this.drawFlash('#ffd26d', 0.16 + (Math.sin(progress * Math.PI * 3) * 0.32));
+        break;
+      case 'DoGrowlSpecialEffects':
+        this.foeStatus.style.transform = `translate(${Math.sin(progress * Math.PI * 8) * 3}px, 0px)`;
+        break;
+      case 'DoRockSlideSpecialEffects':
+        this.drawFlash('#b88f64', 0.12 + (Math.sin(progress * Math.PI * 2) * 0.1));
+        break;
+      default:
+        break;
+    }
+  }
+
+  render(scene) {
+    this.resetSprites();
     this.resize();
     this.ctx.clearRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
-    this.updateHud(state);
-    this.applySpriteState(state);
-    this.renderEffect(state);
+    this.feed.textContent = scene.log;
+    this.applyHp(this.playerHpFill, this.playerHpValue, scene.playerHp);
+    this.applyHp(this.foeHpFill, this.foeHpValue, scene.foeHp);
+
+    const metrics = this.fieldMetrics(scene.source);
+    scene.metrics = metrics;
+
+    if (scene.activeFrame) {
+      for (const sprite of scene.activeFrame.sprites) this.drawSpriteTile(sprite, metrics);
+    }
+
+    for (const effect of scene.activeEffects) {
+      const duration = Math.max(1, effect.end - effect.start);
+      const progress = clamp((scene.time - effect.start) / duration, 0, 1);
+      this.applySpecialEffect(effect.effectName, progress, scene);
+    }
+
+    if (scene.hiddenAttacker) {
+      const attackerNode = scene.side === 'player' ? this.playerSprite : this.foeSprite;
+      attackerNode.style.opacity = '0';
+    }
+    if (scene.hiddenDefender) {
+      const defenderNode = scene.side === 'player' ? this.foeSprite : this.playerSprite;
+      defenderNode.style.opacity = '0';
+    }
+    if (scene.hitActive) {
+      const target = scene.side === 'player' ? this.foeSprite : this.playerSprite;
+      target.classList.toggle('hurt', Math.floor(scene.time / 90) % 2 === 0);
+    }
   }
 }
 
-async function load() {
-  const [movesResponse, sheetImage] = await Promise.all([
-    fetch(DATA_PATH),
-    new Promise((resolve, reject) => {
-      const image = new Image();
-      image.onload = () => resolve(image);
-      image.onerror = reject;
-      image.src = SHEET_PATH;
-    }),
-  ]);
-  return {moves: await movesResponse.json(), sheetImage};
-}
+class AttackPreviewApp {
+  constructor(data, tilesets) {
+    this.data = data;
+    this.tilesets = tilesets;
+    this.moveIndex = 0;
+    this.side = 'player';
+    this.playing = true;
+    this.loopAll = false;
+    this.startedAt = performance.now();
+    this.timeline = null;
+    this.viewports = [];
+    this.currentMove = null;
+  }
 
-const createMoveCard = (move) => `<button class="attack-move-chip" data-move-id="${move.id}"><strong>${String(move.num).padStart(3, '0')}</strong><span>${move.name}</span><em>${move.family}</em></button>`;
+  viewportMarkup(mode) {
+    return `
+      <div class="preview-stage ${mode}" data-viewport="${mode}">
+        <div class="battle-stage">
+          <div class="battle-field"><canvas class="battle-layer"></canvas></div>
+          <div class="battle-status battle-status-foe">
+            <div class="battle-status-top"><strong>${escapeHtml(SAMPLE.foe.name)}</strong><span>Lv100</span></div>
+            <div class="battle-status-meta"><span>Front Sprite</span><span data-foe-hp-value>100/100</span></div>
+            <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp"><div class="hp-fill" data-foe-hp-fill></div></div></div>
+          </div>
+          <div class="battle-status battle-status-player">
+            <div class="battle-status-top"><strong>${escapeHtml(SAMPLE.player.name)}</strong><span>Lv100</span></div>
+            <div class="battle-status-meta"><span>Back Sprite</span><span data-player-hp-value>100/100</span></div>
+            <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp"><div class="hp-fill" data-player-hp-fill></div></div></div>
+          </div>
+          <div class="battle-sprite-wrap battle-sprite-foe">
+            <div class="battle-shadow"></div>
+            <img class="sprite battle front attack-preview-foe" src="${FOE_SPRITE}" alt="${escapeHtml(SAMPLE.foe.name)}">
+          </div>
+          <div class="battle-sprite-wrap battle-sprite-player">
+            <div class="battle-shadow"></div>
+            <img class="sprite battle back attack-preview-player" src="${PLAYER_SPRITE}" alt="${escapeHtml(SAMPLE.player.name)}">
+          </div>
+          <div class="battle-feed"><div class="feed-line"></div></div>
+        </div>
+      </div>
+    `;
+  }
+
+  markup() {
+    return `
+      <div class="preview-shell">
+        <section class="preview-card preview-header">
+          <div>
+            <div class="label">Gen 1 Source Preview</div>
+            <h1>Pokemon Attack Animation Audit</h1>
+            <p>This preview now reads the original move animation scripts from <a href="https://github.com/pret/pokered" target="_blank" rel="noreferrer">pret/pokered</a>. Each move uses the actual Gen 1 script order, subanimation frames, base coordinates and battle-effect routines as the source of truth.</p>
+          </div>
+          <div class="preview-meta">
+            <span>165 Gen 1 moves</span>
+            <span>Original subanimations</span>
+            <span>Desktop + Mobile stage</span>
+          </div>
+        </section>
+        <section class="preview-card preview-controls">
+          <div class="preview-current">
+            <div class="preview-current-head">
+              <div>
+                <div class="label">Current Move</div>
+                <h2 data-current-name></h2>
+                <p data-current-meta></p>
+              </div>
+              <span data-current-source></span>
+            </div>
+          </div>
+          <div class="preview-buttons">
+            <button class="btn-ghost" data-action="prev">Prev</button>
+            <button class="btn-primary" data-action="replay">Replay</button>
+            <button class="btn-ghost" data-action="next">Next</button>
+            <button class="btn-ghost" data-action="side">Attacker: Player</button>
+            <button class="btn-ghost" data-action="loop">Loop All: Off</button>
+          </div>
+        </section>
+        <section class="preview-stage-grid">
+          <div class="preview-stage-stack">
+            <div class="preview-card preview-stage-panel">
+              <div class="preview-stage-head">
+                <div>
+                  <div class="label">Desktop Battle View</div>
+                  <h2>Live Stage Preview</h2>
+                </div>
+                <span>Matches the battle composition</span>
+              </div>
+              ${this.viewportMarkup('desktop')}
+            </div>
+            <div class="preview-card preview-stage-panel">
+              <div class="preview-stage-head">
+                <div>
+                  <div class="label">Mobile Battle View</div>
+                  <h2>Phone Stage Preview</h2>
+                </div>
+                <span>Same move, narrower battle frame</span>
+              </div>
+              ${this.viewportMarkup('mobile')}
+            </div>
+          </div>
+          <aside class="preview-moves" data-move-list></aside>
+        </section>
+      </div>
+    `;
+  }
+
+  mount(root) {
+    root.innerHTML = this.markup();
+    this.nameNode = root.querySelector('[data-current-name]');
+    this.metaNode = root.querySelector('[data-current-meta]');
+    this.sourceNode = root.querySelector('[data-current-source]');
+    this.sideButton = root.querySelector('[data-action="side"]');
+    this.loopButton = root.querySelector('[data-action="loop"]');
+    this.moveList = root.querySelector('[data-move-list]');
+
+    root.querySelector('[data-action="prev"]').addEventListener('click', () => this.step(-1));
+    root.querySelector('[data-action="next"]').addEventListener('click', () => this.step(1));
+    root.querySelector('[data-action="replay"]').addEventListener('click', () => this.replay());
+    this.sideButton.addEventListener('click', () => {
+      this.side = this.side === 'player' ? 'foe' : 'player';
+      this.sideButton.textContent = `Attacker: ${this.side === 'player' ? 'Player' : 'Foe'}`;
+      this.replay();
+    });
+    this.loopButton.addEventListener('click', () => {
+      this.loopAll = !this.loopAll;
+      this.loopButton.textContent = `Loop All: ${this.loopAll ? 'On' : 'Off'}`;
+      this.loopButton.classList.toggle('active', this.loopAll);
+    });
+
+    this.viewports = Array.from(root.querySelectorAll('[data-viewport]')).map((node) => new BattleViewport(node, node.dataset.viewport, this.tilesets));
+    this.renderMoveList();
+    this.setMove(0);
+
+    const loop = (time) => {
+      this.tick(time);
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+
+  renderMoveList() {
+    this.moveList.innerHTML = this.data.moves.map((move, index) => `
+      <button class="move-chip${index === this.moveIndex ? ' active' : ''}" data-move-index="${index}">
+        <strong>#${move.num.toString().padStart(3, '0')}</strong>
+        <span>${escapeHtml(move.name)}</span>
+        <em>${escapeHtml(move.pointerLabel)}</em>
+      </button>
+    `).join('');
+    this.moveList.querySelectorAll('[data-move-index]').forEach((button) => {
+      button.addEventListener('click', () => this.setMove(Number(button.dataset.moveIndex)));
+    });
+  }
+
+  setMove(index) {
+    this.moveIndex = (index + this.data.moves.length) % this.data.moves.length;
+    this.currentMove = this.data.moves[this.moveIndex];
+    this.timeline = buildTimeline(this.currentMove, this.side, this.data.source);
+    this.startedAt = performance.now();
+    this.playing = true;
+    this.nameNode.textContent = this.currentMove.name;
+    this.metaNode.textContent = `${this.currentMove.type} | ${this.currentMove.category} | PP ${this.currentMove.pp ?? '-'} | Acc ${this.currentMove.accuracy ?? '-'}`;
+    this.sourceNode.textContent = this.currentMove.pointerLabel;
+    this.renderMoveList();
+  }
+
+  step(delta) {
+    this.setMove(this.moveIndex + delta);
+  }
+
+  replay() {
+    this.timeline = buildTimeline(this.currentMove, this.side, this.data.source);
+    this.startedAt = performance.now();
+    this.playing = true;
+  }
+
+  currentScene(time) {
+    const elapsed = time - this.startedAt;
+    const localTime = this.playing ? elapsed : Math.min(elapsed, this.timeline.total);
+    const activeFrame = this.timeline.segments.find((segment) => segment.kind === 'subframe' && localTime >= segment.start && localTime < segment.end)?.frame || null;
+    const activeEffects = [];
+    let darkPalette = false;
+    let hiddenAttacker = false;
+    let hiddenDefender = false;
+
+    for (const segment of this.timeline.segments) {
+      if (segment.kind !== 'special' || localTime < segment.start) continue;
+      if (segment.effect === 'SE_DARK_SCREEN_PALETTE') darkPalette = true;
+      if (segment.effect === 'SE_RESET_SCREEN_PALETTE') darkPalette = false;
+      if (segment.effect === 'SE_HIDE_MON_PIC') hiddenAttacker = true;
+      if (segment.effect === 'SE_SHOW_MON_PIC') hiddenAttacker = false;
+      if (segment.effect === 'SE_HIDE_ENEMY_MON_PIC') hiddenDefender = true;
+      if (segment.effect === 'SE_SHOW_ENEMY_MON_PIC') hiddenDefender = false;
+      if (localTime >= segment.start && localTime < segment.end) activeEffects.push({...segment, effectName: segment.effect});
+    }
+
+    const subframeEffect = this.timeline.segments.find((segment) => segment.kind === 'subframe' && segment.moveSpecificEffect && localTime >= segment.start && localTime < segment.end);
+    if (subframeEffect) {
+      activeEffects.push({
+        effectName: subframeEffect.moveSpecificEffect,
+        start: subframeEffect.start,
+        end: subframeEffect.start + (MOVE_SPECIFIC_DURATION[subframeEffect.moveSpecificEffect] || (subframeEffect.end - subframeEffect.start)),
+      });
+    }
+
+    if (darkPalette) activeEffects.push({effectName: 'SE_DARK_SCREEN_PALETTE', start: 0, end: localTime + 1});
+
+    const attacker = this.side === 'player' ? SAMPLE.player.name : SAMPLE.foe.name;
+    const defender = this.side === 'player' ? SAMPLE.foe.name : SAMPLE.player.name;
+    let log = `${attacker} used ${this.currentMove.name}!`;
+    if (this.timeline.impactTime !== null && localTime >= this.timeline.impactTime && localTime < this.timeline.resolveTime) {
+      log = `${this.currentMove.name} hits ${defender}!`;
+    } else if (localTime >= this.timeline.resolveTime) {
+      log = describeResolution(this.currentMove, attacker, defender);
+    }
+
+    const damage = estimateDamage(this.currentMove);
+    const hitProgress = this.timeline.impactTime === null ? 0 : clamp((localTime - this.timeline.impactTime) / 200, 0, 1);
+    const playerHp = this.side === 'foe' ? 1 - (damage * hitProgress) : 1;
+    const foeHp = this.side === 'player' ? 1 - (damage * hitProgress) : 1;
+
+    return {
+      time: localTime,
+      side: this.side,
+      source: this.data.source,
+      activeFrame,
+      activeEffects,
+      hiddenAttacker,
+      hiddenDefender,
+      hitActive: this.timeline.impactTime !== null && localTime >= this.timeline.impactTime && localTime < this.timeline.impactTime + 220,
+      playerHp,
+      foeHp,
+      log,
+    };
+  }
+
+  tick(time) {
+    if (!this.currentMove || !this.timeline) return;
+    const elapsed = time - this.startedAt;
+    if (elapsed >= this.timeline.total) {
+      if (this.loopAll) {
+        this.setMove(this.moveIndex + 1);
+        return;
+      }
+      this.playing = false;
+    }
+    const scene = this.currentScene(time);
+    for (const viewport of this.viewports) viewport.render(scene);
+  }
+}
 
 async function main() {
-  const style = document.createElement('style');
-  style.textContent = STYLES;
-  document.head.append(style);
-  const app = document.getElementById('app');
-  const {moves, sheetImage} = await load();
-  let moveIndex = 0;
-  let side = 'player';
-  let playing = true;
-  let lastSwitchAt = performance.now();
-  let activeMove = moves[moveIndex];
-
-  app.innerHTML = `
-    <div class="attack-preview-shell">
-      <header class="attack-preview-header">
-        <div>
-          <div class="label">Prototype</div>
-          <h1>Gen 1 Attack Animation Preview</h1>
-          <p>Desktop and mobile battle scenes run in sync so each move can be checked with timing, HP loss, hurt flicker, and mirrored foe casting before anything reaches the live battler.</p>
-        </div>
-        <div class="attack-preview-meta">
-          <span>165 moves</span>
-          <span>Family-mapped prototype</span>
-          <span>Not wired into battle yet</span>
-        </div>
-      </header>
-      <section class="attack-preview-stage-grid">
-        ${['desktop', 'mobile'].map((mode) => `
-          <article class="attack-preview-panel">
-            <div class="attack-preview-panel-head"><div><div class="label">${mode === 'desktop' ? 'Desktop' : 'Mobile'}</div><h2>Battle View</h2></div><div class="attack-preview-status" data-status-${mode}></div></div>
-            <div class="attack-preview-stage ${mode}" data-stage="${mode}">
-              <section class="battle-shell">
-                <div class="battle-stage">
-                  <div class="combatant combatant-foe">
-                    <div class="battle-status battle-status-foe">
-                      <div class="battle-status-top">
-                        <div class="battle-status-name">
-                          <div class="label">Opponent</div>
-                          <div class="battle-status-name-row"><strong>${SAMPLE.defender.name}</strong></div>
-                        </div>
-                      </div>
-                      <div class="battle-status-meta"><span>Lv100</span><span>OK</span></div>
-                      <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill" data-foe-hp-fill></div></div></div>
-                      <div class="tiny" data-foe-hp-value>100/100</div>
-                    </div>
-                    <div class="battle-sprite-wrap battle-sprite-foe">
-                      <div class="battle-shadow"></div>
-                      <img class="sprite battle front attack-preview-foe" src="${SAMPLE.defender.sprite}" alt="${SAMPLE.defender.name}">
-                    </div>
-                  </div>
-                  <div class="battle-feed"><div class="feed-line">Loading moves...</div></div>
-                  <div class="combatant combatant-player">
-                    <div class="battle-status battle-status-player">
-                      <div class="battle-status-top">
-                        <div class="battle-status-name">
-                          <div class="label">You</div>
-                          <div class="battle-status-name-row"><strong>${SAMPLE.attacker.name}</strong></div>
-                        </div>
-                      </div>
-                      <div class="battle-status-meta"><span>Lv100</span><span>OK</span></div>
-                      <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill" data-player-hp-fill></div></div></div>
-                      <div class="tiny" data-player-hp-value>100/100</div>
-                    </div>
-                    <div class="battle-sprite-wrap battle-sprite-player">
-                      <div class="battle-shadow"></div>
-                      <img class="sprite battle back attack-preview-player" src="${SAMPLE.attacker.sprite}" alt="${SAMPLE.attacker.name}">
-                    </div>
-                  </div>
-                  <canvas></canvas>
-                </div>
-              </section>
-            </div>
-          </article>
-        `).join('')}
-      </section>
-      <section class="attack-preview-controls">
-        <div class="attack-preview-current">
-          <div class="label">Current Move</div>
-          <h3 data-move-name>${activeMove.name}</h3>
-          <p data-move-detail>${activeMove.type} - ${activeMove.category} - ${activeMove.family}</p>
-        </div>
-        <div class="attack-preview-buttons">
-          <button class="ghost-btn" data-action="prev">Previous</button>
-          <button class="primary-btn" data-action="toggle">Pause</button>
-          <button class="ghost-btn" data-action="next">Next</button>
-        </div>
-      </section>
-      <section class="attack-preview-move-list">${moves.map(createMoveCard).join('')}</section>
-    </div>
-  `;
-
-  const desktop = new BattleViewport(app.querySelector('[data-stage="desktop"]'), 'desktop', sheetImage);
-  const mobile = new BattleViewport(app.querySelector('[data-stage="mobile"]'), 'mobile', sheetImage);
-  const moveName = app.querySelector('[data-move-name]');
-  const moveDetail = app.querySelector('[data-move-detail]');
-  const desktopStatus = app.querySelector('[data-status-desktop]');
-  const mobileStatus = app.querySelector('[data-status-mobile]');
-  const moveButtons = [...app.querySelectorAll('.attack-move-chip')];
-
-  function updateLabels() {
-    activeMove = moves[moveIndex];
-    moveName.textContent = activeMove.name;
-    moveDetail.textContent = `${activeMove.type} - ${activeMove.category} - ${activeMove.family}${activeMove.power ? ` - ${activeMove.power} BP` : ''}`;
-    const attacker = side === 'player' ? SAMPLE.attacker.name : SAMPLE.defender.name;
-    desktopStatus.textContent = `${attacker} uses ${activeMove.name}`;
-    mobileStatus.textContent = `${attacker} uses ${activeMove.name}`;
-    moveButtons.forEach((button) => button.classList.toggle('active', button.dataset.moveId === activeMove.id));
-  }
-
-  function advance() {
-    side = side === 'player' ? 'foe' : 'player';
-    if (side === 'player') moveIndex = (moveIndex + 1) % moves.length;
-    lastSwitchAt = performance.now();
-    updateLabels();
-  }
-
-  updateLabels();
-
-  app.querySelector('[data-action="prev"]').addEventListener('click', () => {
-    moveIndex = (moveIndex - 1 + moves.length) % moves.length;
-    side = 'player';
-    lastSwitchAt = performance.now();
-    updateLabels();
-  });
-
-  app.querySelector('[data-action="next"]').addEventListener('click', () => {
-    moveIndex = (moveIndex + 1) % moves.length;
-    side = 'player';
-    lastSwitchAt = performance.now();
-    updateLabels();
-  });
-
-  app.querySelector('[data-action="toggle"]').addEventListener('click', (event) => {
-    playing = !playing;
-    event.currentTarget.textContent = playing ? 'Pause' : 'Play';
-    lastSwitchAt = performance.now();
-  });
-
-  moveButtons.forEach((button) => button.addEventListener('click', () => {
-    moveIndex = moves.findIndex((move) => move.id === button.dataset.moveId);
-    side = 'player';
-    lastSwitchAt = performance.now();
-    updateLabels();
-  }));
-
-  function tick(now) {
-    const profile = FAMILY[activeMove.family] || FAMILY.impact;
-    const elapsed = now - lastSwitchAt;
-    const progress = clamp(elapsed / profile.duration, 0, 1);
-    const frame = buildFrameState(activeMove, side, progress);
-    const state = {family: activeMove, side, progress, ...frame};
-    desktop.setLog(frame.logText);
-    mobile.setLog(frame.logText);
-    desktop.render(state);
-    mobile.render(state);
-    if (playing && elapsed >= profile.duration + 280) advance();
-    requestAnimationFrame(tick);
-  }
-
-  requestAnimationFrame(tick);
+  injectStyles();
+  const response = await fetch(DATA_PATH);
+  if (!response.ok) throw new Error(`Failed to load ${DATA_PATH}`);
+  const data = await response.json();
+  const loadedTilesets = await Promise.all(
+    Object.entries(data.source.tilesets).map(async ([index, src]) => [index, await loadImage(src)]),
+  );
+  const tilesets = Object.fromEntries(loadedTilesets);
+  const app = new AttackPreviewApp(data, tilesets);
+  app.mount(document.getElementById('app'));
 }
 
 main().catch((error) => {
-  document.getElementById('app').innerHTML = `<pre>${error.stack || error.message}</pre>`;
+  console.error(error);
+  document.getElementById('app').innerHTML = `<pre style="padding:16px;color:#fff;background:#300">${escapeHtml(error.stack || error.message)}</pre>`;
 });
