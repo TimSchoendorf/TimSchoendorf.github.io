@@ -6,6 +6,9 @@
   "scripts": {
     "build:pokemon-draft:data": "node scripts/generate-pokemon-draft-data.mjs",
     "build:pokemon-draft:bundle": "esbuild src/pokemon-draft-app.js --bundle --platform=browser --format=iife --minify --outfile=games/pokemon-draft.js",
+    "build:pokemon-attack-preview:data": "node scripts/generate-pokemon-attack-preview-data.mjs",
+    "build:pokemon-attack-preview:bundle": "esbuild src/pokemon-attack-preview.js --bundle --platform=browser --format=iife --minify --outfile=games/pokemon-attack-preview.js",
+    "build:pokemon-attack-preview": "npm run build:pokemon-attack-preview:data && npm run build:pokemon-attack-preview:bundle",
     "build:pokemon-draft": "npm run build:pokemon-draft:data && npm run build:pokemon-draft:bundle",
     "check:pokemon-draft": "node scripts/check-pokemon-draft.mjs",
     "check:pokemon-draft:mechanics": "node scripts/check-pokemon-gen1-mechanics.mjs",
