@@ -64,6 +64,11 @@ const MOVE_SPECIFIC_DURATION = {
   FlashScreenEveryFourFrameBlocks: 8 * FRAME_MS,
 };
 
+const SOURCE_EFFECT_TILES = {
+  droplet: 0x71,
+  spiralBall: 0x7a,
+};
+
 const STYLES = `
   :root{color-scheme:dark;--bg:#07120d;--panel:#11231c;--line:rgba(173,209,188,.15);--text:#eef6ee;--muted:#b6cdbd;--gold:#e5c965;--accent:#8fd1ff}
   *{box-sizing:border-box}
@@ -438,7 +443,110 @@ class BattleViewport {
     this.ctx.restore();
   }
 
-  drawScreenParticles(kind, progress, metrics, side) {
+  sourcePointToStage(metrics, point) {
+    return {
+      x: metrics.x + (point.x * metrics.scale),
+      y: metrics.y + (point.y * metrics.scale),
+    };
+  }
+
+  drawSourceTile(tile, stagePoint, metrics, tileset = 0) {
+    const image = this.tilesets[tileset] || this.tilesets[0];
+    if (!image) return;
+    const tileSize = 8;
+    const sx = (tile % 16) * tileSize;
+    const sy = Math.floor(tile / 16) * tileSize;
+    const size = Math.round(tileSize * metrics.scale);
+    this.ctx.drawImage(image, sx, sy, tileSize, tileSize, Math.round(stagePoint.x), Math.round(stagePoint.y), size, size);
+  }
+
+  drawSourceDroplets(progress, metrics, effectData) {
+    const steps = 32;
+    const phase = Math.min(steps - 1, Math.floor(progress * steps));
+    const startX = -16 + (phase * 27);
+    for (const rowStart of [16, 24]) {
+      let x = startX;
+      let y = rowStart;
+      while (y < 112) {
+        this.drawSourceTile(SOURCE_EFFECT_TILES.droplet, this.sourcePointToStage(metrics, {x, y}), metrics, 0);
+        x += 27;
+        if (x >= 144) {
+          x -= 168;
+          y += 16;
+        }
+      }
+    }
+  }
+
+  drawSourceSpiral(progress, metrics, scene, effectData) {
+    const coords = effectData.spiralBallAnimationCoordinates || [];
+    if (!coords.length) return;
+    const frameIndex = Math.min(coords.length - 1, Math.floor(progress * coords.length));
+    const base = scene.side === 'player' ? {x: 0, y: 0} : {x: 80, y: -40};
+    for (let index = 0; index < 3; index += 1) {
+      const coord = coords[Math.max(0, frameIndex - (index * 2))] || coords[0];
+      this.drawSourceTile(
+        SOURCE_EFFECT_TILES.spiralBall,
+        this.sourcePointToStage(metrics, {x: base.x + coord.x, y: base.y + coord.y}),
+        metrics,
+        0,
+      );
+    }
+  }
+
+  drawSourceUpwardBalls(progress, metrics, scene, effectData, many = false) {
+    const player = scene.side === 'player';
+    const startY = player ? 48 : 0;
+    const defaultXs = [player ? 40 : 128];
+    const sourceXs = many
+      ? (player ? effectData.upwardBallsAnimXCoordinatesPlayerTurn : effectData.upwardBallsAnimXCoordinatesEnemyTurn) || defaultXs
+      : defaultXs;
+    const count = many ? 4 : 5;
+    const travel = 48;
+    for (const x of sourceXs) {
+      for (let index = 0; index < count; index += 1) {
+        const stagger = index / count;
+        const local = clamp((progress - stagger * 0.25) / Math.max(0.2, 1 - (stagger * 0.25)), 0, 1);
+        if (local <= 0 || local >= 1) continue;
+        const y = startY + (index * 8) - (travel * local);
+        this.drawSourceTile(SOURCE_EFFECT_TILES.spiralBall, this.sourcePointToStage(metrics, {x, y}), metrics, 0);
+      }
+    }
+  }
+
+  drawSourceFallingObjects(progress, metrics, effectData, count) {
+    const initialX = (effectData.fallingObjectsInitialXCoords || []).slice(0, count);
+    const initialMovement = (effectData.fallingObjectsInitialMovementData || []).slice(0, count);
+    const deltaXs = effectData.fallingObjectsDeltaXs || [];
+    if (!initialX.length || !initialMovement.length || !deltaXs.length) return;
+    const steps = 52;
+    const step = Math.min(steps, Math.floor(progress * steps));
+    for (let index = 0; index < count; index += 1) {
+      let y = index * 8;
+      let x = initialX[index];
+      let movement = initialMovement[index];
+      for (let iter = 0; iter < step; iter += 1) {
+        y += 2;
+        const movingLeft = Boolean(movement & 0x80);
+        const delta = deltaXs[movement & 0x7f] || 0;
+        x += movingLeft ? -delta : delta;
+        movement += 1;
+        if ((movement & 0x7f) === 9) movement = (movement & 0x80) ^ 0x80;
+      }
+      if (y >= 112) continue;
+      this.drawSourceTile(count <= 3 ? 0x37 : 0x71, this.sourcePointToStage(metrics, {x, y}), metrics, 1);
+    }
+  }
+
+  drawScreenParticles(kind, progress, metrics, side, scene) {
+    const effectData = scene.source.specialEffectData || {};
+    if (kind === 'droplets') return this.drawSourceDroplets(progress, metrics, effectData);
+    if (kind === 'spiral') return this.drawSourceSpiral(progress, metrics, scene, effectData);
+    if (kind === 'balls-up') return this.drawSourceUpwardBalls(progress, metrics, scene, effectData, false);
+    if (kind === 'many-balls-up') return this.drawSourceUpwardBalls(progress, metrics, scene, effectData, true);
+    if (kind === 'leaves') return this.drawSourceFallingObjects(progress, metrics, effectData, 3);
+    if (kind === 'petals') return this.drawSourceFallingObjects(progress, metrics, effectData, 20);
+
     const ctx = this.ctx;
     const centerX = metrics.anchorX;
     const centerY = metrics.anchorY;
@@ -534,26 +642,28 @@ class BattleViewport {
         this.stage.style.transform = `translate(${Math.sin(progress * Math.PI * 10) * 5}px, 0px)`;
         break;
       case 'SE_WATER_DROPLETS_EVERYWHERE':
-        this.drawScreenParticles('droplets', progress, {...metrics, anchorX: targetAnchor.x, anchorY: targetAnchor.y}, scene.side);
+        this.drawScreenParticles('droplets', progress, {...metrics, anchorX: targetAnchor.x, anchorY: targetAnchor.y}, scene.side, scene);
         break;
       case 'DoBlizzardSpecialEffects':
-        this.drawScreenParticles('petals', progress, {...metrics, anchorX: targetAnchor.x, anchorY: targetAnchor.y}, scene.side);
+        this.drawScreenParticles('petals', progress, {...metrics, anchorX: targetAnchor.x, anchorY: targetAnchor.y}, scene.side, scene);
         break;
       case 'SE_PETALS_FALLING':
-        this.drawScreenParticles('petals', progress, {...metrics, anchorX: targetAnchor.x, anchorY: targetAnchor.y}, scene.side);
+        this.drawScreenParticles('petals', progress, {...metrics, anchorX: targetAnchor.x, anchorY: targetAnchor.y}, scene.side, scene);
         break;
       case 'SE_LEAVES_FALLING':
-        this.drawScreenParticles('leaves', progress, {...metrics, anchorX: targetAnchor.x, anchorY: targetAnchor.y}, scene.side);
+        this.drawScreenParticles('leaves', progress, {...metrics, anchorX: targetAnchor.x, anchorY: targetAnchor.y}, scene.side, scene);
         break;
       case 'SE_SPIRAL_BALLS_INWARD':
-        this.drawScreenParticles('spiral', progress, {...metrics, anchorX: attackerAnchor.x, anchorY: attackerAnchor.y}, scene.side);
+        this.drawScreenParticles('spiral', progress, {...metrics, anchorX: attackerAnchor.x, anchorY: attackerAnchor.y}, scene.side, scene);
         break;
       case 'SE_SHOOT_BALLS_UPWARD':
+        this.drawScreenParticles('balls-up', progress, {...metrics, anchorX: attackerAnchor.x, anchorY: attackerAnchor.y}, scene.side, scene);
+        break;
       case 'SE_SHOOT_MANY_BALLS_UPWARD':
-        this.drawScreenParticles('balls-up', progress, {...metrics, anchorX: attackerAnchor.x, anchorY: attackerAnchor.y}, scene.side);
+        this.drawScreenParticles('many-balls-up', progress, {...metrics, anchorX: attackerAnchor.x, anchorY: attackerAnchor.y}, scene.side, scene);
         break;
       case 'SE_MOVE_MON_HORIZONTALLY':
-        attackerNode.style.transform = `translate(${scene.side === 'player' ? 18 : -18}px, 0px)`;
+        attackerNode.style.transform = `translate(${(scene.side === 'player' ? 8 : -8) * metrics.scale}px, 0px)`;
         break;
       case 'SE_RESET_MON_POSITION':
         attackerNode.style.transform = '';
@@ -580,24 +690,24 @@ class BattleViewport {
         defenderNode.style.opacity = Math.floor(progress * 10) % 2 === 0 ? '0.15' : '1';
         break;
       case 'SE_SLIDE_MON_OFF':
-        attackerNode.style.transform = `translate(${lerp(0, scene.side === 'player' ? -90 : 90, progress)}px, 0px)`;
+        attackerNode.style.transform = `translate(${lerp(0, scene.side === 'player' ? -64 * metrics.scale : 64 * metrics.scale, progress)}px, 0px)`;
         attackerNode.style.opacity = String(1 - progress);
         break;
       case 'SE_SLIDE_MON_HALF_OFF':
-        attackerNode.style.transform = `translate(${lerp(0, scene.side === 'player' ? -42 : 42, progress)}px, 0px)`;
+        attackerNode.style.transform = `translate(${lerp(0, scene.side === 'player' ? -32 * metrics.scale : 32 * metrics.scale, progress)}px, 0px)`;
         break;
       case 'SE_SLIDE_ENEMY_MON_OFF':
-        defenderNode.style.transform = `translate(${lerp(0, scene.side === 'player' ? 80 : -80, progress)}px, 0px)`;
+        defenderNode.style.transform = `translate(${lerp(0, scene.side === 'player' ? 64 * metrics.scale : -64 * metrics.scale, progress)}px, 0px)`;
         defenderNode.style.opacity = String(1 - progress);
         break;
       case 'SE_SLIDE_MON_UP':
-        attackerNode.style.transform = `translate(0px, ${lerp(0, -34, progress)}px)`;
+        attackerNode.style.transform = `translate(0px, ${lerp(0, -8 * metrics.scale, progress)}px)`;
         break;
       case 'SE_SLIDE_MON_DOWN':
-        attackerNode.style.transform = `translate(0px, ${lerp(0, 34, progress)}px)`;
+        attackerNode.style.transform = `translate(0px, ${lerp(0, 56 * metrics.scale, progress)}px)`;
         break;
       case 'SE_SLIDE_MON_DOWN_AND_HIDE':
-        attackerNode.style.transform = `translate(0px, ${lerp(0, 46, progress)}px)`;
+        attackerNode.style.transform = `translate(0px, ${lerp(0, 16 * metrics.scale, progress)}px)`;
         attackerNode.style.opacity = String(1 - progress);
         break;
       case 'SE_SQUISH_MON_PIC':
@@ -616,13 +726,17 @@ class BattleViewport {
         attackerNode.style.filter = `brightness(${1 + (Math.sin(progress * Math.PI * 6) * .8)}) saturate(1.3)`;
         break;
       case 'SE_SHAKE_ENEMY_HUD':
-        this.foeStatus.style.transform = `translate(${Math.sin(progress * Math.PI * 12) * 4}px, 0px)`;
+        this.foeStatus.style.transform = `translate(${Math.sin(progress * Math.PI * 12) * (2 * metrics.scale)}px, 0px)`;
         break;
       case 'SE_SHAKE_BACK_AND_FORTH':
-        attackerNode.style.transform = `translate(${Math.sin(progress * Math.PI * 10) * 12}px, 0px)`;
+        attackerNode.style.transform = `translate(${Math.sin(progress * Math.PI * 10) * (8 * metrics.scale)}px, 0px)`;
         break;
       case 'SE_WAVY_SCREEN':
-        this.field.style.transform = `translateX(${Math.sin(progress * Math.PI * 8) * 4}px)`;
+        {
+          const offsets = scene.source.specialEffectData?.wavyScreenLineOffsets || [];
+          const index = offsets.length ? Math.min(offsets.length - 1, Math.floor(progress * offsets.length)) : 0;
+          this.field.style.transform = `translateX(${(offsets[index] || 0) * metrics.scale}px)`;
+        }
         break;
       case 'DoExplodeSpecialEffects':
         this.drawFlash('#ffd26d', 0.16 + (Math.sin(progress * Math.PI * 3) * 0.32));

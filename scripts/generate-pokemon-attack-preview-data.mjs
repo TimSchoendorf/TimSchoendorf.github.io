@@ -15,6 +15,7 @@ const SOURCE_FILES = {
   baseCoords: 'data/battle_anims/base_coords.asm',
   specialEffects: 'data/battle_anims/special_effects.asm',
   specialEffectPointers: 'data/battle_anims/special_effect_pointers.asm',
+  engineBattleAnimations: 'engine/battle/animations.asm',
   moveTiles0: 'gfx/battle/move_anim_0.png',
   moveTiles1: 'gfx/battle/move_anim_1.png',
   gfxMacros: 'macros/gfx.asm',
@@ -251,6 +252,68 @@ function parseSpecialEffectPointers(text) {
   return map;
 }
 
+function extractAsmBlock(text, label) {
+  const lines = text.split(/\r?\n/);
+  const start = lines.findIndex((line) => stripComment(line) === `${label}:`);
+  if (start === -1) throw new Error(`Missing block ${label}`);
+  const block = [];
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const line = stripComment(lines[index]);
+    if (!line) continue;
+    if (/^[A-Za-z0-9_.]+:$/.test(line)) break;
+    block.push(line);
+  }
+  return block;
+}
+
+function parseAsmNumber(token) {
+  const trimmed = token.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith('$')) return Number.parseInt(trimmed.slice(1), 16);
+  if (trimmed === '-1') return -1;
+  return Number(trimmed);
+}
+
+function parseAsmByteList(text, label) {
+  const values = [];
+  for (const line of extractAsmBlock(text, label)) {
+    if (!(line.startsWith('db ') || line.startsWith('dc '))) continue;
+    const body = line.slice(3);
+    for (const token of body.split(',').map((part) => part.trim()).filter(Boolean)) {
+      const value = parseAsmNumber(token);
+      if (value !== null && !Number.isNaN(value)) values.push(value);
+    }
+  }
+  return values;
+}
+
+function parseAsmPairs(text, label, terminator = -1) {
+  const values = parseAsmByteList(text, label).filter((value) => value !== terminator);
+  const pairs = [];
+  for (let index = 0; index < values.length; index += 2) {
+    if (values[index + 1] === undefined) break;
+    pairs.push({y: values[index], x: values[index + 1]});
+  }
+  return pairs;
+}
+
+function parsePaletteSequence(text, label) {
+  const rows = [];
+  for (const line of extractAsmBlock(text, label)) {
+    if (!line.startsWith('dc ')) {
+      if (line === 'db 1') break;
+      continue;
+    }
+    const values = line
+      .slice(3)
+      .split(',')
+      .map((part) => parseAsmNumber(part))
+      .filter((value) => value !== null && !Number.isNaN(value));
+    if (values.length) rows.push(values);
+  }
+  return rows;
+}
+
 function normalizeAsmLabel(value) {
   return value.toLowerCase().replace(/[^a-z0-9]/g, '');
 }
@@ -416,6 +479,7 @@ async function main() {
     baseCoordsAsm,
     specialEffectsAsm,
     specialEffectPointersAsm,
+    engineBattleAnimationsAsm,
   ] = await Promise.all([
     ensureSource(SOURCE_FILES.moveAnimations),
     ensureSource(SOURCE_FILES.subanimations),
@@ -423,6 +487,7 @@ async function main() {
     ensureSource(SOURCE_FILES.baseCoords),
     ensureSource(SOURCE_FILES.specialEffects),
     ensureSource(SOURCE_FILES.specialEffectPointers),
+    ensureSource(SOURCE_FILES.engineBattleAnimations),
     copyTilesets(),
   ]);
 
@@ -452,9 +517,20 @@ async function main() {
       baseCoords: SOURCE_FILES.baseCoords,
       specialEffects: SOURCE_FILES.specialEffects,
       specialEffectPointers: SOURCE_FILES.specialEffectPointers,
+      engineBattleAnimations: SOURCE_FILES.engineBattleAnimations,
       tilesets: TILESET_PATHS,
       effectFrameMs: ATTACK_EFFECT_MS,
       coordinateSpace: {width: 160, height: 120, xOffset: 8, yOffset: 16},
+      specialEffectData: {
+        flashScreenLongMonochrome: parsePaletteSequence(engineBattleAnimationsAsm, 'FlashScreenLongMonochrome'),
+        spiralBallAnimationCoordinates: parseAsmPairs(engineBattleAnimationsAsm, 'SpiralBallAnimationCoordinates'),
+        upwardBallsAnimXCoordinatesPlayerTurn: parseAsmByteList(engineBattleAnimationsAsm, 'UpwardBallsAnimXCoordinatesPlayerTurn').filter((value) => value !== -1),
+        upwardBallsAnimXCoordinatesEnemyTurn: parseAsmByteList(engineBattleAnimationsAsm, 'UpwardBallsAnimXCoordinatesEnemyTurn').filter((value) => value !== -1),
+        fallingObjectsDeltaXs: parseAsmByteList(engineBattleAnimationsAsm, 'FallingObjects_DeltaXs'),
+        fallingObjectsInitialXCoords: parseAsmByteList(engineBattleAnimationsAsm, 'FallingObjects_InitialXCoords'),
+        fallingObjectsInitialMovementData: parseAsmByteList(engineBattleAnimationsAsm, 'FallingObjects_InitialMovementData'),
+        wavyScreenLineOffsets: parseAsmByteList(engineBattleAnimationsAsm, 'WavyScreenLineOffsets').filter((value) => value !== 0x80),
+      },
     },
     moves: moves.map((move, index) =>
       compileMove(
