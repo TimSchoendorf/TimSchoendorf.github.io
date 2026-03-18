@@ -8,6 +8,7 @@
     "build:pokemon-draft:bundle": "esbuild src/pokemon-draft-app.js --bundle --platform=browser --format=iife --minify --outfile=games/pokemon-draft.js",
     "build:pokemon-draft": "npm run build:pokemon-draft:data && npm run build:pokemon-draft:bundle",
     "check:pokemon-draft": "node scripts/check-pokemon-draft.mjs",
+    "check:pokemon-draft:mechanics": "node scripts/check-pokemon-gen1-mechanics.mjs",
     "check:pokemon-draft:moves": "node scripts/check-pokemon-gen1-moves.mjs",
     "check:soanw-studio": "node scripts/check-soanw-studio.mjs"
   },
