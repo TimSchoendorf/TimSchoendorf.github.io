@@ -873,7 +873,7 @@
     "power": 0,
     "accuracy": 90,
     "family": "leech",
-    "variant": "leech"
+    "variant": "leechseed"
   },
   {
     "id": "growth",
@@ -1389,7 +1389,7 @@
     "power": 0,
     "accuracy": 100,
     "family": "status-self",
-    "variant": "status-self"
+    "variant": "focusenergy"
   },
   {
     "id": "bide",
@@ -1653,7 +1653,7 @@
     "power": 100,
     "accuracy": 100,
     "family": "leech",
-    "variant": "leech"
+    "variant": "dreameater"
   },
   {
     "id": "poisongas",

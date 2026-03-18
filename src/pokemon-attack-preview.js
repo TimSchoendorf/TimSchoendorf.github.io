@@ -173,6 +173,9 @@ function describeWindup(move) {
     case 'metronome': return 'A wild wag starts an unknown effect.';
     case 'mimic': return 'A copy pattern forms over the target.';
     case 'mirrormove': return 'The foe\'s motion is reflected back.';
+    case 'focusenergy': return 'Energy narrows into a sharp focal point.';
+    case 'dreameater': return 'A dream-hungry aura reaches for the target.';
+    case 'leechseed': return 'Seeds drift in and prepare to latch on.';
     case 'wrap': return 'The target is about to be wrapped tight.';
     case 'clamp': return 'The trap closes from both sides.';
   }
@@ -201,6 +204,7 @@ function describeResolution(move, attacker, defender) {
     if (move.variant === 'mimic') return `${attacker} copies the foe's technique.`;
     if (move.variant === 'mirrormove') return `${attacker} mirrors the last motion.`;
     if (move.variant === 'teleport') return `${attacker} slips from view for a moment.`;
+    if (move.variant === 'focusenergy') return `${attacker} sharpens its fighting spirit.`;
     if (move.variant === 'selfdestruct' || move.variant === 'explosion') return `${attacker} is engulfed in the blast.`;
     if (move.variant === 'rest') return `${attacker} drifts into sleep.`;
     return `${move.name} finishes its status animation.`;
@@ -573,6 +577,7 @@ class BattleViewport {
       return;
     }
     if (variant === 'rest') {
+      this.drawCircle(ax, ay - 10, 18 + (Math.sin(progress * Math.PI) * 6), 'rgba(241, 248, 255, .14)', {alpha: 0.55, stroke: '#f6f6f4', lineWidth: 2});
       for (let index = 0; index < 3; index += 1) {
         const t = clamp(progress - (index * 0.12), 0, 1);
         const x = ax + 10 + (index * 8);
@@ -645,20 +650,22 @@ class BattleViewport {
     }
     if (variant === 'doubleteam') {
       const ghosts = [
-        {x: ax - 34, y: ay + 8, alpha: 0.42},
-        {x: ax + 34, y: ay + 2, alpha: 0.38},
-        {x: ax + 6, y: ay - 18, alpha: 0.3},
+        {x: ax - 44, y: ay + 10, alpha: 0.46},
+        {x: ax + 42, y: ay + 4, alpha: 0.42},
+        {x: ax + 10, y: ay - 28, alpha: 0.34},
+        {x: ax - 8, y: ay - 14, alpha: 0.24},
       ];
       for (const ghost of ghosts) {
-        this.drawMonGhost(side, ghost.x, ghost.y + 14, this.mode === 'mobile' ? 40 : 56, this.mode === 'mobile' ? 40 : 56, ghost.alpha);
+        this.drawMonGhost(side, ghost.x, ghost.y + 14, this.mode === 'mobile' ? 42 : 60, this.mode === 'mobile' ? 42 : 60, ghost.alpha);
       }
-      this.drawBurst(ax, ay - 10, 5, 16, progress, '#f3fbff');
+      this.drawBurst(ax, ay - 10, 7, 18, progress, '#f3fbff');
       return;
     }
     if (variant === 'minimize') {
       const pulse = 0.55 + (Math.sin(progress * Math.PI) * 0.12);
       this.drawCircle(ax, ay - 10, 16 + (progress * 10), '', {alpha: 0.8, stroke: '#eef7ff', lineWidth: 3});
       this.drawRect(ax, ay - 10, 26 * pulse, 26 * pulse, 'rgba(225,245,255,.18)', {alpha: 0.5, stroke: '#eef7ff', lineWidth: 2});
+      this.drawEllipse(ax, ay - 10, 24 + (progress * 8), 10 + (Math.sin(progress * Math.PI) * 4), '', {alpha: 0.5, stroke: '#d6ebff', lineWidth: 2});
       return;
     }
     if (variant === 'transform') {
@@ -796,6 +803,36 @@ class BattleViewport {
       this.drawMonGhost(side === 'player' ? 'foe' : 'player', ax + (dir * 18), ay + 8, this.mode === 'mobile' ? 38 : 54, this.mode === 'mobile' ? 38 : 54, 0.42);
       this.drawPolyline([[ax - 6, ay - 30], [dx - 10, dy - 12], [dx, dy]], '#e6f6ff', 3, {alpha: 0.68});
       this.drawBurst(dx, dy, 6, 18, progress, '#eefbff');
+      return;
+    }
+    if (variant === 'focusenergy') {
+      this.drawCircle(ax, ay - 14, 18 + (Math.sin(progress * Math.PI) * 6), '', {alpha: 0.88, stroke: '#ffd17b', lineWidth: 3});
+      this.drawStar(ax, ay - 14, 12 + (Math.sin(progress * Math.PI) * 2), '#ffd17b', {alpha: 0.78, stroke: '#fff0b6', lineWidth: 2, rotation: progress * 1.5});
+      this.drawPolyline([[ax - 24, ay - 14], [ax + 24, ay - 14]], '#ffe09d', 2, {alpha: 0.72});
+      this.drawPolyline([[ax, ay - 38], [ax, ay + 10]], '#ffe09d', 2, {alpha: 0.72});
+      return;
+    }
+    if (variant === 'dreameater') {
+      for (let index = 0; index < 5; index += 1) {
+        const t = clamp(progress - (index * 0.05), 0, 1);
+        const x = lerp(dx, ax, t);
+        const y = lerp(dy - 6, ay - 10, t) + (Math.sin((t * Math.PI * 4) + index) * 10);
+        this.drawCircle(x, y, 7, '#c28dff', {alpha: 0.72, stroke: '#f0d5ff', lineWidth: 2});
+      }
+      this.drawEllipse(dx, dy - 2, 34, 16, '', {alpha: 0.36, stroke: '#c28dff', lineWidth: 2});
+      return;
+    }
+    if (variant === 'leechseed') {
+      for (let index = 0; index < 3; index += 1) {
+        const t = clamp(progress * 1.06 - (index * 0.08), 0, 1);
+        const x = lerp(ax, dx, t) + ((index - 1) * 10);
+        const y = lerp(ay - 8, dy, t) - (Math.sin(t * Math.PI) * 8);
+        this.drawEllipse(x, y, 7, 11, '#b7d86b', {alpha: 0.92, stroke: '#eef6b2', lineWidth: 2, rotation: (index - 1) * 0.25});
+      }
+      if (progress > 0.55) {
+        this.drawPolyline([[dx - 8, dy + 20], [dx - 10, dy + 34], [dx - 6, dy + 48]], '#7cb35a', 3, {alpha: 0.82});
+        this.drawPolyline([[dx + 6, dy + 18], [dx + 10, dy + 34], [dx + 8, dy + 50]], '#7cb35a', 3, {alpha: 0.82});
+      }
       return;
     }
     if (variant === 'selfdestruct' || variant === 'explosion') {
