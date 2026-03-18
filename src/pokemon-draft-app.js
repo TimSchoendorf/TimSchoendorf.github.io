@@ -131,6 +131,7 @@ const BATTLE_DECOR_ZONES = [
 ];
 
 const ATTACK_FRAME_MS = 70;
+const ATTACK_TARGET_BIAS = 0;
 const ATTACK_SPECIAL_EFFECT_DURATION = {
   SE_DELAY_ANIMATION_10: 10 * ATTACK_FRAME_MS,
   SE_DARK_SCREEN_FLASH: 4 * ATTACK_FRAME_MS,
@@ -372,7 +373,22 @@ function buildAttackTimeline(move, side, source) {
       cursor += duration;
     }
   }
-  return {segments, total: cursor + 120};
+  let total = cursor + 120;
+  if (total > 5000) {
+    for (const segment of segments) {
+      segment.start /= 2;
+      segment.end /= 2;
+    }
+    total /= 2;
+  }
+  return {segments, total};
+}
+
+function planBattleAnimations(lines) {
+  return lines.map((line, index) => {
+    if (!line.startsWith('|move|')) return false;
+    return shouldAnimateMove(lines, index);
+  });
 }
 
 function normalizeAttackMoveName(value = '') {
@@ -387,9 +403,10 @@ function resolveAttackPreviewMove(assets, moveName) {
 }
 
 class BattleAttackViewport {
-  constructor(stage, field, canvas, playerSprite, foeSprite, playerStatus, foeStatus, tilesets, source) {
+  constructor(stage, field, feed, canvas, playerSprite, foeSprite, playerStatus, foeStatus, tilesets, source) {
     this.stage = stage;
     this.field = field;
+    this.feed = feed;
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
@@ -427,8 +444,9 @@ class BattleAttackViewport {
   fieldMetrics() {
     const stageRect = this.stage.getBoundingClientRect();
     const fieldRect = this.field.getBoundingClientRect();
+    const feedRect = this.feed.getBoundingClientRect();
     const width = fieldRect.width;
-    const height = fieldRect.height;
+    const height = Math.max(0, (feedRect.top - stageRect.top) - 6);
     const scale = Math.min(width / this.source.coordinateSpace.width, height / this.source.coordinateSpace.height);
     const renderWidth = this.source.coordinateSpace.width * scale;
     const renderHeight = this.source.coordinateSpace.height * scale;
@@ -498,9 +516,17 @@ class BattleAttackViewport {
       y: scene.metrics.y + (center.y * scene.metrics.scale),
     };
     const progress = Math.min(Math.max((((centerPx.x - attacker.original.x) * lineX) + ((centerPx.y - attacker.original.y) * lineY)) / lineLengthSq, 0), 1);
-    return {
+    const baseOffset = {
       x: lerp(attacker.offset.x, target.offset.x, progress),
       y: lerp(attacker.offset.y, target.offset.y, progress),
+    };
+    const dirX = target.actual.x - attacker.actual.x;
+    const dirY = target.actual.y - attacker.actual.y;
+    const dirLen = Math.hypot(dirX, dirY) || 1;
+    const bias = ATTACK_TARGET_BIAS * scene.metrics.scale;
+    return {
+      x: baseOffset.x + ((dirX / dirLen) * bias),
+      y: baseOffset.y + ((dirY / dirLen) * bias),
     };
   }
 
@@ -785,13 +811,33 @@ class BattleAttackViewport {
 function currentBattleViewport(assets) {
   const stage = document.querySelector('.battle-stage');
   const field = document.querySelector('[data-battle-attack-field]');
+  const feed = document.querySelector('.battle-feed');
   const canvas = document.querySelector('[data-battle-attack-layer]');
   const playerSprite = document.querySelector('.combatant-player .sprite.battle');
   const foeSprite = document.querySelector('.combatant-foe .sprite.battle');
   const playerStatus = document.querySelector('.battle-status-player');
   const foeStatus = document.querySelector('.battle-status-foe');
-  if (!stage || !field || !canvas || !playerSprite || !foeSprite || !playerStatus || !foeStatus) return null;
-  return new BattleAttackViewport(stage, field, canvas, playerSprite, foeSprite, playerStatus, foeStatus, assets.tilesets, assets.data.source);
+  if (!stage || !field || !feed || !canvas || !playerSprite || !foeSprite || !playerStatus || !foeStatus) return null;
+  return new BattleAttackViewport(stage, field, feed, canvas, playerSprite, foeSprite, playerStatus, foeStatus, assets.tilesets, assets.data.source);
+}
+
+function shouldAnimateMove(lines, moveIndex) {
+  let sawFailure = false;
+  let sawSuccess = false;
+  for (let index = moveIndex + 1; index < lines.length; index += 1) {
+    const parts = lines[index].split('|');
+    const type = parts[1];
+    if (type === 'move' || type === 'switch' || type === 'turn' || type === 'win') break;
+    if (['-miss', '-immune', '-fail', '-notarget'].includes(type)) sawFailure = true;
+    if ([
+      '-damage', '-heal', '-status', '-curestatus', '-clearstatus', '-start', '-end', '-activate', '-sidestart',
+      '-sideend', '-fieldstart', '-fieldend', '-prepare', '-singleturn', '-singlemove', '-boost', '-unboost',
+      '-clearboost', '-clearallboost', '-clearpositiveboost', '-clearnegativeboost', '-setboost', '-supereffective',
+      '-resisted', '-crit', '-hitcount', '-ohko', 'faint',
+    ].includes(type)) sawSuccess = true;
+  }
+  if (sawFailure && !sawSuccess) return false;
+  return true;
 }
 
 async function playBattleMoveAnimation(moveName, sideKey) {
@@ -2059,7 +2105,7 @@ function flashSide(sideKey, cls) {
   }, 280);
 }
 
-async function handleBattleLine(line) {
+async function handleBattleLine(line, shouldAnimate = false) {
   if (!line.startsWith('|')) return 0;
   const parts = line.split('|');
   const type = parts[1];
@@ -2072,7 +2118,7 @@ async function handleBattleLine(line) {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
     state.lastMove[sideKey] = parts[3];
     render();
-    await playBattleMoveAnimation(parts[3], sideKey);
+    if (shouldAnimate) await playBattleMoveAnimation(parts[3], sideKey);
     return 120;
   }
   if (type === 'switch') {
@@ -2124,8 +2170,10 @@ async function handleBattleLine(line) {
 
 async function animateBattleChunk(chunk) {
   state.battleAnimating = true;
-  for (const line of chunk.split('\n').filter(Boolean)) {
-    const delay = await handleBattleLine(line);
+  const lines = chunk.split('\n').filter(Boolean);
+  const animationPlan = planBattleAnimations(lines);
+  for (let index = 0; index < lines.length; index += 1) {
+    const delay = await handleBattleLine(lines[index], animationPlan[index]);
     render();
     if (delay) await sleep(delay);
   }
@@ -3281,7 +3329,7 @@ function injectStyles() {
     }
     .battle-field{
       position:absolute;
-      inset:0 0 21% 0;
+      inset:0;
       z-index:3;
       pointer-events:none;
     }
@@ -5039,4 +5087,8 @@ window.__pokemonBattlerDebug = {
   ensureAttackAnimationAssets,
   playBattleMoveAnimation,
   startBattleSimulation,
+  shouldAnimateMove,
+  planBattleAnimations,
+  buildAttackTimeline,
+  resolveAttackPreviewMove,
 };
