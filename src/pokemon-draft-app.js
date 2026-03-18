@@ -462,7 +462,7 @@ class BattleAttackViewport {
     const originalPlayer = {x: metrics.x + (40 * metrics.scale), y: metrics.y + (84 * metrics.scale)};
     const originalFoe = {x: metrics.x + (112 * metrics.scale), y: metrics.y + (40 * metrics.scale)};
     const actualPlayerAttack = this.spriteImpactPoint(this.playerSprite, {x: 0.62, y: 0.42});
-    const actualPlayerTarget = this.spriteImpactPoint(this.playerSprite, {x: 0.74, y: 0.5});
+    const actualPlayerTarget = this.spriteImpactPoint(this.playerSprite, {x: 0.44, y: 0.72});
     const actualFoeAttack = this.spriteImpactPoint(this.foeSprite, {x: 0.26, y: 0.56});
     const actualFoeTarget = this.spriteImpactPoint(this.foeSprite, {x: 0.3, y: 0.58});
     return {
