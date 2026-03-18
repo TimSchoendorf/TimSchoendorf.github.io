@@ -141,7 +141,7 @@
     "power": 0,
     "accuracy": 30,
     "family": "slash",
-    "variant": "slash"
+    "variant": "guillotine"
   },
   {
     "id": "razorwind",
@@ -381,7 +381,7 @@
     "power": 0,
     "accuracy": 30,
     "family": "horn",
-    "variant": "horn"
+    "variant": "horndrill"
   },
   {
     "id": "tackle",
@@ -645,7 +645,7 @@
     "power": 0,
     "accuracy": 100,
     "family": "status-self",
-    "variant": "status-self"
+    "variant": "mist"
   },
   {
     "id": "watergun",
@@ -1077,7 +1077,7 @@
     "power": 0,
     "accuracy": 30,
     "family": "rock",
-    "variant": "rock"
+    "variant": "fissure"
   },
   {
     "id": "dig",
@@ -1269,7 +1269,7 @@
     "power": 0,
     "accuracy": 100,
     "family": "barrier",
-    "variant": "barrier"
+    "variant": "harden"
   },
   {
     "id": "minimize",
@@ -1317,7 +1317,7 @@
     "power": 0,
     "accuracy": 100,
     "family": "barrier",
-    "variant": "barrier"
+    "variant": "withdraw"
   },
   {
     "id": "defensecurl",
@@ -1497,7 +1497,7 @@
     "power": 65,
     "accuracy": 85,
     "family": "rock",
-    "variant": "rock"
+    "variant": "boneclub"
   },
   {
     "id": "fireblast",
@@ -1605,7 +1605,7 @@
     "power": 0,
     "accuracy": 80,
     "family": "confusion",
-    "variant": "confusion"
+    "variant": "kinesis"
   },
   {
     "id": "softboiled",
@@ -1641,7 +1641,7 @@
     "power": 0,
     "accuracy": 75,
     "family": "status-target",
-    "variant": "status-target"
+    "variant": "glare"
   },
   {
     "id": "dreameater",
@@ -1773,7 +1773,7 @@
     "power": 0,
     "accuracy": 70,
     "family": "status-target",
-    "variant": "status-target"
+    "variant": "flash"
   },
   {
     "id": "psywave",
@@ -1857,7 +1857,7 @@
     "power": 50,
     "accuracy": 90,
     "family": "rock",
-    "variant": "rock"
+    "variant": "bonemerang"
   },
   {
     "id": "rest",
@@ -1917,7 +1917,7 @@
     "power": 0,
     "accuracy": 100,
     "family": "status-self",
-    "variant": "status-self"
+    "variant": "conversion"
   },
   {
     "id": "triattack",
