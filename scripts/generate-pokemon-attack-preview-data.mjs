@@ -262,12 +262,12 @@ function buildNormalizedLookup(map) {
 }
 
 function effectiveTransform(type, side) {
-  if (type === 'SUBANIMTYPE_REVERSE') return {flip: 'SUBANIMTYPE_NORMAL', reverse: true};
   if (side === 'player') {
     if (type === 'SUBANIMTYPE_ENEMY') return {flip: 'SUBANIMTYPE_HFLIP', reverse: false};
     return {flip: 'SUBANIMTYPE_NORMAL', reverse: false};
   }
   if (type === 'SUBANIMTYPE_ENEMY') return {flip: 'SUBANIMTYPE_NORMAL', reverse: false};
+  if (type === 'SUBANIMTYPE_REVERSE') return {flip: 'SUBANIMTYPE_NORMAL', reverse: true};
   return {flip: type, reverse: false};
 }
 

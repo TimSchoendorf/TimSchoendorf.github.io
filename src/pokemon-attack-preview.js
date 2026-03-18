@@ -412,8 +412,8 @@ class BattleViewport {
     };
     const progress = clamp((((centerPx.x - attacker.original.x) * lineX) + ((centerPx.y - attacker.original.y) * lineY)) / lineLengthSq, 0, 1);
     return {
-      x: lerp(attacker.offset.x, target.offset.x, progress) / scene.metrics.scale,
-      y: lerp(attacker.offset.y, target.offset.y, progress) / scene.metrics.scale,
+      x: lerp(attacker.offset.x, target.offset.x, progress),
+      y: lerp(attacker.offset.y, target.offset.y, progress),
     };
   }
 
@@ -653,15 +653,15 @@ class BattleViewport {
     if (scene.activeFrame) {
       const frameOffset = this.frameOffset(scene);
       this.frameCtx.clearRect(0, 0, this.frameCanvas.width, this.frameCanvas.height);
-      for (const sprite of scene.activeFrame.sprites) this.drawSpriteTile(this.frameCtx, sprite, frameOffset);
+      for (const sprite of scene.activeFrame.sprites) this.drawSpriteTile(this.frameCtx, sprite);
       this.ctx.drawImage(
         this.frameCanvas,
         0,
         0,
         this.frameCanvas.width,
         this.frameCanvas.height,
-        metrics.x,
-        metrics.y,
+        metrics.x + frameOffset.x,
+        metrics.y + frameOffset.y,
         metrics.width,
         metrics.height,
       );
