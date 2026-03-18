@@ -431,10 +431,9 @@ class BattleAttackViewport {
     this.ctx.imageSmoothingEnabled = false;
   }
 
-  spriteImpactPoint(node, role) {
+  spriteImpactPoint(node, profile) {
     const stageRect = this.stage.getBoundingClientRect();
     const rect = node.getBoundingClientRect();
-    const profile = role === 'foe' ? {x: 0.26, y: 0.56} : {x: 0.62, y: 0.42};
     return {
       x: (rect.left - stageRect.left) + (rect.width * profile.x),
       y: (rect.top - stageRect.top) + (rect.height * profile.y),
@@ -462,11 +461,25 @@ class BattleAttackViewport {
   battleAnchors(metrics) {
     const originalPlayer = {x: metrics.x + (40 * metrics.scale), y: metrics.y + (84 * metrics.scale)};
     const originalFoe = {x: metrics.x + (112 * metrics.scale), y: metrics.y + (40 * metrics.scale)};
-    const actualPlayer = this.spriteImpactPoint(this.playerSprite, 'player');
-    const actualFoe = this.spriteImpactPoint(this.foeSprite, 'foe');
+    const actualPlayerAttack = this.spriteImpactPoint(this.playerSprite, {x: 0.62, y: 0.42});
+    const actualPlayerTarget = this.spriteImpactPoint(this.playerSprite, {x: 0.74, y: 0.5});
+    const actualFoeAttack = this.spriteImpactPoint(this.foeSprite, {x: 0.26, y: 0.56});
+    const actualFoeTarget = this.spriteImpactPoint(this.foeSprite, {x: 0.3, y: 0.58});
     return {
-      player: {original: originalPlayer, actual: actualPlayer, offset: {x: actualPlayer.x - originalPlayer.x, y: actualPlayer.y - originalPlayer.y}},
-      foe: {original: originalFoe, actual: actualFoe, offset: {x: actualFoe.x - originalFoe.x, y: actualFoe.y - originalFoe.y}},
+      player: {
+        original: originalPlayer,
+        attacker: actualPlayerAttack,
+        target: actualPlayerTarget,
+        attackOffset: {x: actualPlayerAttack.x - originalPlayer.x, y: actualPlayerAttack.y - originalPlayer.y},
+        targetOffset: {x: actualPlayerTarget.x - originalPlayer.x, y: actualPlayerTarget.y - originalPlayer.y},
+      },
+      foe: {
+        original: originalFoe,
+        attacker: actualFoeAttack,
+        target: actualFoeTarget,
+        attackOffset: {x: actualFoeAttack.x - originalFoe.x, y: actualFoeAttack.y - originalFoe.y},
+        targetOffset: {x: actualFoeTarget.x - originalFoe.x, y: actualFoeTarget.y - originalFoe.y},
+      },
     };
   }
 
@@ -517,11 +530,11 @@ class BattleAttackViewport {
     };
     const progress = Math.min(Math.max((((centerPx.x - attacker.original.x) * lineX) + ((centerPx.y - attacker.original.y) * lineY)) / lineLengthSq, 0), 1);
     const baseOffset = {
-      x: lerp(attacker.offset.x, target.offset.x, progress),
-      y: lerp(attacker.offset.y, target.offset.y, progress),
+      x: lerp(attacker.attackOffset.x, target.targetOffset.x, progress),
+      y: lerp(attacker.attackOffset.y, target.targetOffset.y, progress),
     };
-    const dirX = target.actual.x - attacker.actual.x;
-    const dirY = target.actual.y - attacker.actual.y;
+    const dirX = target.target.x - attacker.attacker.x;
+    const dirY = target.target.y - attacker.attacker.y;
     const dirLen = Math.hypot(dirX, dirY) || 1;
     const bias = ATTACK_TARGET_BIAS * scene.metrics.scale;
     return {
