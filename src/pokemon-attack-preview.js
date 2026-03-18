@@ -275,6 +275,11 @@ class BattleViewport {
     this.canvas = root.querySelector('canvas');
     this.ctx = this.canvas.getContext('2d');
     this.ctx.imageSmoothingEnabled = false;
+    this.frameCanvas = document.createElement('canvas');
+    this.frameCanvas.width = 160;
+    this.frameCanvas.height = 120;
+    this.frameCtx = this.frameCanvas.getContext('2d');
+    this.frameCtx.imageSmoothingEnabled = false;
     this.playerSprite = root.querySelector('.attack-preview-player');
     this.foeSprite = root.querySelector('.attack-preview-foe');
     this.playerStatus = root.querySelector('.battle-status-player');
@@ -367,20 +372,19 @@ class BattleViewport {
     value.textContent = `${percent}/100`;
   }
 
-  drawSpriteTile(sprite, metrics, offset = {x: 0, y: 0}) {
+  drawSpriteTile(ctx, sprite, offset = {x: 0, y: 0}) {
     const image = this.tilesets[sprite.tileset] || this.tilesets[0];
     if (!image) return;
     const tileSize = 8;
     const tileX = (sprite.tile % 16) * tileSize;
     const tileY = Math.floor(sprite.tile / 16) * tileSize;
-    const drawX = metrics.x + (sprite.x * metrics.scale) + offset.x;
-    const drawY = metrics.y + (sprite.y * metrics.scale) + offset.y;
-    const size = tileSize * metrics.scale;
-    this.ctx.save();
-    this.ctx.translate(drawX + (size / 2), drawY + (size / 2));
-    this.ctx.scale(sprite.flipX ? -1 : 1, sprite.flipY ? -1 : 1);
-    this.ctx.drawImage(image, tileX, tileY, tileSize, tileSize, -(size / 2), -(size / 2), size, size);
-    this.ctx.restore();
+    const drawX = Math.round(sprite.x + offset.x);
+    const drawY = Math.round(sprite.y + offset.y);
+    ctx.save();
+    ctx.translate(drawX + (tileSize / 2), drawY + (tileSize / 2));
+    ctx.scale(sprite.flipX ? -1 : 1, sprite.flipY ? -1 : 1);
+    ctx.drawImage(image, tileX, tileY, tileSize, tileSize, -(tileSize / 2), -(tileSize / 2), tileSize, tileSize);
+    ctx.restore();
   }
 
   frameOffset(scene) {
@@ -408,8 +412,8 @@ class BattleViewport {
     };
     const progress = clamp((((centerPx.x - attacker.original.x) * lineX) + ((centerPx.y - attacker.original.y) * lineY)) / lineLengthSq, 0, 1);
     return {
-      x: lerp(attacker.offset.x, target.offset.x, progress),
-      y: lerp(attacker.offset.y, target.offset.y, progress),
+      x: lerp(attacker.offset.x, target.offset.x, progress) / scene.metrics.scale,
+      y: lerp(attacker.offset.y, target.offset.y, progress) / scene.metrics.scale,
     };
   }
 
@@ -648,7 +652,19 @@ class BattleViewport {
 
     if (scene.activeFrame) {
       const frameOffset = this.frameOffset(scene);
-      for (const sprite of scene.activeFrame.sprites) this.drawSpriteTile(sprite, metrics, frameOffset);
+      this.frameCtx.clearRect(0, 0, this.frameCanvas.width, this.frameCanvas.height);
+      for (const sprite of scene.activeFrame.sprites) this.drawSpriteTile(this.frameCtx, sprite, frameOffset);
+      this.ctx.drawImage(
+        this.frameCanvas,
+        0,
+        0,
+        this.frameCanvas.width,
+        this.frameCanvas.height,
+        metrics.x,
+        metrics.y,
+        metrics.width,
+        metrics.height,
+      );
     }
 
     for (const effect of scene.activeEffects) {
