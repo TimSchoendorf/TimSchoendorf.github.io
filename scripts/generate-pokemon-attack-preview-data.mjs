@@ -272,6 +272,7 @@ function variantFor(move) {
     psybeam: 'psybeam',
     nightshade: 'nightshade',
     doubleteam: 'doubleteam',
+    minimize: 'minimize',
     reflect: 'reflect',
     lightscreen: 'lightscreen',
     barrier: 'barrier',

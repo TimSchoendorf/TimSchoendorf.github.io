@@ -158,6 +158,8 @@ function describeWindup(move) {
     case 'powder-spore': return 'Heavy spores rain down on the target.';
     case 'rest': return 'The user settles into rest.';
     case 'doubleteam': return 'Afterimages begin to split apart.';
+    case 'minimize': return 'The user compresses into a smaller outline.';
+    case 'transform': return 'The user starts to copy the opposing form.';
     case 'reflect': return 'A reflective wall flashes into place.';
     case 'lightscreen': return 'A light screen shimmers into place.';
     case 'wrap': return 'The target is about to be wrapped tight.';
@@ -182,6 +184,8 @@ function describeResolution(move, attacker, defender) {
     if (move.family === 'barrier') return `${attacker} is covered by a barrier.`;
     if (move.family === 'substitute') return `${attacker} hides behind a substitute.`;
     if (move.variant === 'doubleteam') return `${attacker} is surrounded by afterimages.`;
+    if (move.variant === 'minimize') return `${attacker} becomes harder to pin down.`;
+    if (move.variant === 'transform') return `${attacker} takes on the opposing shape.`;
     if (move.variant === 'rest') return `${attacker} drifts into sleep.`;
     return `${move.name} finishes its status animation.`;
   }
@@ -253,6 +257,14 @@ class BattleViewport {
     this.foeSprite.style.transform = '';
     this.playerSprite.style.opacity = '';
     this.foeSprite.style.opacity = '';
+  }
+
+  drawMonGhost(side, x, y, width, height, alpha = 0.4) {
+    const image = side === 'player' ? this.playerSprite : this.foeSprite;
+    this.ctx.save();
+    this.ctx.globalAlpha = alpha;
+    this.ctx.drawImage(image, x - (width / 2), y - height, width, height);
+    this.ctx.restore();
   }
 
   drawSprite(name, x, y, scale, {alpha = 1, rotation = 0, flipX = false} = {}) {
@@ -584,14 +596,38 @@ class BattleViewport {
     }
     if (variant === 'doubleteam') {
       const ghosts = [
-        {x: ax - 30, y: ay - 4, alpha: 0.55},
-        {x: ax + 28, y: ay - 10, alpha: 0.5},
-        {x: ax + 6, y: ay - 30, alpha: 0.42},
+        {x: ax - 34, y: ay + 8, alpha: 0.42},
+        {x: ax + 34, y: ay + 2, alpha: 0.38},
+        {x: ax + 6, y: ay - 18, alpha: 0.3},
       ];
       for (const ghost of ghosts) {
-        this.drawRect(ghost.x, ghost.y, 30, 54, 'rgba(207,236,255,.18)', {alpha: ghost.alpha, stroke: 'rgba(225,246,255,.72)', lineWidth: 2});
+        this.drawMonGhost(side, ghost.x, ghost.y + 14, this.mode === 'mobile' ? 40 : 56, this.mode === 'mobile' ? 40 : 56, ghost.alpha);
       }
       this.drawBurst(ax, ay - 10, 5, 16, progress, '#f3fbff');
+      return;
+    }
+    if (variant === 'minimize') {
+      const pulse = 0.55 + (Math.sin(progress * Math.PI) * 0.12);
+      this.drawCircle(ax, ay - 10, 16 + (progress * 10), '', {alpha: 0.8, stroke: '#eef7ff', lineWidth: 3});
+      this.drawRect(ax, ay - 10, 26 * pulse, 26 * pulse, 'rgba(225,245,255,.18)', {alpha: 0.5, stroke: '#eef7ff', lineWidth: 2});
+      return;
+    }
+    if (variant === 'transform') {
+      const t = progress < 0.5 ? progress / 0.5 : (progress - 0.5) / 0.5;
+      if (progress < 0.5) {
+        this.drawBurst(ax, ay - 6, 8, 22, progress * 2, '#d9f6ff');
+        this.drawCircle(ax, ay - 8, 18 + (progress * 16), '', {alpha: 0.9 - progress, stroke: '#d9f6ff', lineWidth: 3});
+      } else {
+        this.drawBurst(ax, ay - 6, 8, 22, t, '#d9f6ff');
+        this.drawMonGhost(side === 'player' ? 'foe' : 'player', ax, ay + 10, this.mode === 'mobile' ? 42 : 58, this.mode === 'mobile' ? 42 : 58, 0.35 + (t * 0.25));
+      }
+      return;
+    }
+    if (variant === 'substitute') {
+      const x = ax;
+      const y = ay - 20;
+      this.drawRect(x, y, 46, 56, 'rgba(127,215,144,.3)', {stroke: '#c4ffd0', lineWidth: 3, alpha: 0.9});
+      this.drawMonGhost(side, x, y + 12, this.mode === 'mobile' ? 30 : 42, this.mode === 'mobile' ? 30 : 42, 0.24);
       return;
     }
     if (variant === 'reflect' || variant === 'lightscreen') {
