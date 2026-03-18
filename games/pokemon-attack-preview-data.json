@@ -753,7 +753,7 @@
     "power": 150,
     "accuracy": 90,
     "family": "beam",
-    "variant": "beam"
+    "variant": "hyperbeam"
   },
   {
     "id": "peck",
@@ -813,7 +813,7 @@
     "power": 1,
     "accuracy": 100,
     "family": "seismic",
-    "variant": "seismic"
+    "variant": "counter"
   },
   {
     "id": "seismictoss",
@@ -1221,7 +1221,7 @@
     "power": 0,
     "accuracy": 100,
     "family": "status-self",
-    "variant": "status-self"
+    "variant": "mimic"
   },
   {
     "id": "screech",
@@ -1401,7 +1401,7 @@
     "power": 0,
     "accuracy": 100,
     "family": "seismic",
-    "variant": "seismic"
+    "variant": "bide"
   },
   {
     "id": "metronome",
@@ -1413,7 +1413,7 @@
     "power": 0,
     "accuracy": 100,
     "family": "status-self",
-    "variant": "status-self"
+    "variant": "metronome"
   },
   {
     "id": "mirrormove",
@@ -1425,7 +1425,7 @@
     "power": 0,
     "accuracy": 100,
     "family": "status-self",
-    "variant": "status-self"
+    "variant": "mirrormove"
   },
   {
     "id": "selfdestruct",

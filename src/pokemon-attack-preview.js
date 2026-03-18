@@ -166,6 +166,13 @@ function describeWindup(move) {
     case 'lightscreen': return 'A light screen shimmers into place.';
     case 'haze': return 'A cold haze spreads over the field.';
     case 'disable': return 'A sealing mark forms around the target.';
+    case 'bide': return 'Energy is stored behind a tight stance.';
+    case 'counter': return 'The user braces for a sharp counterblow.';
+    case 'hyperbeam': return 'A blinding beam swells at the user\'s side.';
+    case 'teleport': return 'The user begins to blink out of sight.';
+    case 'metronome': return 'A wild wag starts an unknown effect.';
+    case 'mimic': return 'A copy pattern forms over the target.';
+    case 'mirrormove': return 'The foe\'s motion is reflected back.';
     case 'wrap': return 'The target is about to be wrapped tight.';
     case 'clamp': return 'The trap closes from both sides.';
   }
@@ -190,6 +197,10 @@ function describeResolution(move, attacker, defender) {
     if (move.variant === 'doubleteam') return `${attacker} is surrounded by afterimages.`;
     if (move.variant === 'minimize') return `${attacker} becomes harder to pin down.`;
     if (move.variant === 'transform') return `${attacker} takes on the opposing shape.`;
+    if (move.variant === 'metronome') return `${attacker} triggers a strange effect.`;
+    if (move.variant === 'mimic') return `${attacker} copies the foe's technique.`;
+    if (move.variant === 'mirrormove') return `${attacker} mirrors the last motion.`;
+    if (move.variant === 'teleport') return `${attacker} slips from view for a moment.`;
     if (move.variant === 'selfdestruct' || move.variant === 'explosion') return `${attacker} is engulfed in the blast.`;
     if (move.variant === 'rest') return `${attacker} drifts into sleep.`;
     return `${move.name} finishes its status animation.`;
@@ -726,6 +737,65 @@ class BattleViewport {
       this.drawCircle(dx, dy, 26 + (Math.sin(progress * Math.PI) * 8), '', {alpha: 0.8, stroke: '#f6d57a', lineWidth: 3});
       this.drawPolyline([[dx - 18, dy - 18], [dx + 18, dy + 18]], '#f6d57a', 4, {alpha: 0.8});
       this.drawPolyline([[dx - 18, dy + 18], [dx + 18, dy - 18]], '#f6d57a', 4, {alpha: 0.8});
+      return;
+    }
+    if (variant === 'bide') {
+      const charge = 18 + (Math.sin(progress * Math.PI) * 10);
+      this.drawCircle(ax, ay - 10, charge, '', {alpha: 0.85, stroke: '#ffb66a', lineWidth: 4});
+      this.drawCircle(ax, ay - 10, charge + 14, '', {alpha: 0.46, stroke: '#ffe0a1', lineWidth: 3});
+      for (let index = 0; index < 6; index += 1) {
+        const angle = ((Math.PI * 2 * index) / 6) + (progress * 3.5);
+        this.drawCircle(ax + Math.cos(angle) * (charge + 10), ay - 10 + Math.sin(angle) * (charge * 0.7), 4, '#ffd27f', {alpha: 0.82});
+      }
+      return;
+    }
+    if (variant === 'counter') {
+      const x = lerp(ax, dx, Math.min(1, p * 1.06));
+      const y = lerp(ay, dy, Math.min(1, p * 1.06));
+      this.drawPolyline([[x - 34, y + 24], [x + 34, y - 24]], '#ffd697', 7, {alpha: 0.96});
+      this.drawPolyline([[x - 34, y - 24], [x + 34, y + 24]], '#ff7b63', 5, {alpha: 0.92});
+      this.drawCircle(dx, dy, 18 + (Math.sin(progress * Math.PI) * 6), '', {alpha: 0.52, stroke: '#ffe1ab', lineWidth: 2});
+      return;
+    }
+    if (variant === 'hyperbeam') {
+      const ex = lerp(ax, dx, easeOutQuad(localToHit));
+      const ey = lerp(ay, dy, easeOutQuad(localToHit));
+      this.drawCircle(ax, ay, 16 + (Math.sin(progress * Math.PI) * 8), '#ffe182', {alpha: 0.46});
+      this.drawPolyline([[ax, ay], [ex, ey]], '#fff4a7', 18, {alpha: 0.9});
+      this.drawPolyline([[ax, ay], [ex, ey]], '#ffcc53', 10, {alpha: 0.94});
+      this.drawPolyline([[ax, ay], [ex, ey]], '#fffef0', 4, {alpha: 0.98});
+      if (progress > hitAt) this.drawBurst(dx, dy, 12, 38, (progress - hitAt) / (1 - hitAt), '#fff4a7');
+      return;
+    }
+    if (variant === 'teleport') {
+      for (let index = 0; index < 4; index += 1) {
+        const t = clamp(progress - (index * 0.07), 0, 1);
+        this.drawCircle(ax, ay - 10, 10 + (t * 24), '', {alpha: 1 - t, stroke: '#d5f7ff', lineWidth: 3});
+      }
+      this.drawBurst(ax, ay - 10, 6, 24, progress, '#dffcff');
+      return;
+    }
+    if (variant === 'metronome') {
+      const handX = ax + 8;
+      const handY = ay - 22;
+      const wag = Math.sin(progress * Math.PI * 3) * 12;
+      this.drawPolyline([[handX, handY + 14], [handX + wag * 0.35, handY - 10], [handX + wag, handY - 28]], '#ffe59c', 5, {alpha: 0.95});
+      this.drawCircle(handX + wag, handY - 32, 6, '#fff0bb', {alpha: 0.92, stroke: '#ffd76f', lineWidth: 2});
+      this.drawStar(ax + 26, ay - 50, 8, '#ffe17a', {alpha: 0.7, rotation: progress, stroke: '#fff5c5', lineWidth: 2});
+      return;
+    }
+    if (variant === 'mimic') {
+      const copyX = lerp(dx, ax, progress);
+      const copyY = lerp(dy - 8, ay - 12, progress);
+      this.drawRect(dx, dy - 6, 34, 34, 'rgba(238,244,255,.12)', {alpha: 0.48, stroke: '#e7f1ff', lineWidth: 2});
+      this.drawRect(copyX, copyY, 24, 24, 'rgba(238,244,255,.18)', {alpha: 0.72, stroke: '#e7f1ff', lineWidth: 2});
+      this.drawPolyline([[dx, dy], [copyX, copyY], [ax, ay - 8]], '#e7f1ff', 3, {alpha: 0.7});
+      return;
+    }
+    if (variant === 'mirrormove') {
+      this.drawMonGhost(side === 'player' ? 'foe' : 'player', ax + (dir * 18), ay + 8, this.mode === 'mobile' ? 38 : 54, this.mode === 'mobile' ? 38 : 54, 0.42);
+      this.drawPolyline([[ax - 6, ay - 30], [dx - 10, dy - 12], [dx, dy]], '#e6f6ff', 3, {alpha: 0.68});
+      this.drawBurst(dx, dy, 6, 18, progress, '#eefbff');
       return;
     }
     if (variant === 'selfdestruct' || variant === 'explosion') {
