@@ -692,6 +692,7 @@ class BattleViewport {
       this.drawRect(ax, ay - 10, 26 * pulse, 26 * pulse, 'rgba(225,245,255,.18)', {alpha: 0.5, stroke: '#eef7ff', lineWidth: 2});
       this.drawEllipse(ax, ay - 10, 24 + (progress * 8), 10 + (Math.sin(progress * Math.PI) * 4), '', {alpha: 0.5, stroke: '#d6ebff', lineWidth: 2});
       this.drawEllipse(ax, ay - 10, 14 + (Math.sin(progress * Math.PI) * 3), 6 + (Math.sin(progress * Math.PI) * 2), 'rgba(214,235,255,.16)', {alpha: 0.48, stroke: '#eef7ff', lineWidth: 1});
+      this.drawRect(ax, ay - 10, 16 * pulse, 16 * pulse, 'rgba(225,245,255,.08)', {alpha: 0.58, stroke: '#f6fbff', lineWidth: 2});
       return;
     }
     if (variant === 'transform') {
@@ -853,12 +854,15 @@ class BattleViewport {
         const t = clamp(progress * 1.06 - (index * 0.08), 0, 1);
         const x = lerp(ax, dx, t) + ((index - 1) * 10);
         const y = lerp(ay - 8, dy, t) - (Math.sin(t * Math.PI) * 8);
-        this.drawEllipse(x, y, 7, 11, '#b7d86b', {alpha: 0.92, stroke: '#eef6b2', lineWidth: 2, rotation: (index - 1) * 0.25});
+        this.drawEllipse(x, y, 8, 12, '#b7d86b', {alpha: 0.94, stroke: '#eef6b2', lineWidth: 2, rotation: (index - 1) * 0.25});
       }
-      if (progress > 0.55) {
-        this.drawPolyline([[dx - 8, dy + 20], [dx - 10, dy + 34], [dx - 6, dy + 48]], '#7cb35a', 3, {alpha: 0.82});
-        this.drawPolyline([[dx + 6, dy + 18], [dx + 10, dy + 34], [dx + 8, dy + 50]], '#7cb35a', 3, {alpha: 0.82});
-        this.drawEllipse(dx, dy + 6, 28, 12, '', {alpha: 0.4, stroke: '#b7d86b', lineWidth: 2});
+      if (progress > 0.42) {
+        const grow = clamp((progress - 0.42) / 0.58, 0, 1);
+        this.drawPolyline([[dx - 10, dy + 14], [dx - 12, dy + (20 + (grow * 12))], [dx - 6, dy + (34 + (grow * 16))]], '#7cb35a', 3, {alpha: 0.86});
+        this.drawPolyline([[dx + 8, dy + 12], [dx + 12, dy + (20 + (grow * 12))], [dx + 10, dy + (36 + (grow * 14))]], '#7cb35a', 3, {alpha: 0.86});
+        this.drawEllipse(dx, dy + 6, 28 + (grow * 6), 12 + (grow * 2), '', {alpha: 0.52, stroke: '#b7d86b', lineWidth: 2});
+        this.drawCircle(dx - 8, dy + 18, 4, '#c7ea7f', {alpha: 0.7});
+        this.drawCircle(dx + 10, dy + 20, 4, '#c7ea7f', {alpha: 0.7});
       }
       return;
     }
