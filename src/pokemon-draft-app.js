@@ -118,6 +118,7 @@ const MENU_SHOWCASE = {
   player: POKEMON_POOL.find((species) => species.name === 'Charizard') || POKEMON_POOL[1] || POKEMON_POOL[0],
 };
 const STARTER_ART_PATH = '../assets/firstgenstarter-cutout.png';
+const ATTACK_PREVIEW_DATA_PATH = './pokemon-attack-preview-data.json';
 const BATTLE_DECOR_ZONES = [
   {leftMin: 1.2, leftMax: 7.4, topMin: 9.5, topMax: 26},
   {leftMin: 1.2, leftMax: 8.2, topMin: 27, topMax: 44},
@@ -128,6 +129,59 @@ const BATTLE_DECOR_ZONES = [
   {leftMin: 1.2, leftMax: 12.6, topMin: 69.5, topMax: 95},
   {leftMin: 87.4, leftMax: 98.2, topMin: 69.5, topMax: 95},
 ];
+
+const ATTACK_FRAME_MS = 70;
+const ATTACK_SPECIAL_EFFECT_DURATION = {
+  SE_DELAY_ANIMATION_10: 10 * ATTACK_FRAME_MS,
+  SE_DARK_SCREEN_FLASH: 4 * ATTACK_FRAME_MS,
+  SE_DARK_SCREEN_PALETTE: 0,
+  SE_RESET_SCREEN_PALETTE: 0,
+  SE_FLASH_SCREEN_LONG: 10 * ATTACK_FRAME_MS,
+  SE_SHAKE_SCREEN: 6 * ATTACK_FRAME_MS,
+  SE_WATER_DROPLETS_EVERYWHERE: 10 * ATTACK_FRAME_MS,
+  SE_DARKEN_MON_PALETTE: 6 * ATTACK_FRAME_MS,
+  SE_LIGHT_SCREEN_PALETTE: 8 * ATTACK_FRAME_MS,
+  SE_BLINK_MON: 6 * ATTACK_FRAME_MS,
+  SE_FLASH_MON_PIC: 4 * ATTACK_FRAME_MS,
+  SE_HIDE_MON_PIC: 0,
+  SE_SHOW_MON_PIC: 0,
+  SE_MOVE_MON_HORIZONTALLY: 5 * ATTACK_FRAME_MS,
+  SE_RESET_MON_POSITION: 3 * ATTACK_FRAME_MS,
+  SE_SLIDE_MON_OFF: 8 * ATTACK_FRAME_MS,
+  SE_SLIDE_MON_HALF_OFF: 7 * ATTACK_FRAME_MS,
+  SE_SLIDE_MON_UP: 6 * ATTACK_FRAME_MS,
+  SE_SLIDE_MON_DOWN: 6 * ATTACK_FRAME_MS,
+  SE_SLIDE_MON_DOWN_AND_HIDE: 8 * ATTACK_FRAME_MS,
+  SE_SQUISH_MON_PIC: 6 * ATTACK_FRAME_MS,
+  SE_BOUNCE_UP_AND_DOWN: 8 * ATTACK_FRAME_MS,
+  SE_MINIMIZE_MON: 8 * ATTACK_FRAME_MS,
+  SE_SUBSTITUTE_MON: 0,
+  SE_TRANSFORM_MON: 8 * ATTACK_FRAME_MS,
+  SE_PETALS_FALLING: 10 * ATTACK_FRAME_MS,
+  SE_LEAVES_FALLING: 10 * ATTACK_FRAME_MS,
+  SE_SHAKE_ENEMY_HUD: 5 * ATTACK_FRAME_MS,
+  SE_SHAKE_BACK_AND_FORTH: 6 * ATTACK_FRAME_MS,
+  SE_WAVY_SCREEN: 10 * ATTACK_FRAME_MS,
+  SE_SPIRAL_BALLS_INWARD: 10 * ATTACK_FRAME_MS,
+  SE_SHOOT_BALLS_UPWARD: 8 * ATTACK_FRAME_MS,
+  SE_SHOOT_MANY_BALLS_UPWARD: 9 * ATTACK_FRAME_MS,
+  SE_SHOW_ENEMY_MON_PIC: 0,
+  SE_HIDE_ENEMY_MON_PIC: 0,
+  SE_BLINK_ENEMY_MON: 6 * ATTACK_FRAME_MS,
+  SE_SLIDE_ENEMY_MON_OFF: 8 * ATTACK_FRAME_MS,
+};
+const ATTACK_MOVE_SPECIFIC_DURATION = {
+  AnimationFlashScreen: 4 * ATTACK_FRAME_MS,
+  DoBlizzardSpecialEffects: 10 * ATTACK_FRAME_MS,
+  DoExplodeSpecialEffects: 8 * ATTACK_FRAME_MS,
+  DoGrowlSpecialEffects: 6 * ATTACK_FRAME_MS,
+  DoRockSlideSpecialEffects: 8 * ATTACK_FRAME_MS,
+  FlashScreenEveryEightFrameBlocks: 6 * ATTACK_FRAME_MS,
+  FlashScreenEveryFourFrameBlocks: 8 * ATTACK_FRAME_MS,
+};
+const ATTACK_EFFECT_TILES = {droplet: 0x71, spiralBall: 0x7a};
+let attackAnimationAssetsPromise = null;
+let attackAnimationAssets = null;
 
 const state = {
   phase: 'menu',
@@ -206,12 +260,602 @@ function saveBestRun(value) {
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const lerp = (a, b, t) => a + ((b - a) * t);
 const ownSide = () => (state.playMode === 'link' ? state.link.localSide : 'p1');
 const foeSide = () => (ownSide() === 'p1' ? 'p2' : 'p1');
 const ownActive = () => state.active[ownSide()];
 const foeActive = () => state.active[foeSide()];
 const ownTeamState = () => state.teamStates[ownSide()];
 const foeTeamState = () => state.teamStates[foeSide()];
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error(`Failed to load image: ${src}`));
+    image.src = src;
+  });
+}
+
+function makeWhiteTileTransparent(image) {
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext('2d', {willReadFrequently: true});
+  ctx.drawImage(image, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const {data, width, height} = imageData;
+  const isWhite = (x, y) => {
+    const index = ((y * width) + x) * 4;
+    return data[index] === 255 && data[index + 1] === 255 && data[index + 2] === 255 && data[index + 3] === 255;
+  };
+
+  for (let tileY = 0; tileY < height; tileY += 8) {
+    for (let tileX = 0; tileX < width; tileX += 8) {
+      const queue = [];
+      const seen = new Set();
+      const push = (x, y) => {
+        if (x < tileX || x >= tileX + 8 || y < tileY || y >= tileY + 8) return;
+        const key = `${x},${y}`;
+        if (seen.has(key) || !isWhite(x, y)) return;
+        seen.add(key);
+        queue.push([x, y]);
+      };
+      for (let x = tileX; x < tileX + 8; x += 1) {
+        push(x, tileY);
+        push(x, tileY + 7);
+      }
+      for (let y = tileY; y < tileY + 8; y += 1) {
+        push(tileX, y);
+        push(tileX + 7, y);
+      }
+      while (queue.length) {
+        const [x, y] = queue.shift();
+        const index = ((y * width) + x) * 4;
+        data[index + 3] = 0;
+        push(x + 1, y);
+        push(x - 1, y);
+        push(x, y + 1);
+        push(x, y - 1);
+      }
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+async function ensureAttackAnimationAssets() {
+  if (attackAnimationAssets) return attackAnimationAssets;
+  if (attackAnimationAssetsPromise) return attackAnimationAssetsPromise;
+  attackAnimationAssetsPromise = (async () => {
+    const response = await fetch(ATTACK_PREVIEW_DATA_PATH);
+    if (!response.ok) throw new Error(`Failed to load ${ATTACK_PREVIEW_DATA_PATH}`);
+    const data = await response.json();
+    const tilesets = Object.fromEntries(await Promise.all(Object.entries(data.source.tilesets).map(async ([index, src]) => {
+      const image = await loadImage(src);
+      return [index, makeWhiteTileTransparent(image)];
+    })));
+    const moveLookup = new Map(data.moves.map((move) => [move.id, move]));
+    attackAnimationAssets = {data, tilesets, moveLookup};
+    return attackAnimationAssets;
+  })().catch((error) => {
+    attackAnimationAssetsPromise = null;
+    throw error;
+  });
+  return attackAnimationAssetsPromise;
+}
+
+function buildAttackTimeline(move, side, source) {
+  const segments = [];
+  let cursor = 0;
+  for (const command of move.commands) {
+    if (command.kind === 'special') {
+      const duration = ATTACK_SPECIAL_EFFECT_DURATION[command.effect] ?? (4 * ATTACK_FRAME_MS);
+      segments.push({...command, start: cursor, end: cursor + duration});
+      cursor += duration;
+      continue;
+    }
+    for (let index = 0; index < command.frames[side].length; index += 1) {
+      const frame = command.frames[side][index];
+      const duration = Math.max(ATTACK_FRAME_MS, frame.durationFrames * (source.effectFrameMs || ATTACK_FRAME_MS));
+      segments.push({
+        kind: 'subframe',
+        animationId: command.animationId,
+        subanimation: command.subanimation,
+        moveSpecificEffect: command.moveSpecificEffect,
+        frameIndex: index,
+        frame,
+        start: cursor,
+        end: cursor + duration,
+      });
+      cursor += duration;
+    }
+  }
+  return {segments, total: cursor + 120};
+}
+
+function normalizeAttackMoveName(value = '') {
+  return String(value).toLowerCase().replace(/[^a-z0-9]/g, '');
+}
+
+function resolveAttackPreviewMove(assets, moveName) {
+  const normalized = normalizeAttackMoveName(moveName);
+  const dexId = dex.moves.get(moveName)?.id;
+  if (dexId && assets.moveLookup.has(dexId)) return assets.moveLookup.get(dexId);
+  return assets.data.moves.find((move) => move.id === normalized || normalizeAttackMoveName(move.name) === normalized) || null;
+}
+
+class BattleAttackViewport {
+  constructor(stage, field, canvas, playerSprite, foeSprite, playerStatus, foeStatus, tilesets, source) {
+    this.stage = stage;
+    this.field = field;
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.ctx.imageSmoothingEnabled = false;
+    this.frameCanvas = document.createElement('canvas');
+    this.frameCanvas.width = 160;
+    this.frameCanvas.height = 120;
+    this.frameCtx = this.frameCanvas.getContext('2d');
+    this.frameCtx.imageSmoothingEnabled = false;
+    this.playerSprite = playerSprite;
+    this.foeSprite = foeSprite;
+    this.playerStatus = playerStatus;
+    this.foeStatus = foeStatus;
+    this.tilesets = tilesets;
+    this.source = source;
+  }
+
+  resize() {
+    const bounds = this.canvas.getBoundingClientRect();
+    this.canvas.width = Math.round(bounds.width * devicePixelRatio);
+    this.canvas.height = Math.round(bounds.height * devicePixelRatio);
+    this.ctx.setTransform(devicePixelRatio, 0, 0, devicePixelRatio, 0, 0);
+    this.ctx.imageSmoothingEnabled = false;
+  }
+
+  spriteImpactPoint(node, role) {
+    const stageRect = this.stage.getBoundingClientRect();
+    const rect = node.getBoundingClientRect();
+    const profile = role === 'foe' ? {x: 0.26, y: 0.56} : {x: 0.62, y: 0.42};
+    return {
+      x: (rect.left - stageRect.left) + (rect.width * profile.x),
+      y: (rect.top - stageRect.top) + (rect.height * profile.y),
+    };
+  }
+
+  fieldMetrics() {
+    const stageRect = this.stage.getBoundingClientRect();
+    const fieldRect = this.field.getBoundingClientRect();
+    const width = fieldRect.width;
+    const height = fieldRect.height;
+    const scale = Math.min(width / this.source.coordinateSpace.width, height / this.source.coordinateSpace.height);
+    const renderWidth = this.source.coordinateSpace.width * scale;
+    const renderHeight = this.source.coordinateSpace.height * scale;
+    return {
+      x: fieldRect.left - stageRect.left + ((width - renderWidth) / 2),
+      y: fieldRect.top - stageRect.top + ((height - renderHeight) / 2),
+      width: renderWidth,
+      height: renderHeight,
+      scale,
+    };
+  }
+
+  battleAnchors(metrics) {
+    const originalPlayer = {x: metrics.x + (40 * metrics.scale), y: metrics.y + (84 * metrics.scale)};
+    const originalFoe = {x: metrics.x + (112 * metrics.scale), y: metrics.y + (40 * metrics.scale)};
+    const actualPlayer = this.spriteImpactPoint(this.playerSprite, 'player');
+    const actualFoe = this.spriteImpactPoint(this.foeSprite, 'foe');
+    return {
+      player: {original: originalPlayer, actual: actualPlayer, offset: {x: actualPlayer.x - originalPlayer.x, y: actualPlayer.y - originalPlayer.y}},
+      foe: {original: originalFoe, actual: actualFoe, offset: {x: actualFoe.x - originalFoe.x, y: actualFoe.y - originalFoe.y}},
+    };
+  }
+
+  resetSprites() {
+    this.stage.style.transform = '';
+    this.field.style.transform = '';
+    for (const node of [this.playerSprite, this.foeSprite, this.playerStatus, this.foeStatus]) {
+      if (!node) continue;
+      node.style.transform = '';
+      node.style.opacity = '';
+      node.style.filter = '';
+    }
+  }
+
+  drawSpriteTile(ctx, sprite) {
+    const image = this.tilesets[sprite.tileset] || this.tilesets[0];
+    if (!image) return;
+    const tileSize = 8;
+    const tileX = (sprite.tile % 16) * tileSize;
+    const tileY = Math.floor(sprite.tile / 16) * tileSize;
+    ctx.save();
+    ctx.translate(Math.round(sprite.x + 4), Math.round(sprite.y + 4));
+    ctx.scale(sprite.flipX ? -1 : 1, sprite.flipY ? -1 : 1);
+    ctx.drawImage(image, tileX, tileY, tileSize, tileSize, -(tileSize / 2), -(tileSize / 2), tileSize, tileSize);
+    ctx.restore();
+  }
+
+  frameOffset(scene) {
+    const frame = scene.activeFrame;
+    if (!frame?.sprites?.length) return {x: 0, y: 0};
+    const attackerKey = scene.side === 'player' ? 'player' : 'foe';
+    const targetKey = scene.side === 'player' ? 'foe' : 'player';
+    const attacker = scene.anchors[attackerKey];
+    const target = scene.anchors[targetKey];
+    const center = frame.sprites.reduce((acc, sprite) => {
+      acc.x += sprite.x + 4;
+      acc.y += sprite.y + 4;
+      return acc;
+    }, {x: 0, y: 0});
+    center.x /= frame.sprites.length;
+    center.y /= frame.sprites.length;
+    const lineX = target.original.x - attacker.original.x;
+    const lineY = target.original.y - attacker.original.y;
+    const lineLengthSq = (lineX * lineX) + (lineY * lineY) || 1;
+    const centerPx = {
+      x: scene.metrics.x + (center.x * scene.metrics.scale),
+      y: scene.metrics.y + (center.y * scene.metrics.scale),
+    };
+    const progress = Math.min(Math.max((((centerPx.x - attacker.original.x) * lineX) + ((centerPx.y - attacker.original.y) * lineY)) / lineLengthSq, 0), 1);
+    return {
+      x: lerp(attacker.offset.x, target.offset.x, progress),
+      y: lerp(attacker.offset.y, target.offset.y, progress),
+    };
+  }
+
+  drawFlash(color, alpha) {
+    if (alpha <= 0) return;
+    this.ctx.save();
+    this.ctx.globalAlpha = alpha;
+    this.ctx.fillStyle = color;
+    this.ctx.fillRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
+    this.ctx.restore();
+  }
+
+  drawGlow(x, y, radius, color, alpha = 0.35) {
+    this.ctx.save();
+    const gradient = this.ctx.createRadialGradient(x, y, radius * 0.15, x, y, radius);
+    gradient.addColorStop(0, `${color}${Math.round(alpha * 255).toString(16).padStart(2, '0')}`);
+    gradient.addColorStop(1, `${color}00`);
+    this.ctx.fillStyle = gradient;
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, radius, 0, Math.PI * 2);
+    this.ctx.fill();
+    this.ctx.restore();
+  }
+
+  sourcePointToStage(metrics, point) {
+    return {x: metrics.x + (point.x * metrics.scale), y: metrics.y + (point.y * metrics.scale)};
+  }
+
+  drawSourceTile(tile, stagePoint, metrics, tileset = 0) {
+    const image = this.tilesets[tileset] || this.tilesets[0];
+    if (!image) return;
+    const tileSize = 8;
+    const sx = (tile % 16) * tileSize;
+    const sy = Math.floor(tile / 16) * tileSize;
+    const size = Math.round(tileSize * metrics.scale);
+    this.ctx.drawImage(image, sx, sy, tileSize, tileSize, Math.round(stagePoint.x), Math.round(stagePoint.y), size, size);
+  }
+
+  drawSourceDroplets(progress, metrics, effectData) {
+    const phase = Math.min(31, Math.floor(progress * 32));
+    const startX = -16 + (phase * 27);
+    for (const rowStart of [16, 24]) {
+      let x = startX;
+      let y = rowStart;
+      while (y < 112) {
+        this.drawSourceTile(ATTACK_EFFECT_TILES.droplet, this.sourcePointToStage(metrics, {x, y}), metrics, 0);
+        x += 27;
+        if (x >= 144) {
+          x -= 168;
+          y += 16;
+        }
+      }
+    }
+  }
+
+  drawSourceSpiral(progress, metrics, scene, effectData) {
+    const coords = effectData.spiralBallAnimationCoordinates || [];
+    if (!coords.length) return;
+    const frameIndex = Math.min(coords.length - 1, Math.floor(progress * coords.length));
+    const base = scene.side === 'player' ? {x: 0, y: 0} : {x: 80, y: -40};
+    for (let index = 0; index < 3; index += 1) {
+      const coord = coords[Math.max(0, frameIndex - (index * 2))] || coords[0];
+      this.drawSourceTile(ATTACK_EFFECT_TILES.spiralBall, this.sourcePointToStage(metrics, {x: base.x + coord.x, y: base.y + coord.y}), metrics, 0);
+    }
+  }
+
+  drawSourceUpwardBalls(progress, metrics, scene, effectData, many = false) {
+    const player = scene.side === 'player';
+    const startY = player ? 48 : 0;
+    const defaultXs = [player ? 40 : 128];
+    const sourceXs = many ? (player ? effectData.upwardBallsAnimXCoordinatesPlayerTurn : effectData.upwardBallsAnimXCoordinatesEnemyTurn) || defaultXs : defaultXs;
+    const count = many ? 4 : 5;
+    const travel = 48;
+    for (const x of sourceXs) {
+      for (let index = 0; index < count; index += 1) {
+        const stagger = index / count;
+        const local = Math.min(Math.max((progress - stagger * 0.25) / Math.max(0.2, 1 - (stagger * 0.25)), 0), 1);
+        if (local <= 0 || local >= 1) continue;
+        const y = startY + (index * 8) - (travel * local);
+        this.drawSourceTile(ATTACK_EFFECT_TILES.spiralBall, this.sourcePointToStage(metrics, {x, y}), metrics, 0);
+      }
+    }
+  }
+
+  drawSourceFallingObjects(progress, metrics, effectData, count) {
+    const initialX = (effectData.fallingObjectsInitialXCoords || []).slice(0, count);
+    const initialMovement = (effectData.fallingObjectsInitialMovementData || []).slice(0, count);
+    const deltaXs = effectData.fallingObjectsDeltaXs || [];
+    if (!initialX.length || !initialMovement.length || !deltaXs.length) return;
+    const step = Math.min(52, Math.floor(progress * 52));
+    for (let index = 0; index < count; index += 1) {
+      let y = index * 8;
+      let x = initialX[index];
+      let movement = initialMovement[index];
+      for (let iter = 0; iter < step; iter += 1) {
+        y += 2;
+        const movingLeft = Boolean(movement & 0x80);
+        const delta = deltaXs[movement & 0x7f] || 0;
+        x += movingLeft ? -delta : delta;
+        movement += 1;
+        if ((movement & 0x7f) === 9) movement = (movement & 0x80) ^ 0x80;
+      }
+      if (y >= 112) continue;
+      this.drawSourceTile(count <= 3 ? 0x37 : 0x71, this.sourcePointToStage(metrics, {x, y}), metrics, 1);
+    }
+  }
+
+  drawScreenParticles(kind, progress, metrics, scene) {
+    const effectData = scene.source.specialEffectData || {};
+    if (kind === 'droplets') return this.drawSourceDroplets(progress, metrics, effectData);
+    if (kind === 'spiral') return this.drawSourceSpiral(progress, metrics, scene, effectData);
+    if (kind === 'balls-up') return this.drawSourceUpwardBalls(progress, metrics, scene, effectData, false);
+    if (kind === 'many-balls-up') return this.drawSourceUpwardBalls(progress, metrics, scene, effectData, true);
+    if (kind === 'leaves') return this.drawSourceFallingObjects(progress, metrics, effectData, 3);
+    if (kind === 'petals') return this.drawSourceFallingObjects(progress, metrics, effectData, 20);
+  }
+
+  applySpecialEffect(effect, progress, scene) {
+    const attackerNode = scene.side === 'player' ? this.playerSprite : this.foeSprite;
+    const defenderNode = scene.side === 'player' ? this.foeSprite : this.playerSprite;
+    const metrics = scene.metrics;
+    const attackerKey = scene.side === 'player' ? 'player' : 'foe';
+    const targetKey = scene.side === 'player' ? 'foe' : 'player';
+    const attackerAnchor = scene.anchors[attackerKey].actual;
+    const targetAnchor = scene.anchors[targetKey].actual;
+    switch (effect) {
+      case 'SE_DARK_SCREEN_FLASH':
+      case 'AnimationFlashScreen':
+        this.drawFlash('#fff2a8', 0.24 + (Math.sin(progress * Math.PI) * 0.36));
+        break;
+      case 'SE_FLASH_SCREEN_LONG':
+      case 'FlashScreenEveryFourFrameBlocks':
+      case 'FlashScreenEveryEightFrameBlocks':
+        this.drawFlash(progress < 0.5 ? '#f2e7a8' : '#d6e3ff', 0.24 + (Math.sin(progress * Math.PI * 4) * 0.18));
+        break;
+      case 'SE_DARK_SCREEN_PALETTE':
+        this.drawFlash('#1a1f33', 0.34);
+        break;
+      case 'SE_DARKEN_MON_PALETTE':
+        defenderNode.style.filter = 'brightness(.55) saturate(.8)';
+        break;
+      case 'SE_LIGHT_SCREEN_PALETTE':
+        this.drawFlash('#d7f0ff', 0.14);
+        this.drawGlow(attackerAnchor.x, attackerAnchor.y, metrics.width * 0.14, '#bfe8ff', 0.45);
+        break;
+      case 'SE_SHAKE_SCREEN':
+        this.stage.style.transform = `translate(${Math.sin(progress * Math.PI * 10) * 5}px, 0px)`;
+        break;
+      case 'SE_WATER_DROPLETS_EVERYWHERE':
+        this.drawScreenParticles('droplets', progress, metrics, scene);
+        break;
+      case 'DoBlizzardSpecialEffects':
+      case 'SE_PETALS_FALLING':
+        this.drawScreenParticles('petals', progress, metrics, scene);
+        break;
+      case 'SE_LEAVES_FALLING':
+        this.drawScreenParticles('leaves', progress, metrics, scene);
+        break;
+      case 'SE_SPIRAL_BALLS_INWARD':
+        this.drawScreenParticles('spiral', progress, metrics, scene);
+        break;
+      case 'SE_SHOOT_BALLS_UPWARD':
+        this.drawScreenParticles('balls-up', progress, metrics, scene);
+        break;
+      case 'SE_SHOOT_MANY_BALLS_UPWARD':
+        this.drawScreenParticles('many-balls-up', progress, metrics, scene);
+        break;
+      case 'SE_MOVE_MON_HORIZONTALLY':
+        attackerNode.style.transform = `translate(${(scene.side === 'player' ? 8 : -8) * metrics.scale}px, 0px)`;
+        break;
+      case 'SE_RESET_MON_POSITION':
+        attackerNode.style.transform = '';
+        break;
+      case 'SE_BLINK_MON':
+        attackerNode.style.opacity = Math.floor(progress * 10) % 2 === 0 ? '0.15' : '1';
+        break;
+      case 'SE_FLASH_MON_PIC':
+        attackerNode.style.filter = Math.floor(progress * 10) % 2 === 0 ? 'brightness(1.85) contrast(1.35)' : '';
+        break;
+      case 'SE_HIDE_MON_PIC':
+        attackerNode.style.opacity = '0';
+        break;
+      case 'SE_SHOW_MON_PIC':
+        attackerNode.style.opacity = '1';
+        break;
+      case 'SE_HIDE_ENEMY_MON_PIC':
+        defenderNode.style.opacity = '0';
+        break;
+      case 'SE_SHOW_ENEMY_MON_PIC':
+        defenderNode.style.opacity = '1';
+        break;
+      case 'SE_BLINK_ENEMY_MON':
+        defenderNode.style.opacity = Math.floor(progress * 10) % 2 === 0 ? '0.15' : '1';
+        break;
+      case 'SE_SLIDE_MON_OFF':
+        attackerNode.style.transform = `translate(${lerp(0, scene.side === 'player' ? -64 * metrics.scale : 64 * metrics.scale, progress)}px, 0px)`;
+        attackerNode.style.opacity = String(1 - progress);
+        break;
+      case 'SE_SLIDE_MON_HALF_OFF':
+        attackerNode.style.transform = `translate(${lerp(0, scene.side === 'player' ? -32 * metrics.scale : 32 * metrics.scale, progress)}px, 0px)`;
+        break;
+      case 'SE_SLIDE_ENEMY_MON_OFF':
+        defenderNode.style.transform = `translate(${lerp(0, scene.side === 'player' ? 64 * metrics.scale : -64 * metrics.scale, progress)}px, 0px)`;
+        defenderNode.style.opacity = String(1 - progress);
+        break;
+      case 'SE_SLIDE_MON_UP':
+        attackerNode.style.transform = `translate(0px, ${lerp(0, -8 * metrics.scale, progress)}px)`;
+        break;
+      case 'SE_SLIDE_MON_DOWN':
+        attackerNode.style.transform = `translate(0px, ${lerp(0, 56 * metrics.scale, progress)}px)`;
+        break;
+      case 'SE_SLIDE_MON_DOWN_AND_HIDE':
+        attackerNode.style.transform = `translate(0px, ${lerp(0, 16 * metrics.scale, progress)}px)`;
+        attackerNode.style.opacity = String(1 - progress);
+        break;
+      case 'SE_SQUISH_MON_PIC':
+        attackerNode.style.transform = `scaleY(${lerp(1, .4, progress)})`;
+        break;
+      case 'SE_BOUNCE_UP_AND_DOWN':
+        attackerNode.style.transform = `translate(0px, ${Math.sin(progress * Math.PI * 2) * (-18)}px)`;
+        break;
+      case 'SE_MINIMIZE_MON':
+        attackerNode.style.transform = `scale(${lerp(1, .45, progress)})`;
+        break;
+      case 'SE_SUBSTITUTE_MON':
+        attackerNode.style.filter = 'sepia(.6) saturate(.4) brightness(1.15)';
+        break;
+      case 'SE_TRANSFORM_MON':
+        attackerNode.style.filter = `brightness(${1 + (Math.sin(progress * Math.PI * 6) * .8)}) saturate(1.3)`;
+        break;
+      case 'SE_SHAKE_ENEMY_HUD':
+        this.foeStatus.style.transform = `translate(${Math.sin(progress * Math.PI * 12) * (2 * metrics.scale)}px, 0px)`;
+        break;
+      case 'SE_SHAKE_BACK_AND_FORTH':
+        attackerNode.style.transform = `translate(${Math.sin(progress * Math.PI * 10) * (8 * metrics.scale)}px, 0px)`;
+        break;
+      case 'SE_WAVY_SCREEN': {
+        const offsets = scene.source.specialEffectData?.wavyScreenLineOffsets || [];
+        const index = offsets.length ? Math.min(offsets.length - 1, Math.floor(progress * offsets.length)) : 0;
+        this.field.style.transform = `translateX(${(offsets[index] || 0) * metrics.scale}px)`;
+        break;
+      }
+      case 'DoExplodeSpecialEffects':
+        this.drawFlash('#ffd26d', 0.16 + (Math.sin(progress * Math.PI * 3) * 0.32));
+        break;
+      case 'DoGrowlSpecialEffects':
+        this.foeStatus.style.transform = `translate(${Math.sin(progress * Math.PI * 8) * 3}px, 0px)`;
+        break;
+      case 'DoRockSlideSpecialEffects':
+        this.drawFlash('#b88f64', 0.12 + (Math.sin(progress * Math.PI * 2) * 0.1));
+        break;
+      default:
+        break;
+    }
+  }
+
+  renderFrame(scene) {
+    this.resetSprites();
+    this.resize();
+    this.ctx.clearRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
+    scene.metrics = this.fieldMetrics();
+    scene.anchors = this.battleAnchors(scene.metrics);
+    if (scene.activeFrame) {
+      const frameOffset = this.frameOffset(scene);
+      this.frameCtx.clearRect(0, 0, this.frameCanvas.width, this.frameCanvas.height);
+      for (const sprite of scene.activeFrame.sprites) this.drawSpriteTile(this.frameCtx, sprite);
+      this.ctx.drawImage(this.frameCanvas, 0, 0, this.frameCanvas.width, this.frameCanvas.height, scene.metrics.x + frameOffset.x, scene.metrics.y + frameOffset.y, scene.metrics.width, scene.metrics.height);
+    }
+    for (const effect of scene.activeEffects) {
+      const duration = Math.max(1, effect.end - effect.start);
+      const progress = Math.min(Math.max((scene.time - effect.start) / duration, 0), 1);
+      this.applySpecialEffect(effect.effectName, progress, scene);
+    }
+  }
+
+  clear() {
+    this.resetSprites();
+    this.ctx.clearRect(0, 0, this.canvas.clientWidth, this.canvas.clientHeight);
+  }
+}
+
+function currentBattleViewport(assets) {
+  const stage = document.querySelector('.battle-stage');
+  const field = document.querySelector('[data-battle-attack-field]');
+  const canvas = document.querySelector('[data-battle-attack-layer]');
+  const playerSprite = document.querySelector('.combatant-player .sprite.battle');
+  const foeSprite = document.querySelector('.combatant-foe .sprite.battle');
+  const playerStatus = document.querySelector('.battle-status-player');
+  const foeStatus = document.querySelector('.battle-status-foe');
+  if (!stage || !field || !canvas || !playerSprite || !foeSprite || !playerStatus || !foeStatus) return null;
+  return new BattleAttackViewport(stage, field, canvas, playerSprite, foeSprite, playerStatus, foeStatus, assets.tilesets, assets.data.source);
+}
+
+async function playBattleMoveAnimation(moveName, sideKey) {
+  try {
+    window.__pokemonBattlerDebug.lastAnimationInfo = {moveName, sideKey, stage: 'loading'};
+    const assets = await ensureAttackAnimationAssets();
+    const move = resolveAttackPreviewMove(assets, moveName);
+    if (!move) {
+      window.__pokemonBattlerDebug.lastAnimationInfo = {moveName, sideKey, stage: 'missing-move'};
+      return;
+    }
+    const viewport = currentBattleViewport(assets);
+    if (!viewport) {
+      window.__pokemonBattlerDebug.lastAnimationInfo = {moveName, sideKey, stage: 'missing-viewport'};
+      return;
+    }
+    const side = sideKey === 'p1' ? 'player' : 'foe';
+    const timeline = buildAttackTimeline(move, side, assets.data.source);
+    const sceneBase = {side, source: assets.data.source};
+    window.__pokemonBattlerDebug.lastAnimationInfo = {moveName, sideKey, stage: 'running', total: timeline.total};
+    await new Promise((resolve) => {
+      const startedAt = performance.now();
+      const tick = (time) => {
+        try {
+          const localTime = time - startedAt;
+          const activeFrame = timeline.segments.find((segment) => segment.kind === 'subframe' && localTime >= segment.start && localTime < segment.end)?.frame || null;
+          const activeEffects = [];
+          let darkPalette = false;
+          for (const segment of timeline.segments) {
+            if (segment.kind !== 'special' || localTime < segment.start) continue;
+            if (segment.effect === 'SE_DARK_SCREEN_PALETTE') darkPalette = true;
+            if (segment.effect === 'SE_RESET_SCREEN_PALETTE') darkPalette = false;
+            if (localTime >= segment.start && localTime < segment.end) activeEffects.push({...segment, effectName: segment.effect});
+          }
+          const subframeEffect = timeline.segments.find((segment) => segment.kind === 'subframe' && segment.moveSpecificEffect && localTime >= segment.start && localTime < segment.end);
+          if (subframeEffect) {
+            activeEffects.push({
+              effectName: subframeEffect.moveSpecificEffect,
+              start: subframeEffect.start,
+              end: subframeEffect.start + (ATTACK_MOVE_SPECIFIC_DURATION[subframeEffect.moveSpecificEffect] || (subframeEffect.end - subframeEffect.start)),
+            });
+          }
+          if (darkPalette) activeEffects.push({effectName: 'SE_DARK_SCREEN_PALETTE', start: 0, end: localTime + 1});
+          viewport.renderFrame({...sceneBase, time: localTime, activeFrame, activeEffects});
+          window.__pokemonBattlerDebug.lastAnimationInfo = {moveName, sideKey, stage: 'tick', time: localTime, hasFrame: !!activeFrame, effects: activeEffects.length};
+          if (localTime >= timeline.total) {
+            viewport.clear();
+            window.__pokemonBattlerDebug.lastAnimationInfo = {moveName, sideKey, stage: 'done'};
+            resolve();
+            return;
+          }
+          requestAnimationFrame(tick);
+        } catch (error) {
+          window.__pokemonBattlerDebug.lastAnimationError = String(error?.stack || error);
+          resolve();
+        }
+      };
+      requestAnimationFrame(tick);
+    });
+  } catch (error) {
+    window.__pokemonBattlerDebug.lastAnimationError = String(error?.stack || error);
+    console.warn('Battle animation skipped:', error);
+  }
+}
 
 function typeGradient(types) {
   const palette = {
@@ -821,7 +1465,7 @@ function renderBattleStage() {
     <div class="battle-desktop-shell">
       <div class="battle-center">
         <div class="battle-header"><div><div class="label">Battle Phase</div><h2>${currentEnemyLabel()}</h2></div><p>${state.message}</p></div>
-        <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), currentEnemyLabel(), 'front', foeSide(), 'foe')}<div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'You', 'back', ownSide(), 'player')}</div></section>
+        <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), currentEnemyLabel(), 'front', foeSide(), 'foe')}<div class="battle-field" data-battle-attack-field><canvas class="battle-layer" data-battle-attack-layer></canvas></div><div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'You', 'back', ownSide(), 'player')}</div></section>
         <section class="battle-footer">
           <div class="panel battle-panel"><div class="label">Your Bench</div>${renderBench(ownTeamState(), true)}</div>
           <div class="panel battle-panel battle-actions-panel"><div class="label">Actions</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn battle-mobile-menu" data-action="go-menu">Mode Select</button></div></div>
@@ -1268,6 +1912,7 @@ async function startBattleSimulation({p1Team, p2Team, p1Name, p2Name, localSide,
   initialiseTeamStates(p1Team, p2Team);
   state.message = `${p2Name} accepts the challenge.`;
   render();
+  void ensureAttackAnimationAssets();
   const streams = BattleStreams.getPlayerStreams(new BattleStreams.BattleStream());
   state.battle = {streams, multiplayer};
 
@@ -1414,7 +2059,7 @@ function flashSide(sideKey, cls) {
   }, 280);
 }
 
-function handleBattleLine(line) {
+async function handleBattleLine(line) {
   if (!line.startsWith('|')) return 0;
   const parts = line.split('|');
   const type = parts[1];
@@ -1426,7 +2071,9 @@ function handleBattleLine(line) {
   if (type === 'move') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
     state.lastMove[sideKey] = parts[3];
-    return 700;
+    render();
+    await playBattleMoveAnimation(parts[3], sideKey);
+    return 120;
   }
   if (type === 'switch') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
@@ -1478,7 +2125,7 @@ function handleBattleLine(line) {
 async function animateBattleChunk(chunk) {
   state.battleAnimating = true;
   for (const line of chunk.split('\n').filter(Boolean)) {
-    const delay = handleBattleLine(line);
+    const delay = await handleBattleLine(line);
     render();
     if (delay) await sleep(delay);
   }
@@ -2632,6 +3279,19 @@ function injectStyles() {
         radial-gradient(circle at 27% 78%,rgba(255,255,255,.24),transparent 24%);
       pointer-events:none;
     }
+    .battle-field{
+      position:absolute;
+      inset:0 0 21% 0;
+      z-index:3;
+      pointer-events:none;
+    }
+    .battle-layer{
+      position:absolute;
+      inset:0;
+      width:100%;
+      height:100%;
+      pointer-events:none;
+    }
     .battle-feed{
       position:absolute;
       left:2.8%;
@@ -2645,7 +3305,7 @@ function injectStyles() {
       min-height:var(--battle-feed-height);
       background:#f8f5e8;
       box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);
-      z-index:3;
+      z-index:6;
     }
     .feed-line{
       color:#1e2b14;
@@ -2679,6 +3339,7 @@ function injectStyles() {
       color:#1e2b14;
       box-shadow:inset 0 0 0 2px rgba(255,255,255,.6);
       pointer-events:auto;
+      z-index:5;
     }
     .battle-status-foe{
       top:var(--battle-pad-top);
@@ -2752,6 +3413,7 @@ function injectStyles() {
       display:flex;
       align-items:flex-end;
       justify-content:center;
+      z-index:2;
     }
     .battle-sprite-foe{
       position:absolute;
@@ -4371,3 +5033,10 @@ function injectStyles() {
 
 injectStyles();
 render();
+window.__pokemonBattlerDebug = {
+  state,
+  render,
+  ensureAttackAnimationAssets,
+  playBattleMoveAnimation,
+  startBattleSimulation,
+};
