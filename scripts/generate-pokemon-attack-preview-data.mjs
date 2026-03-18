@@ -237,6 +237,54 @@ function familyFor(move) {
   return FAMILY.IMPACT;
 }
 
+function variantFor(move) {
+  const variants = {
+    ember: 'ember',
+    flamethrower: 'flamethrower',
+    firespin: 'firespin',
+    firepunch: 'firepunch',
+    dragonrage: 'dragonrage',
+    fireblast: 'fireblast',
+    watergun: 'watergun',
+    bubble: 'bubble',
+    bubblebeam: 'bubblebeam',
+    hydropump: 'hydropump',
+    surf: 'surf',
+    waterfall: 'waterfall',
+    thunder: 'thunder',
+    thunderbolt: 'thunderbolt',
+    thundershock: 'thundershock',
+    thunderwave: 'thunderwave',
+    stunspore: 'stunspore',
+    hypnosis: 'hypnosis',
+    sing: 'sing',
+    lovelykiss: 'lovelykiss',
+    rest: 'rest',
+    sleeppowder: 'powder-sleep',
+    poisonpowder: 'powder-poison',
+    spore: 'powder-spore',
+    poisongas: 'poisongas',
+    smog: 'smog',
+    sludge: 'sludge',
+    smokescreen: 'smokescreen',
+    confuseray: 'confuseray',
+    psychic: 'psychic',
+    psybeam: 'psybeam',
+    nightshade: 'nightshade',
+    doubleteam: 'doubleteam',
+    reflect: 'reflect',
+    lightscreen: 'lightscreen',
+    barrier: 'barrier',
+    substitute: 'substitute',
+    transform: 'transform',
+    clamp: 'clamp',
+    wrap: 'wrap',
+    bind: 'bind',
+    constrict: 'constrict',
+  };
+  return variants[move.id] || move.family || move.id;
+}
+
 async function main() {
   const moves = dex.moves.all()
     .filter((move) => move.exists && move.gen === 1 && !move.isNonstandard)
@@ -251,6 +299,7 @@ async function main() {
       power: move.basePower,
       accuracy: move.accuracy === true ? 100 : move.accuracy,
       family: familyFor(move),
+      variant: variantFor({...move, family: familyFor(move)}),
     }));
 
   await fs.writeFile(OUTPUT, JSON.stringify(moves, null, 2), 'utf8');

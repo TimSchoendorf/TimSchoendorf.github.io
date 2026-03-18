@@ -137,12 +137,34 @@ function estimateDamage(move) {
 }
 
 function describeWindup(move) {
-  switch (move.family) {
-    case 'fireblast': return 'Flames gather into a blazing crest.';
-    case 'electric': return 'Electric charge spikes across the field.';
+  switch (move.variant) {
+    case 'thunder': return 'A heavy bolt starts to form overhead.';
+    case 'thunderbolt': return 'Electric charge spikes across the field.';
+    case 'thundershock': return 'A short electric pulse snaps forward.';
+    case 'thunderwave': return 'Paralyzing waves spread outward.';
+    case 'watergun': return 'Water gathers high above the target.';
+    case 'bubblebeam': return 'A tight stream of bubbles rushes in.';
     case 'hydropump': return 'Water pressure builds below the target.';
-    case 'beam': return 'Energy focuses into a straight beam.';
     case 'surf': return 'A wave rises across the arena.';
+    case 'ember': return 'Small flames spit forward.';
+    case 'flamethrower': return 'A stream of fire surges ahead.';
+    case 'firespin': return 'A ring of fire begins to tighten.';
+    case 'fireblast': return 'Flames gather into a blazing crest.';
+    case 'hypnosis': return 'A hypnotic ring forms around the target.';
+    case 'sing': return 'A note drifts softly toward the target.';
+    case 'lovelykiss': return 'A kiss floats toward the target.';
+    case 'powder-sleep': return 'Sleep powder drifts across the field.';
+    case 'powder-poison': return 'Poison powder starts to fall.';
+    case 'powder-spore': return 'Heavy spores rain down on the target.';
+    case 'rest': return 'The user settles into rest.';
+    case 'doubleteam': return 'Afterimages begin to split apart.';
+    case 'reflect': return 'A reflective wall flashes into place.';
+    case 'lightscreen': return 'A light screen shimmers into place.';
+    case 'wrap': return 'The target is about to be wrapped tight.';
+    case 'clamp': return 'The trap closes from both sides.';
+  }
+  switch (move.family) {
+    case 'beam': return 'Energy focuses into a straight beam.';
     case 'sleep': return 'Drowsy powder drifts toward the target.';
     case 'confusion': return 'Psychic rings start to spiral.';
     case 'barrier': return 'A defensive wall flashes into place.';
@@ -159,6 +181,8 @@ function describeResolution(move, attacker, defender) {
     if (move.family === 'poison') return `${defender} is left in a toxic cloud.`;
     if (move.family === 'barrier') return `${attacker} is covered by a barrier.`;
     if (move.family === 'substitute') return `${attacker} hides behind a substitute.`;
+    if (move.variant === 'doubleteam') return `${attacker} is surrounded by afterimages.`;
+    if (move.variant === 'rest') return `${attacker} drifts into sleep.`;
     return `${move.name} finishes its status animation.`;
   }
   return `${defender} reels from ${move.name}.`;
@@ -376,6 +400,7 @@ class BattleViewport {
     const profile = FAMILY[family.family];
     if (!profile) return;
     const effect = profile.effect;
+    const variant = family.variant || family.id || family.family;
     const metrics = this.metrics();
     const width = this.canvas.clientWidth;
     const height = this.canvas.clientHeight;
@@ -389,6 +414,207 @@ class BattleViewport {
     const hitAt = profile.hitAt ?? 0.6;
     const localToHit = clamp(progress / hitAt, 0, 1);
     const p = easeInOut(localToHit);
+
+    if (variant === 'thunder') {
+      const strikeX = dx + (Math.sin(progress * Math.PI * 10) * 4);
+      const strikeY = dy - 14;
+      this.drawPolyline([[strikeX - 6, strikeY - 82], [strikeX + 8, strikeY - 48], [strikeX - 5, strikeY - 20], [strikeX + 10, strikeY + 8], [strikeX - 2, strikeY + 38]], '#fff6a0', 8, {alpha: 0.98});
+      this.drawPolyline([[strikeX + 16, strikeY - 70], [strikeX + 4, strikeY - 36], [strikeX + 18, strikeY - 6]], '#ffe056', 5, {alpha: 0.88});
+      if (progress > hitAt) this.drawBurst(dx, dy, 10, 30, (progress - hitAt) / (1 - hitAt), '#fff685');
+      return;
+    }
+    if (variant === 'thundershock') {
+      const x = lerp(ax, dx, p);
+      const y = lerp(ay, dy, p);
+      this.drawPolyline([[x - 12, y - 20], [x + 2, y - 8], [x - 6, y + 6], [x + 8, y + 18]], '#fff18b', 4, {alpha: 0.95});
+      return;
+    }
+    if (variant === 'thunderwave' || variant === 'stunspore') {
+      for (let index = 0; index < 3; index += 1) {
+        const t = clamp(progress - (index * 0.08), 0, 1);
+        const radius = 12 + (t * 20);
+        const color = variant === 'stunspore' ? '#f2e97a' : '#c6d8ff';
+        this.drawCircle(dx, dy, radius, '', {alpha: 1 - t, stroke: color, lineWidth: 3});
+      }
+      if (variant === 'stunspore') {
+        for (let index = 0; index < 6; index += 1) {
+          const t = clamp(progress * 1.1 - (index * 0.05), 0, 1);
+          this.drawCircle(lerp(ax, dx, t) + ((index - 3) * 6), lerp(ay - 14, dy, t), 3, '#efe48a', {alpha: 0.9});
+        }
+      }
+      return;
+    }
+    if (variant === 'watergun') {
+      for (let index = 0; index < 4; index += 1) {
+        const t = clamp(localToHit - (index * 0.05), 0, 1);
+        const x = dx + ((index - 1) * 8);
+        const y = lerp(dy - 96 - (index * 8), dy, easeOutQuad(t));
+        this.drawPolyline([[x, y - 14], [x, y + 12]], '#d8f7ff', 7, {alpha: 0.96});
+        this.drawPolyline([[x, y - 14], [x, y + 12]], '#7fd7ff', 3, {alpha: 0.96});
+      }
+      if (progress > hitAt) this.drawBurst(dx, dy, 6, 18, (progress - hitAt) / (1 - hitAt), '#d8f7ff');
+      return;
+    }
+    if (variant === 'bubblebeam') {
+      for (let index = 0; index < 7; index += 1) {
+        const t = clamp(progress * 1.16 - (index * 0.05), 0, 1);
+        const x = lerp(ax, dx, t) + (Math.sin(index + t * Math.PI * 2) * 10);
+        const y = lerp(ay, dy, t) + ((index - 3) * 4);
+        this.drawCircle(x, y, 7, '', {alpha: 1 - (t * 0.32), stroke: '#bceeff', lineWidth: 3});
+      }
+      return;
+    }
+    if (variant === 'waterfall') {
+      const baseY = dy + 70;
+      for (let index = -1; index <= 1; index += 1) {
+        const x = dx + (index * 10);
+        const top = lerp(baseY, dy - 20, easeOutQuad(localToHit));
+        this.drawPolyline([[x, baseY], [x, top]], '#dff9ff', 8, {alpha: 0.9});
+      }
+      return;
+    }
+    if (variant === 'ember' || variant === 'firepunch') {
+      for (let index = 0; index < 3; index += 1) {
+        const t = clamp(progress * 1.06 - (index * 0.08), 0, 1);
+        const x = lerp(ax, dx, t);
+        const y = lerp(ay, dy, t) + ((index - 1) * 10);
+        this.drawCircle(x, y, 8, '#f49a36', {alpha: 0.94, stroke: '#ffe58b', lineWidth: 2});
+      }
+      return;
+    }
+    if (variant === 'flamethrower' || variant === 'dragonrage') {
+      const ex = lerp(ax, dx, easeOutQuad(localToHit));
+      const ey = lerp(ay, dy, easeOutQuad(localToHit));
+      const outer = variant === 'dragonrage' ? '#ffd36b' : '#ffb14c';
+      const inner = variant === 'dragonrage' ? '#9f5fff' : '#ff6f2d';
+      this.drawPolyline([[ax, ay], [ex, ey]], outer, 12, {alpha: 0.92});
+      this.drawPolyline([[ax, ay], [ex, ey]], inner, 6, {alpha: 0.96});
+      return;
+    }
+    if (variant === 'firespin') {
+      for (let index = 0; index < 7; index += 1) {
+        const angle = (Math.PI * 2 * index) / 7 + (progress * Math.PI * 2.2);
+        const radius = 18 + (progress * 22);
+        this.drawCircle(dx + Math.cos(angle) * radius, dy + Math.sin(angle) * (radius * 0.8), 7, '#ff9e3e', {alpha: 0.9, stroke: '#ffe27e', lineWidth: 2});
+      }
+      return;
+    }
+    if (variant === 'hypnosis') {
+      for (let index = 0; index < 4; index += 1) {
+        const t = clamp(progress - (index * 0.08), 0, 1);
+        this.drawCircle(dx, dy, 10 + (t * 22), '', {alpha: 1 - t, stroke: '#d6b0ff', lineWidth: 3});
+      }
+      return;
+    }
+    if (variant === 'sing') {
+      for (let index = 0; index < 3; index += 1) {
+        const t = clamp(progress - (index * 0.08), 0, 1);
+        const x = lerp(ax, dx, t);
+        const y = lerp(ay - 10, dy - 10, t) + (Math.sin((t * 8) + index) * 12);
+        this.drawPolyline([[x - 8, y + 10], [x - 8, y - 10], [x + 6, y - 5]], '#f3f3f0', 3, {alpha: 1 - t});
+        this.drawCircle(x + 7, y + 3, 5, '#f3f3f0', {alpha: 1 - t});
+      }
+      return;
+    }
+    if (variant === 'lovelykiss') {
+      for (let index = 0; index < 4; index += 1) {
+        const t = clamp(progress * 1.08 - (index * 0.07), 0, 1);
+        const x = lerp(ax, dx, t);
+        const y = lerp(ay, dy, t) + ((index - 1.5) * 10);
+        this.drawCircle(x, y, 8, '#ff8dc7', {alpha: 0.92, stroke: '#ffd2eb', lineWidth: 2});
+      }
+      return;
+    }
+    if (variant === 'rest') {
+      for (let index = 0; index < 3; index += 1) {
+        const t = clamp(progress - (index * 0.12), 0, 1);
+        const x = ax + 10 + (index * 8);
+        const y = ay - 18 - (t * 32);
+        this.ctx.save();
+        this.ctx.globalAlpha = 1 - t;
+        this.ctx.fillStyle = '#f6f6f4';
+        this.ctx.font = this.mode === 'mobile' ? 'bold 14px Georgia' : 'bold 18px Georgia';
+        this.ctx.fillText('Z', x, y);
+        this.ctx.restore();
+      }
+      return;
+    }
+    if (variant === 'powder-sleep' || variant === 'powder-poison' || variant === 'powder-spore') {
+      const color = variant === 'powder-poison' ? '#c7a1f0' : variant === 'powder-spore' ? '#efe8a1' : '#f3f3f0';
+      for (let index = 0; index < 10; index += 1) {
+        const t = clamp(progress * 1.05 - (index * 0.04), 0, 1);
+        const x = dx + (((index % 5) - 2) * 9);
+        const y = lerp(dy - 76 - Math.floor(index / 5) * 18, dy + 18, easeOutQuad(t));
+        this.drawCircle(x, y, 3 + (index % 2), color, {alpha: 0.9 - (t * 0.35)});
+      }
+      return;
+    }
+    if (variant === 'poisongas' || variant === 'sludge' || variant === 'smokescreen') {
+      const color = variant === 'sludge' ? '#5d5068' : variant === 'smokescreen' ? '#8a8795' : '#7c63a4';
+      for (let index = 0; index < 5; index += 1) {
+        const t = clamp(progress - (index * 0.06), 0, 1);
+        const x = lerp(ax, dx, t) + (index * 6 * dir);
+        const y = lerp(ay, dy, t) - (index * 5);
+        this.drawCircle(x, y, 11 + (index * 2), color, {alpha: 0.86 - (t * 0.4)});
+      }
+      return;
+    }
+    if (variant === 'confuseray') {
+      for (let index = 0; index < 4; index += 1) {
+        const t = clamp(progress - (index * 0.05), 0, 1);
+        this.drawCircle(dx, dy, 10 + (t * 20), '', {alpha: 1 - t, stroke: '#f2f6ff', lineWidth: 2});
+      }
+      return;
+    }
+    if (variant === 'psychic' || variant === 'nightshade') {
+      for (let index = 0; index < 5; index += 1) {
+        const y = dy - 36 + (index * 18);
+        const amp = 10 + (index * 2);
+        const phase = progress * Math.PI * 4 + index;
+        this.drawPolyline([[dx - 34, y + Math.sin(phase) * amp], [dx, y - Math.sin(phase) * amp], [dx + 34, y + Math.sin(phase + 1.2) * amp]], variant === 'nightshade' ? '#9c79ff' : '#d4b7ff', 3, {alpha: 0.78});
+      }
+      return;
+    }
+    if (variant === 'psybeam') {
+      const ex = lerp(ax, dx, easeOutQuad(localToHit));
+      const ey = lerp(ay, dy, easeOutQuad(localToHit));
+      this.drawPolyline([[ax, ay], [ex, ey]], '#ff8fd7', 10, {alpha: 0.88});
+      this.drawPolyline([[ax, ay], [ex, ey]], '#7be2ff', 5, {alpha: 0.92});
+      return;
+    }
+    if (variant === 'doubleteam') {
+      const ghosts = [
+        {x: ax - 30, y: ay - 4, alpha: 0.55},
+        {x: ax + 28, y: ay - 10, alpha: 0.5},
+        {x: ax + 6, y: ay - 30, alpha: 0.42},
+      ];
+      for (const ghost of ghosts) {
+        this.drawRect(ghost.x, ghost.y, 30, 54, 'rgba(207,236,255,.18)', {alpha: ghost.alpha, stroke: 'rgba(225,246,255,.72)', lineWidth: 2});
+      }
+      this.drawBurst(ax, ay - 10, 5, 16, progress, '#f3fbff');
+      return;
+    }
+    if (variant === 'reflect' || variant === 'lightscreen') {
+      const x = ax;
+      const y = ay - 18;
+      const color = variant === 'reflect' ? '#dff5ff' : '#fff2a8';
+      this.drawRect(x - 14, y, 18, 72, `${color}33`, {stroke: color, lineWidth: 3, alpha: 0.84});
+      this.drawRect(x + 14, y, 18, 72, `${color}28`, {stroke: color, lineWidth: 3, alpha: 0.68});
+      return;
+    }
+    if (variant === 'wrap' || variant === 'bind' || variant === 'clamp' || variant === 'constrict') {
+      const radiusX = variant === 'constrict' ? 18 : 24;
+      const radiusY = variant === 'clamp' ? 30 : 22;
+      for (let index = 0; index < 3; index += 1) {
+        const t = clamp(progress - (index * 0.07), 0, 1);
+        this.drawCircle(dx, dy, radiusX + (t * 4), '', {alpha: 0.82 - (index * 0.12), stroke: variant === 'clamp' ? '#eef7ff' : '#c6f2bf', lineWidth: 3});
+        if (variant === 'clamp') {
+          this.drawPolyline([[dx - 18, dy - radiusY], [dx - 4, dy], [dx - 18, dy + radiusY]], '#f5f5ee', 4, {alpha: 0.9});
+          this.drawPolyline([[dx + 18, dy - radiusY], [dx + 4, dy], [dx + 18, dy + radiusY]], '#f5f5ee', 4, {alpha: 0.9});
+        }
+      }
+      return;
+    }
 
     if (effect.type === 'burst') { const x = lerp(ax, dx, p); const y = lerp(ay, dy, p); this.drawBurst(x, y, 8, 18, progress, '#fff0a8'); if (progress > hitAt) this.drawBurst(dx, dy, 8, 30, (progress - hitAt) / (1 - hitAt), '#ffd478'); return; }
     if (effect.type === 'slash') { const x = lerp(ax, dx, p); const y = lerp(ay, dy, p); this.drawPolyline([[x - 30, y + 20], [x + 30, y - 22]], '#f7f7ef', 5, {alpha: 0.95}); this.drawPolyline([[x - 24, y + 26], [x + 24, y - 16]], '#ff6767', 2, {alpha: 0.78}); return; }
