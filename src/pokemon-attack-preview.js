@@ -213,6 +213,57 @@ function loadImage(src) {
   });
 }
 
+function makeWhiteTileTransparent(image) {
+  const canvas = document.createElement('canvas');
+  canvas.width = image.width;
+  canvas.height = image.height;
+  const ctx = canvas.getContext('2d', {willReadFrequently: true});
+  ctx.drawImage(image, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const {data, width, height} = imageData;
+
+  const isWhite = (x, y) => {
+    const index = ((y * width) + x) * 4;
+    return data[index] === 255 && data[index + 1] === 255 && data[index + 2] === 255 && data[index + 3] === 255;
+  };
+
+  for (let tileY = 0; tileY < height; tileY += 8) {
+    for (let tileX = 0; tileX < width; tileX += 8) {
+      const queue = [];
+      const seen = new Set();
+      const push = (x, y) => {
+        if (x < tileX || x >= tileX + 8 || y < tileY || y >= tileY + 8) return;
+        const key = `${x},${y}`;
+        if (seen.has(key) || !isWhite(x, y)) return;
+        seen.add(key);
+        queue.push([x, y]);
+      };
+
+      for (let x = tileX; x < tileX + 8; x += 1) {
+        push(x, tileY);
+        push(x, tileY + 7);
+      }
+      for (let y = tileY; y < tileY + 8; y += 1) {
+        push(tileX, y);
+        push(tileX + 7, y);
+      }
+
+      while (queue.length) {
+        const [x, y] = queue.shift();
+        const index = ((y * width) + x) * 4;
+        data[index + 3] = 0;
+        push(x + 1, y);
+        push(x - 1, y);
+        push(x, y + 1);
+        push(x, y - 1);
+      }
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
 class BattleViewport {
   constructor(root, mode, tilesets) {
     this.root = root;
@@ -242,6 +293,15 @@ class BattleViewport {
     this.ctx.imageSmoothingEnabled = false;
   }
 
+  spriteCenter(node) {
+    const stageRect = this.stage.getBoundingClientRect();
+    const rect = node.getBoundingClientRect();
+    return {
+      x: (rect.left - stageRect.left) + (rect.width / 2),
+      y: (rect.top - stageRect.top) + (rect.height / 2),
+    };
+  }
+
   fieldMetrics(source) {
     const stageRect = this.stage.getBoundingClientRect();
     const fieldRect = this.field.getBoundingClientRect();
@@ -256,6 +316,31 @@ class BattleViewport {
       width: renderWidth,
       height: renderHeight,
       scale,
+    };
+  }
+
+  battleAnchors(source, metrics) {
+    const originalPlayer = {
+      x: metrics.x + (40 * metrics.scale),
+      y: metrics.y + (84 * metrics.scale),
+    };
+    const originalFoe = {
+      x: metrics.x + (112 * metrics.scale),
+      y: metrics.y + (40 * metrics.scale),
+    };
+    const actualPlayer = this.spriteCenter(this.playerSprite);
+    const actualFoe = this.spriteCenter(this.foeSprite);
+    return {
+      player: {
+        original: originalPlayer,
+        actual: actualPlayer,
+        offset: {x: actualPlayer.x - originalPlayer.x, y: actualPlayer.y - originalPlayer.y},
+      },
+      foe: {
+        original: originalFoe,
+        actual: actualFoe,
+        offset: {x: actualFoe.x - originalFoe.x, y: actualFoe.y - originalFoe.y},
+      },
     };
   }
 
@@ -279,20 +364,50 @@ class BattleViewport {
     value.textContent = `${percent}/100`;
   }
 
-  drawSpriteTile(sprite, metrics) {
+  drawSpriteTile(sprite, metrics, offset = {x: 0, y: 0}) {
     const image = this.tilesets[sprite.tileset] || this.tilesets[0];
     if (!image) return;
     const tileSize = 8;
     const tileX = (sprite.tile % 16) * tileSize;
     const tileY = Math.floor(sprite.tile / 16) * tileSize;
-    const drawX = metrics.x + (sprite.x * metrics.scale);
-    const drawY = metrics.y + (sprite.y * metrics.scale);
+    const drawX = metrics.x + (sprite.x * metrics.scale) + offset.x;
+    const drawY = metrics.y + (sprite.y * metrics.scale) + offset.y;
     const size = tileSize * metrics.scale;
     this.ctx.save();
     this.ctx.translate(drawX + (size / 2), drawY + (size / 2));
     this.ctx.scale(sprite.flipX ? -1 : 1, sprite.flipY ? -1 : 1);
     this.ctx.drawImage(image, tileX, tileY, tileSize, tileSize, -(size / 2), -(size / 2), size, size);
     this.ctx.restore();
+  }
+
+  frameOffset(scene) {
+    const frame = scene.activeFrame;
+    if (!frame?.sprites?.length) return {x: 0, y: 0};
+    const anchors = scene.anchors;
+    const attackerKey = scene.side === 'player' ? 'player' : 'foe';
+    const targetKey = scene.side === 'player' ? 'foe' : 'player';
+    const attacker = anchors[attackerKey];
+    const target = anchors[targetKey];
+    const center = frame.sprites.reduce((acc, sprite) => {
+      acc.x += sprite.x + 4;
+      acc.y += sprite.y + 4;
+      return acc;
+    }, {x: 0, y: 0});
+    center.x /= frame.sprites.length;
+    center.y /= frame.sprites.length;
+
+    const lineX = target.original.x - attacker.original.x;
+    const lineY = target.original.y - attacker.original.y;
+    const lineLengthSq = (lineX * lineX) + (lineY * lineY) || 1;
+    const centerPx = {
+      x: scene.metrics.x + (center.x * scene.metrics.scale),
+      y: scene.metrics.y + (center.y * scene.metrics.scale),
+    };
+    const progress = clamp((((centerPx.x - attacker.original.x) * lineX) + ((centerPx.y - attacker.original.y) * lineY)) / lineLengthSq, 0, 1);
+    return {
+      x: lerp(attacker.offset.x, target.offset.x, progress),
+      y: lerp(attacker.offset.y, target.offset.y, progress),
+    };
   }
 
   drawFlash(color, alpha) {
@@ -318,8 +433,8 @@ class BattleViewport {
 
   drawScreenParticles(kind, progress, metrics, side) {
     const ctx = this.ctx;
-    const centerX = metrics.x + (metrics.width * (side === 'player' ? 0.26 : 0.74));
-    const centerY = metrics.y + (metrics.height * (side === 'player' ? 0.78 : 0.3));
+    const centerX = metrics.anchorX;
+    const centerY = metrics.anchorY;
     if (kind === 'leaves' || kind === 'petals') {
       const color = kind === 'leaves' ? '#8fc45f' : '#f0a7bf';
       for (let index = 0; index < 12; index += 1) {
@@ -377,6 +492,10 @@ class BattleViewport {
     const attackerNode = scene.side === 'player' ? this.playerSprite : this.foeSprite;
     const defenderNode = scene.side === 'player' ? this.foeSprite : this.playerSprite;
     const metrics = scene.metrics;
+    const attackerKey = scene.side === 'player' ? 'player' : 'foe';
+    const targetKey = scene.side === 'player' ? 'foe' : 'player';
+    const attackerAnchor = scene.anchors[attackerKey].actual;
+    const targetAnchor = scene.anchors[targetKey].actual;
 
     switch (effect) {
       case 'SE_DARK_SCREEN_FLASH':
@@ -397,8 +516,8 @@ class BattleViewport {
       case 'SE_LIGHT_SCREEN_PALETTE':
         this.drawFlash('#d7f0ff', 0.14);
         this.drawGlow(
-          metrics.x + (metrics.width * (scene.side === 'player' ? 0.26 : 0.74)),
-          metrics.y + (metrics.height * (scene.side === 'player' ? 0.78 : 0.32)),
+          attackerAnchor.x,
+          attackerAnchor.y,
           metrics.width * 0.14,
           '#bfe8ff',
           0.45,
@@ -408,23 +527,23 @@ class BattleViewport {
         this.stage.style.transform = `translate(${Math.sin(progress * Math.PI * 10) * 5}px, 0px)`;
         break;
       case 'SE_WATER_DROPLETS_EVERYWHERE':
-        this.drawScreenParticles('droplets', progress, metrics, scene.side);
+        this.drawScreenParticles('droplets', progress, {...metrics, anchorX: targetAnchor.x, anchorY: targetAnchor.y}, scene.side);
         break;
       case 'DoBlizzardSpecialEffects':
-        this.drawScreenParticles('petals', progress, metrics, scene.side);
+        this.drawScreenParticles('petals', progress, {...metrics, anchorX: targetAnchor.x, anchorY: targetAnchor.y}, scene.side);
         break;
       case 'SE_PETALS_FALLING':
-        this.drawScreenParticles('petals', progress, metrics, scene.side);
+        this.drawScreenParticles('petals', progress, {...metrics, anchorX: targetAnchor.x, anchorY: targetAnchor.y}, scene.side);
         break;
       case 'SE_LEAVES_FALLING':
-        this.drawScreenParticles('leaves', progress, metrics, scene.side);
+        this.drawScreenParticles('leaves', progress, {...metrics, anchorX: targetAnchor.x, anchorY: targetAnchor.y}, scene.side);
         break;
       case 'SE_SPIRAL_BALLS_INWARD':
-        this.drawScreenParticles('spiral', progress, metrics, scene.side);
+        this.drawScreenParticles('spiral', progress, {...metrics, anchorX: attackerAnchor.x, anchorY: attackerAnchor.y}, scene.side);
         break;
       case 'SE_SHOOT_BALLS_UPWARD':
       case 'SE_SHOOT_MANY_BALLS_UPWARD':
-        this.drawScreenParticles('balls-up', progress, metrics, scene.side);
+        this.drawScreenParticles('balls-up', progress, {...metrics, anchorX: attackerAnchor.x, anchorY: attackerAnchor.y}, scene.side);
         break;
       case 'SE_MOVE_MON_HORIZONTALLY':
         attackerNode.style.transform = `translate(${scene.side === 'player' ? 18 : -18}px, 0px)`;
@@ -522,9 +641,11 @@ class BattleViewport {
 
     const metrics = this.fieldMetrics(scene.source);
     scene.metrics = metrics;
+    scene.anchors = this.battleAnchors(scene.source, metrics);
 
     if (scene.activeFrame) {
-      for (const sprite of scene.activeFrame.sprites) this.drawSpriteTile(sprite, metrics);
+      const frameOffset = this.frameOffset(scene);
+      for (const sprite of scene.activeFrame.sprites) this.drawSpriteTile(sprite, metrics, frameOffset);
     }
 
     for (const effect of scene.activeEffects) {
@@ -804,7 +925,10 @@ async function main() {
   if (!response.ok) throw new Error(`Failed to load ${DATA_PATH}`);
   const data = await response.json();
   const loadedTilesets = await Promise.all(
-    Object.entries(data.source.tilesets).map(async ([index, src]) => [index, await loadImage(src)]),
+    Object.entries(data.source.tilesets).map(async ([index, src]) => {
+      const image = await loadImage(src);
+      return [index, makeWhiteTileTransparent(image)];
+    }),
   );
   const tilesets = Object.fromEntries(loadedTilesets);
   const app = new AttackPreviewApp(data, tilesets);
