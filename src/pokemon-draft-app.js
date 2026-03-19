@@ -9,7 +9,6 @@ import {
   drawPack,
   generateSet,
   pickOpponentDraft,
-  previewMoves,
   setArchetype,
   shuffle,
 } from './pokemon-draft-core.js';
@@ -87,16 +86,16 @@ const GENERATION_CONFIG = {
     label: 'Gen 5',
     kicker: 'Next Era Preview',
     title: 'Pokemon Battle Arena',
-    subtitle: 'This already previews the visual direction for the later Gen 5 expansion. The playable mode comes next.',
-    availability: 'Style preview',
-    status: 'Next expansion',
-    features: ['Distinct theme', 'More modern arena feel', 'Prepared for expansion'],
-    steps: ['Inspect the generation', 'Compare styles', 'Expand it into a full mode later'],
+    subtitle: 'Choose a generation first. Then pick Bot Run or Link Battle and jump straight into the draft. Gen 5 modes are still in development.',
+    availability: 'In development',
+    status: 'Unova preview',
+    features: ['Gen 5 style preview', 'Modes still in development', 'Modern arena style inspired by Gen 5'],
+    steps: ['Pick a generation', 'Choose a mode', 'Draft, order, battle'],
     modeCards: {
       bot: {
         eyebrow: 'Solo',
         title: 'Bot Run',
-        points: ['The theme preview is already live', 'The playable Gen 5 mode comes next', 'The structure is ready for future expansion'],
+        points: ['Always 3 Pokemon to choose from', 'Set your own order', 'Gen 5 mode still in development'],
         enabled: false,
         action: 'start-bot',
         cta: 'Coming soon',
@@ -104,13 +103,13 @@ const GENERATION_CONFIG = {
       link: {
         eyebrow: 'Online',
         title: 'Link Battle',
-        points: ['The design system is already separated', 'Switching styles is visible immediately', 'Online mode comes later'],
+        points: ['Share a room code or join one', 'Both players draft in secret across 3 rounds', 'Gen 5 mode still in development'],
         enabled: false,
         action: 'start-link',
         cta: 'Coming soon',
       },
     },
-    note: 'Rules stay intentionally generation-agnostic so future systems fit cleanly.',
+    note: 'Battle rules depend on the selected generation.',
   },
 };
 const MENU_SHOWCASE = {
@@ -929,6 +928,39 @@ function typeGradient(types) {
   return `linear-gradient(145deg, ${first[0]}, ${second[1]})`;
 }
 
+function typeColors(type) {
+  const palette = {
+    Normal: {bg: '#d7d0bb', fg: '#3f3729'},
+    Fire: {bg: '#f0a15f', fg: '#4f2507'},
+    Water: {bg: '#73a9df', fg: '#112f51'},
+    Electric: {bg: '#e0c34f', fg: '#4b3900'},
+    Grass: {bg: '#7fab74', fg: '#173617'},
+    Ice: {bg: '#9fd7e2', fg: '#103943'},
+    Fighting: {bg: '#c47d70', fg: '#40150d'},
+    Poison: {bg: '#b78ad7', fg: '#33194b'},
+    Ground: {bg: '#caa770', fg: '#453117'},
+    Flying: {bg: '#adc4ec', fg: '#203253'},
+    Psychic: {bg: '#e19cb7', fg: '#4c1830'},
+    Bug: {bg: '#b8cf75', fg: '#31430b'},
+    Rock: {bg: '#bca47d', fg: '#43341d'},
+    Ghost: {bg: '#988fb7', fg: '#2a2145'},
+    Dragon: {bg: '#8ea3f0', fg: '#1d2b63'},
+  };
+  return palette[type] || {bg: '#ced5c2', fg: '#1f271d'};
+}
+
+function moveTypeBadge(type, extraClass = '') {
+  const tone = typeColors(type);
+  const cls = ['type-badge', extraClass].filter(Boolean).join(' ');
+  return `<span class="${cls}" style="--type-bg:${tone.bg};--type-fg:${tone.fg}">${type}</span>`;
+}
+
+function draftMovePreview(species) {
+  return generateSet(species, dex).moves
+    .map((moveId) => dex.moves.get(moveId))
+    .filter((move) => move?.exists);
+}
+
 function compactMeta(parts) {
   return parts.filter(Boolean).join(' | ');
 }
@@ -1030,7 +1062,7 @@ function renderInspectMoveCard(move) {
   return `<article class="inspect-move-card">
     <div class="inspect-move-head">
       <strong>${move.name}</strong>
-      <div class="inspect-move-tags"><span>${move.type}</span><span>${move.category}</span></div>
+      <div class="inspect-move-tags">${moveTypeBadge(move.type)}<span>${move.category}</span></div>
     </div>
     <div class="inspect-move-stats">
       <div><span>PWR</span><strong>${formatMovePower(move)}</strong></div>
@@ -1086,6 +1118,7 @@ function renderDraftStatCells(member) {
 }
 
 function renderDraftCard(species, pickAttr) {
+  const moves = draftMovePreview(species);
   return `<article class="draft-card draft-choice-card" style="background:${typeGradient(species.types)}">
     <div class="draft-choice-head">
       <div><div class="label">#${species.num}</div><h3>${species.name}</h3></div>
@@ -1095,7 +1128,7 @@ function renderDraftCard(species, pickAttr) {
       <div class="draft-choice-sprite">${spriteTag(species, 'front', 'lg')}</div>
       <div class="draft-choice-copy">
         <div class="types">${species.types.map((type) => `<span>${type}</span>`).join('')}</div>
-        <div class="move-row">${previewMoves(species, dex).map((move) => `<span>${move}</span>`).join('')}</div>
+        <div class="move-row">${moves.map((move) => `<span class="move-chip" style="--type-bg:${typeColors(move.type).bg};--type-fg:${typeColors(move.type).fg}">${move.name}</span>`).join('')}</div>
       </div>
     </div>
     <div class="draft-stat-grid">${renderDraftStatCells(species)}</div>
@@ -1136,7 +1169,7 @@ function renderDraftStatusCard(mode, roundLabel) {
 function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, cards, showStatusCard = mode === 'link'}) {
   return `<section class="draft-shell">
     <div class="draft-topbar">
-      <a class="ghost-btn back" href="../index.html#games">Back to home</a>
+      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
     </div>
     <section class="draft-hero-panel">
@@ -1185,7 +1218,7 @@ function renderPreviewHeroGuide(mode) {
 function renderPreviewShell({mode, title, statusCopy, chips, actionLabel, playerPanelTitle, playerCards, asidePanel}) {
   return `<section class="preview-shell">
     <div class="draft-topbar">
-      <a class="ghost-btn back" href="../index.html#games">Back to home</a>
+      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
     </div>
     <section class="draft-hero-panel preview-hero-panel">
@@ -1279,16 +1312,18 @@ function renderMenuStage() {
         <div class="menu-stage-text">Choose a generation, pick a mode, then draft and battle.</div>
       </div>`
     : `<div class="menu-showcase menu-showcase-gen5">
-        <div class="menu-tech-card menu-tech-card-foe"><span class="label">Theme Shift</span><strong>Gen 5 Preview</strong><span>Distinct battle style</span></div>
-        <div class="menu-tech-card menu-tech-card-player"><span class="label">Expansion</span><strong>Next Battle Layer</strong><span>Mode arrives later</span></div>
-        <div class="menu-energy menu-energy-a"></div>
-        <div class="menu-energy menu-energy-b"></div>
-        <div class="menu-energy menu-energy-c"></div>
-        <div class="menu-stage-text">The switch already separates the visual language of each generation.</div>
+        <div class="menu-stage-card menu-stage-card-foe menu-stage-card-gen5">
+          <strong>${generation.label} Arena</strong>
+          <span>Battle preview coming soon</span>
+        </div>
+        <div class="menu-stage-mon menu-stage-mon-foe menu-stage-mon-empty">${menuSpriteTag(null, 'front', 'foe')}</div>
+        <div class="menu-stage-mon menu-stage-mon-player menu-stage-mon-empty">${menuSpriteTag(null, 'back', 'player')}</div>
+        <div class="menu-stage-line menu-stage-line-top"></div>
+        <div class="menu-stage-line menu-stage-line-bottom"></div>
+        <div class="menu-stage-text">Choose a generation, pick a mode, then draft and battle. Gen 5 modes are still in development.</div>
       </div>`;
   return `<section class="menu-shell">
     <div class="menu-topbar">
-      <a class="ghost-btn back" href="../index.html#games">Back to home</a>
       <div class="menu-generation-switch" role="tablist" aria-label="Choose generation">
         <button class="menu-generation-btn ${state.generation === 'gen1' ? 'active' : ''}" data-action="set-generation-gen1">Gen 1</button>
         <button class="menu-generation-btn ${state.generation === 'gen5' ? 'active' : ''}" data-action="set-generation-gen5">Gen 5</button>
@@ -1377,7 +1412,7 @@ function renderLinkConnectionCard(kind) {
 function renderLinkSetupStage() {
   return `<section class="link-setup-shell">
     <div class="draft-topbar">
-      <a class="ghost-btn back" href="../index.html#games">Back to home</a>
+      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>Link Battle</span></div>
     </div>
     <section class="link-setup-hero">
@@ -1425,7 +1460,7 @@ function renderLinkPreviewStage() {
     </div>`).join('');
   return `<section class="link-preview-shell">
     <div class="draft-topbar">
-      <a class="ghost-btn back" href="../index.html#games">Back to home</a>
+      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>Link Battle</span></div>
     </div>
     <section class="draft-hero-panel link-preview-hero">
@@ -1511,7 +1546,11 @@ function renderChoiceButtons() {
 }
 
 function renderBattleStage() {
-  const rematch = state.playMode === 'link' && state.battleFinished ? '<button class="primary-btn" data-action="link-rematch">Rematch</button>' : '';
+  const rematch = state.playMode === 'link' && state.battleFinished
+    ? '<button class="primary-btn" data-action="link-rematch">Rematch</button>'
+    : state.playMode === 'bot' && state.battleFinished
+      ? '<button class="primary-btn" data-action="retry-bot">Retry</button>'
+      : '';
   const latestFeed = state.battleFeed[0] || 'The battle is about to begin.';
   const streak = `Win Streak ${state.runWins}`;
   return `<section class="battle-ui">
@@ -1744,6 +1783,7 @@ function handleAction(action) {
     return render();
   }
   if (action === 'start-battle') return startBotBattle();
+  if (action === 'retry-bot') return resetDraft();
   if (action === 'host-link') return startHosting();
   if (action === 'join-link') return joinHost();
   if (action === 'ready-link-battle') return readyLinkBattle();
@@ -2378,6 +2418,13 @@ function injectStyles() {
       font-size:.78rem;
       font-weight:600;
     }
+    .type-badge,
+    .move-chip{
+      background:var(--type-bg) !important;
+      color:var(--type-fg) !important;
+      border:1px solid rgba(0,0,0,.14);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.18);
+    }
     .draft-card .tiny,.roster-card .tiny,.preview-card .tiny,.combatant .tiny,.bench-card .tiny{
       color:var(--ink-soft);
       font-weight:600;
@@ -2865,12 +2912,8 @@ function injectStyles() {
     .menu-topbar{
       display:flex;
       align-items:center;
-      justify-content:space-between;
+      justify-content:flex-end;
       gap:14px;
-    }
-    .menu-topbar .back{
-      padding:10px 16px;
-      background:rgba(255,255,255,.1);
     }
     .menu-generation-switch{
       display:grid;
@@ -3009,6 +3052,11 @@ function injectStyles() {
     .menu-stage-card-foe strong{
       line-height:1;
     }
+    .menu-stage-card-foe span{
+      font-size:.78rem;
+      line-height:1.15;
+      opacity:.82;
+    }
     .menu-stage-card-player{display:none}
     .menu-stage-mon{
       position:absolute;
@@ -3089,7 +3137,23 @@ function injectStyles() {
       background:
         radial-gradient(circle at 18% 26%,rgba(102,216,255,.18),transparent 22%),
         radial-gradient(circle at 76% 30%,rgba(139,107,255,.2),transparent 26%),
-        linear-gradient(145deg,#11172f,#19224f 55%,#121937);
+        linear-gradient(180deg,#11172f 0%,#11172f 53%,#202750 53%,#202750 100%);
+    }
+    .menu-showcase-gen5 .menu-stage-line-top{background:rgba(173,227,255,.2)}
+    .menu-showcase-gen5 .menu-stage-line-bottom{
+      background:rgba(17,23,47,.88);
+      border-color:rgba(154,229,255,.22);
+      box-shadow:inset 0 0 0 2px rgba(154,229,255,.08);
+    }
+    .menu-showcase-gen5 .menu-stage-card{
+      background:rgba(11,19,42,.9);
+      border-color:rgba(113,219,255,.35);
+      color:#edf7ff;
+    }
+    .menu-showcase-gen5 .menu-mon-placeholder{
+      background:rgba(255,255,255,.04);
+      border:1px dashed rgba(154,229,255,.22);
+      color:rgba(237,247,255,.38);
     }
     .menu-tech-card-foe{top:28px;left:28px;background:rgba(13,21,46,.9);border-color:rgba(102,216,255,.4);color:#edf7ff}
     .menu-tech-card-player{right:28px;bottom:88px;background:rgba(27,21,58,.9);border-color:rgba(139,107,255,.45);color:#edf7ff}
@@ -3104,13 +3168,9 @@ function injectStyles() {
     .menu-energy-c{width:70px;height:70px;top:148px;left:44%;background:radial-gradient(circle,var(--menu-accent-soft),transparent 70%);opacity:.9}
     .menu-showcase-gen5 .menu-stage-text{
       color:#eef8ff;
-      left:32px;
-      right:32px;
-      bottom:34px;
       text-transform:none;
       letter-spacing:.02em;
       font-weight:600;
-      font-size:1rem;
     }
     .menu-lower{
       display:grid;
@@ -3769,6 +3829,10 @@ function injectStyles() {
       font-size:.76rem;
       font-weight:700;
     }
+    .inspect-move-tags .type-badge{
+      background:var(--type-bg);
+      color:var(--type-fg);
+    }
     .inspect-move-stats{
       display:grid;
       grid-template-columns:repeat(4,minmax(0,1fr));
@@ -4072,7 +4136,6 @@ function injectStyles() {
       }
       .menu-shell{gap:10px;padding:6px 0 8px}
       .menu-topbar{
-        flex-direction:column;
         align-items:stretch;
       }
       .menu-generation-switch{

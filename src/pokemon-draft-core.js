@@ -228,15 +228,32 @@ function estimateMoveDamage(move, attacker, defender, dex) {
   return (((move.basePower || 0) * attackStat) / Math.max(1, defenseStat)) * stab * effectiveness * moveAccuracy(move);
 }
 
+function moveHasNoEffect(move, defender, dex) {
+  if (!move?.exists) return true;
+  if (move.category !== 'Status') return typeMultiplier(move.type, defender.types, dex) <= 0;
+  if (move.id === 'thunderwave') return typeMultiplier(move.type, defender.types, dex) <= 0;
+  if ((move.status === 'psn' || move.status === 'tox') && defender.types.includes('Poison')) return true;
+  return false;
+}
+
+function statusWouldBeRedundant(move, defender) {
+  if (!move?.exists) return false;
+  if (move.status && defender.status) return true;
+  return false;
+}
+
 function evaluateMoveChoice(moveSlot, dex, attacker, defender) {
   const move = dex.moves.get(moveSlot.id || moveSlot.move || '');
   if (!move?.exists || move.disabled) return -999;
   if (move.category === 'Status') {
+    if (moveHasNoEffect(move, defender, dex)) return -180;
+    if (statusWouldBeRedundant(move, defender)) return -150;
     let score = statusMoveScore(move, attacker);
     if (HIGH_PRIORITY_STATUS.has(move.id) && !defender.status) score += 30;
     if (RBY_RECOVERY.has(move.id)) score += attacker.currentPercent <= 45 ? 36 : -12;
     return score;
   }
+  if (moveHasNoEffect(move, defender, dex)) return -120;
   let score = estimateMoveDamage(move, attacker, defender, dex);
   if (move.id === 'hyperbeam' && defender.currentPercent <= 45) score += 40;
   if (RBY_EXPLOSION.has(move.id) && defender.currentPercent <= 60) score += 34;
