@@ -2833,8 +2833,15 @@ function formatStatus(status) {
   return labels[status] || status;
 }
 
+function battleTagValue(parts, prefix) {
+  const tag = parts.find((part) => typeof part === 'string' && part.startsWith(prefix));
+  return tag ? tag.slice(prefix.length) : '';
+}
+
 function battleText(parts) {
   const type = parts[1];
+  const actor = parts[2]?.includes(': ') ? parts[2].split(': ').pop() : parts[2];
+  const fromItem = battleTagValue(parts, '[from] item: ');
   if (type === 'move') return `${parts[2].split(': ').pop()} used ${parts[3]}.`;
   if (type === '-miss') return `${parts[2].split(': ').pop()} missed.`;
   if (type === '-supereffective') return "It's super effective.";
@@ -2842,6 +2849,17 @@ function battleText(parts) {
   if (type === '-crit') return 'A critical hit.';
   if (type === 'switch') return `${parts[2].split(': ').pop()} entered the battle.`;
   if (type === 'faint') return `${parts[2].split(': ').pop()} fainted.`;
+  if (type === '-heal' && fromItem) {
+    if (fromItem === 'Leftovers') return `${actor} restored a little HP using its Leftovers.`;
+    if (fromItem === 'Black Sludge') return `${actor} restored HP using its Black Sludge.`;
+    if (fromItem === 'Sitrus Berry') return `${actor} restored HP using its Sitrus Berry.`;
+    return `${actor} restored HP using ${fromItem}.`;
+  }
+  if (type === '-damage' && fromItem) {
+    if (fromItem === 'Life Orb') return `${actor} is hurt by its Life Orb.`;
+    if (fromItem === 'Black Sludge') return `${actor} is hurt by the Black Sludge.`;
+    return `${actor} is hurt by ${fromItem}.`;
+  }
   if (type === '-status') return `${parts[2].split(': ').pop()} is afflicted with ${formatStatus(parts[3])}.`;
   if (type === '-curestatus') return `${parts[2].split(': ').pop()} recovered.`;
   if (type === '-clearstatus') return `${parts[2].split(': ').pop()} is cured.`;
@@ -2874,8 +2892,11 @@ function battleText(parts) {
     if (parts[3]?.startsWith('move: Bide')) return `${name} is storing energy.`;
     return `${name} activates ${parts[3]}.`;
   }
-  if (type === '-item') return `${parts[2].split(': ').pop()} uses ${parts[3]}.`;
-  if (type === '-enditem') return `${parts[2].split(': ').pop()} consumed ${parts[3]}.`;
+  if (type === '-item') {
+    if (parts[3] === 'Air Balloon') return `${actor} floats with an Air Balloon.`;
+    return `${parts[2].split(': ').pop()} uses ${parts[3]}.`;
+  }
+  if (type === '-enditem') return `${parts[2].split(': ').pop()} consumed its ${parts[3]}.`;
   if (type === '-sidestart') return `${parts[2].startsWith('p1') ? 'One side' : 'The other side'} gained ${parts[3]}.`;
   if (type === '-sideend') return `${parts[3]} wore off.`;
   if (type === '-fieldstart') return `${parts[2]} began.`;
@@ -7378,6 +7399,7 @@ render();
 window.__pokemonBattlerDebug = {
   state,
   render,
+  battleText,
   ensureAttackAnimationAssets,
   playBattleMoveAnimation,
   startBattleSimulation,
