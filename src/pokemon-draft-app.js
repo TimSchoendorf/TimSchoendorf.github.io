@@ -2018,28 +2018,38 @@ function renderCombatant(mon, label, facing, sideKey, side) {
 function renderBench(team, own) {
   const bench = team.filter((member) => !member.active);
   if (!bench.length) return '<div class="empty">No reserve available.</div>';
-  return `<div class="bench-grid">${bench.map((member) => `<div class="bench-card bench-card-switch" style="background:${typeGradient(member.types || ['Normal'])}">
+  const allowSwitch = own && state.playerRequest && (state.playerRequest.forceSwitch || !state.playerRequest.active?.[0]?.trapped);
+  const switchChoices = new Map(
+    allowSwitch
+      ? state.playerRequest.side.pokemon
+        .map((mon, index) => ({mon, index}))
+        .filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt'))
+        .map(({mon, index}) => [mon.details.split(',')[0], `switch ${index + 1}`])
+      : [],
+  );
+  return `<div class="bench-grid">${bench.map((member) => {
+    const switchChoice = own ? switchChoices.get(member.name) || '' : '';
+    const switchState = own && switchChoice ? (state.playerRequest?.forceSwitch ? 'Forced switch' : 'Tap card to switch in') : '';
+    const clickable = Boolean(switchChoice) && !state.actionLocked;
+    return `<div class="bench-card bench-card-switch ${clickable ? 'bench-card-actionable' : ''}" ${clickable ? `data-choice="${switchChoice}" data-choice-kind="switch"` : ''} style="background:${typeGradient(member.types || ['Normal'])}">
       <div class="bench-card-sprite">${spriteTag(member, 'front', 'sm')}</div>
-      <div class="bench-card-copy"><strong>${member.name}</strong><div class="tiny">${member.condition}${member.set?.item ? ` | ${itemName(member.set.item)}` : ''}</div></div>
+      <div class="bench-card-copy"><strong>${member.name}</strong><div class="tiny">${member.condition}${member.set?.item ? ` | ${itemName(member.set.item)}` : ''}</div>${switchState ? `<div class="bench-card-switch-note">${switchState}</div>` : ''}</div>
       <button class="info-chip" data-inspect="${member.name}">Info</button>
-    </div>`).join('')}</div>`;
+    </div>`;
+  }).join('')}</div>`;
 }
 
 function renderChoiceButtons() {
   if (!state.playerRequest) return '<div class="empty">Waiting for the next request.</div>';
-  const switchDisabled = state.actionLocked ? 'disabled' : '';
   if (state.playerRequest.forceSwitch) {
-    return `<div class="choice-grid">${state.playerRequest.side.pokemon.map((mon, index) => ({mon, index})).filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt')).map(({mon, index}) => `<button class="choice-btn" ${switchDisabled} data-choice="switch ${index + 1}" data-choice-kind="switch">${mon.details.split(',')[0]}<span>Forced switch</span></button>`).join('')}</div>`;
+    return '<div class="empty battle-choice-note"><strong>Choose your next Pokemon.</strong><div>Tap one of the reserve cards below to send it in.</div></div>';
   }
   const moves = state.playerRequest.active?.[0]?.moves.map((move, index) => {
     const selected = state.selectedChoice === `move ${index + 1}` ? 'selected' : '';
     const ppText = Number.isFinite(move.pp) && Number.isFinite(move.maxpp) ? `<span>${move.pp}/${move.maxpp} PP</span>` : '';
     return `<button class="choice-btn ${selected}" data-choice="move ${index + 1}" data-choice-kind="move" data-move-name="${move.move}">${move.move}${ppText}</button>`;
   }).join('') || '';
-  const switches = !state.playerRequest.active?.[0]?.trapped
-    ? state.playerRequest.side.pokemon.map((mon, index) => ({mon, index})).filter(({mon}) => !mon.active && !mon.condition.endsWith(' fnt')).map(({mon, index}) => `<button class="choice-btn alt" ${switchDisabled} data-choice="switch ${index + 1}" data-choice-kind="switch">${mon.details.split(',')[0]}<span>Spend your turn</span></button>`).join('')
-    : '';
-  return `<div class="choice-grid">${moves}${switches}</div>`;
+  return `<div class="choice-grid">${moves}</div>`;
 }
 
 function renderBattleStage() {
@@ -2050,7 +2060,7 @@ function renderBattleStage() {
       : '';
   const latestFeed = state.battleFeed[0] || 'The battle is about to begin.';
   const streak = `Win Streak ${state.runWins}`;
-  return `<section class="battle-ui">
+  return `<section class="battle-ui team-size-${currentTeamSize()}">
     ${renderBattleDecor()}
     <div class="battle-frame-top">
       <button class="ghost-btn battle-mode-link" data-action="go-menu">Mode Select</button>
@@ -2126,7 +2136,10 @@ function bindEvents() {
   document.querySelectorAll('[data-clear-item]').forEach((button) => button.addEventListener('click', () => clearAssignedItem(button.dataset.clearItem)));
   document.querySelectorAll('[data-move-index]').forEach((button) => button.addEventListener('click', () => movePreviewMon(Number(button.dataset.moveIndex), Number(button.dataset.moveDir))));
   document.querySelectorAll('[data-choice]').forEach((button) => button.addEventListener('click', () => handleChoiceClick(button.dataset.choice, button.dataset.choiceKind || '', button.dataset.moveName || '')));
-  document.querySelectorAll('[data-inspect]').forEach((button) => button.addEventListener('click', () => openInspect(button.dataset.inspect)));
+  document.querySelectorAll('[data-inspect]').forEach((button) => button.addEventListener('click', (event) => {
+    event.stopPropagation();
+    openInspect(button.dataset.inspect);
+  }));
   document.querySelectorAll('[data-close-inspect]').forEach((button) => button.addEventListener('click', closeInspect));
   document.getElementById('joinCodeInput')?.addEventListener('input', (event) => { state.hostJoinCode = event.target.value.trim(); });
 }
@@ -3072,6 +3085,10 @@ function injectStyles() {
     }
     .type-badge,
     .move-chip{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:0;
       background:var(--type-bg) !important;
       color:var(--type-fg) !important;
       border:1px solid rgba(0,0,0,.14);
@@ -4049,6 +4066,9 @@ function injectStyles() {
         linear-gradient(180deg,#e7f3cb 0%,#e7f3cb 54%,#cadc9a 54%,#cadc9a 100%);
       box-shadow:inset 0 0 0 2px rgba(255,255,255,.2), 0 24px 60px rgba(0,0,0,.22);
     }
+    .team-size-6 .battle-stage{
+      height:clamp(320px,23vw,380px);
+    }
     .battle-stage::before{
       content:"";
       position:absolute;
@@ -4226,6 +4246,9 @@ function injectStyles() {
       width:100%;
       margin:0 auto;
     }
+    .team-size-6 .battle-footer{
+      align-items:start;
+    }
     .battle-starter-art{
       display:none;
     }
@@ -4261,6 +4284,21 @@ function injectStyles() {
       gap:3px;
       min-width:0;
     }
+    .bench-card-switch-note{
+      font-size:.7rem;
+      line-height:1.15;
+      color:rgba(24,34,25,.74);
+      font-weight:700;
+    }
+    .bench-card-actionable{
+      cursor:pointer;
+      box-shadow:inset 0 0 0 999px rgba(255,255,255,.18),0 12px 22px rgba(0,0,0,.12);
+      transition:transform .14s ease, box-shadow .14s ease;
+    }
+    .bench-card-actionable:hover{
+      transform:translateY(-1px);
+      box-shadow:inset 0 0 0 999px rgba(255,255,255,.22),0 14px 24px rgba(0,0,0,.16);
+    }
     .battle-panel .bench-card strong{
       font-size:.9rem;
       line-height:1.1;
@@ -4269,10 +4307,56 @@ function injectStyles() {
       font-size:.76rem;
       line-height:1.15;
     }
+    .battle-panel .bench-card .bench-card-switch-note{
+      font-size:.7rem;
+      line-height:1.15;
+    }
     .battle-panel .bench-card .info-chip{
       justify-self:end;
       padding:6px 8px;
       font-size:.72rem;
+    }
+    .team-size-6 .battle-panel .bench-grid{
+      display:flex;
+      gap:6px;
+      overflow-x:auto;
+      overflow-y:hidden;
+      padding-bottom:2px;
+    }
+    .team-size-6 .battle-panel .bench-grid::-webkit-scrollbar{display:none}
+    .team-size-6 .battle-panel .bench-card{
+      flex:0 0 19%;
+      min-height:84px;
+      padding:8px;
+    }
+    .team-size-6 .battle-panel .bench-card-switch{
+      grid-template-columns:1fr;
+      justify-items:center;
+      text-align:center;
+      gap:4px;
+    }
+    .team-size-6 .battle-panel .bench-card-copy{
+      justify-items:center;
+    }
+    .team-size-6 .battle-panel .bench-card .tiny,
+    .team-size-6 .battle-panel .bench-card .bench-card-switch-note{
+      display:none;
+    }
+    .team-size-6 .battle-panel .bench-card strong{
+      font-size:.76rem;
+    }
+    .team-size-6 .battle-panel .bench-card .info-chip{
+      justify-self:center;
+      padding:4px 6px;
+      font-size:.62rem;
+    }
+    .team-size-6 .battle-panel .sprite.sm{
+      width:42px;
+      height:42px;
+    }
+    .battle-choice-note{
+      align-content:center;
+      min-height:72px;
     }
     .battle-panel .sprite.sm{width:56px;height:56px}
     .choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -5507,6 +5591,10 @@ function injectStyles() {
         padding:8px;
         gap:6px;
       }
+      .team-size-6.preview-shell .draft-chip-row span:nth-child(n+3),
+      .team-size-6.link-preview-shell .draft-chip-row span:nth-child(n+3){
+        display:none;
+      }
       .inspect-move-list{
         grid-template-columns:1fr;
       }
@@ -5623,6 +5711,26 @@ function injectStyles() {
       .team-size-6 .preview-panel .draft-section-head p,
       .team-size-6 .preview-opponent-panel .preview-status-stack{
         display:none;
+      }
+      .team-size-6 .preview-card{
+        min-height:54px;
+        padding:5px 6px;
+        gap:6px;
+      }
+      .team-size-6 .preview-actions{
+        gap:3px;
+      }
+      .team-size-6 .preview-actions .info-chip,
+      .team-size-6 .preview-actions .mini-btn{
+        padding:4px 5px;
+        font-size:.56rem;
+      }
+      .team-size-6 .preview-side-panel .empty{
+        padding:8px;
+      }
+      .team-size-6 .preview-side-panel .empty div{
+        font-size:.68rem;
+        line-height:1.2;
       }
       .preview-actions{
         width:auto;
@@ -6060,6 +6168,13 @@ function injectStyles() {
         grid-template-columns:1fr;
         gap:6px;
       }
+      .team-size-6 .battle-header p{
+        display:none;
+      }
+      .team-size-6 .battle-stage{
+        height:300px;
+        min-height:300px;
+      }
       .battle-panel{
         padding:6px;
         border-radius:18px;
@@ -6079,11 +6194,67 @@ function injectStyles() {
       .battle-panel .bench-card .tiny{
         font-size:.68rem;
       }
+      .battle-panel .bench-card .bench-card-switch-note{
+        font-size:.62rem;
+      }
       .battle-panel .bench-card .info-chip{
         padding:4px 6px;
         font-size:.66rem;
       }
       .battle-panel .sprite.sm{width:54px;height:54px}
+      .team-size-6 .battle-footer{
+        gap:5px;
+      }
+      .team-size-6 .battle-panel{
+        padding:5px;
+      }
+      .team-size-6 .battle-panel .bench-grid{
+        display:flex;
+        gap:4px;
+        overflow-x:auto;
+        overflow-y:hidden;
+        padding-bottom:2px;
+      }
+      .team-size-6 .battle-panel .bench-grid::-webkit-scrollbar{display:none}
+      .team-size-6 .battle-panel .bench-card{
+        flex:0 0 31%;
+        min-height:66px;
+        padding:5px 4px;
+      }
+      .team-size-6 .battle-panel .bench-card-switch{
+        grid-template-columns:1fr;
+        justify-items:center;
+        text-align:center;
+        gap:4px;
+      }
+      .team-size-6 .battle-panel .bench-card-copy{
+        justify-items:center;
+      }
+      .team-size-6 .battle-panel .bench-card .tiny,
+      .team-size-6 .battle-panel .bench-card .bench-card-switch-note{
+        display:none;
+      }
+      .team-size-6 .battle-panel .bench-card strong{
+        font-size:.7rem;
+      }
+      .team-size-6 .battle-panel .bench-card .info-chip{
+        padding:3px 5px;
+        font-size:.6rem;
+      }
+      .team-size-6 .battle-panel .sprite.sm{
+        width:38px;
+        height:38px;
+      }
+      .team-size-6 .battle-actions-panel{
+        padding:5px;
+      }
+      .team-size-6 .choice-grid{
+        gap:4px;
+      }
+      .team-size-6 .choice-btn{
+        min-height:34px;
+        padding:4px 6px;
+      }
       .choice-grid{
         grid-template-columns:repeat(2,minmax(0,1fr));
         gap:6px;
@@ -6168,15 +6339,35 @@ function injectStyles() {
         gap:5px;
         min-height:64px;
       }
+      .team-size-6 .draft-team-strip{
+        grid-template-columns:repeat(6,minmax(0,1fr));
+        gap:4px;
+        min-height:56px;
+      }
       .draft-team-slot{
         padding:6px 4px;
         gap:4px;
         min-height:64px;
         height:64px;
       }
+      .team-size-6 .draft-team-slot{
+        padding:4px 2px;
+        gap:3px;
+        min-height:56px;
+        height:56px;
+      }
       .draft-team-index{
         width:28px;
         height:28px;
+      }
+      .team-size-6 .draft-team-index{
+        width:22px;
+        height:22px;
+        font-size:.62rem;
+      }
+      .team-size-6 .draft-team-slot .sprite.sm{
+        width:24px;
+        height:24px;
       }
       .draft-team-slot.empty strong,.draft-team-copy strong{
         display:none;
@@ -6232,18 +6423,21 @@ function injectStyles() {
         padding:4px 6px;
         font-size:.62rem;
         white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
       }
       .draft-choice-copy .types{
-        flex-wrap:nowrap;
-        overflow:hidden;
-        min-height:19px;
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:4px;
+        min-height:0;
       }
       .draft-choice-copy .move-row{
-        overflow:hidden;
-        max-height:42px;
-      }
-      .draft-choice-copy .move-row span:nth-child(n+4){
-        display:none;
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:4px;
+        overflow:visible;
+        max-height:none;
       }
       .draft-stat-grid{
         grid-template-columns:repeat(3,minmax(0,1fr));
@@ -6283,6 +6477,60 @@ function injectStyles() {
       .link-preview-ready-panel .empty{
         padding:8px;
       }
+      .team-size-6 .item-draft-team-strip{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:5px;
+      }
+      .team-size-6 .item-draft-team-strip .draft-team-slot{
+        padding:6px 7px;
+      }
+      .team-size-6 .reroll-grid{
+        grid-template-columns:1fr;
+        gap:6px;
+      }
+      .team-size-6 .reroll-card{
+        padding:8px;
+        gap:6px;
+      }
+      .team-size-6 .reroll-card h3{
+        font-size:.92rem;
+      }
+      .team-size-6 .reroll-card-body{
+        grid-template-columns:46px minmax(0,1fr);
+        gap:6px;
+      }
+      .team-size-6 .reroll-card-sprite .sprite.sm{
+        width:38px;
+        height:38px;
+      }
+      .team-size-6 .item-assign-list{
+        grid-template-columns:1fr;
+        gap:6px;
+      }
+      .team-size-6 .item-assign-card{
+        padding:8px;
+        gap:6px;
+      }
+      .team-size-6 .item-assign-head{
+        grid-template-columns:38px minmax(0,1fr) auto;
+        gap:6px;
+      }
+      .team-size-6 .item-assign-head .sprite.sm{
+        width:38px;
+        height:38px;
+      }
+      .team-size-6 .item-assign-current .item-pill{
+        padding:5px 7px;
+        font-size:.68rem;
+      }
+      .team-size-6 .item-assign-card .card-actions{
+        grid-template-columns:1fr 1fr;
+      }
+      .team-size-6 .item-assign-card .card-actions .primary-btn,
+      .team-size-6 .item-assign-card .card-actions .ghost-btn{
+        padding:6px 8px;
+        font-size:.72rem;
+      }
       .battle-stage{
         --battle-foe-line:11%;
       }
@@ -6306,6 +6554,9 @@ function injectStyles() {
       .battle-panel .bench-card .tiny{
         font-size:.64rem;
       }
+      .battle-panel .bench-card .bench-card-switch-note{
+        font-size:.58rem;
+      }
       .battle-panel .bench-card .info-chip{
         padding:4px 5px;
         font-size:.62rem;
@@ -6319,6 +6570,9 @@ function injectStyles() {
       .draft-view{
         height:auto;
         min-height:calc(100svh - 16px);
+      }
+      .team-size-6 .draft-shell{
+        gap:4px;
       }
       .draft-view .main{
         height:auto;
@@ -6402,6 +6656,154 @@ function injectStyles() {
       .link-preview-ready-panel .actions .ghost-btn{
         padding:7px 8px;
         font-size:.74rem;
+      }
+      .team-size-6 .item-draft-team-strip{
+        grid-template-columns:repeat(6,minmax(0,1fr));
+        gap:4px;
+      }
+      .team-size-6 .item-draft-team-strip .draft-team-slot{
+        padding:4px 2px;
+        min-height:50px;
+        height:50px;
+      }
+      .team-size-6 .item-draft-team-strip .draft-team-slot .sprite.sm{
+        width:22px;
+        height:22px;
+      }
+      .team-size-6.item-assign-shell .preview-hero-panel,
+      .team-size-6.preview-shell .preview-hero-panel,
+      .team-size-6.link-preview-shell .draft-hero-panel{
+        display:none;
+      }
+      .team-size-6 .item-assign-list{
+        display:grid;
+        grid-auto-flow:column;
+        grid-auto-columns:72%;
+        gap:5px;
+        overflow-x:auto;
+        overflow-y:hidden;
+        padding-bottom:2px;
+      }
+      .team-size-6 .item-assign-list::-webkit-scrollbar{display:none}
+      .team-size-6 .item-assign-card{
+        padding:6px;
+        gap:5px;
+      }
+      .team-size-6 .item-assign-head{
+        grid-template-columns:1fr;
+        justify-items:start;
+        gap:4px;
+      }
+      .team-size-6 .item-assign-head .sprite.sm{
+        width:32px;
+        height:32px;
+      }
+      .team-size-6 .item-assign-head .tiny{
+        display:none;
+      }
+      .team-size-6 .item-assign-head .info-chip{
+        justify-self:start;
+      }
+      .team-size-6 .item-assign-current .item-pill{
+        padding:4px 6px;
+        font-size:.62rem;
+      }
+      .team-size-6 .item-assign-card .card-actions{
+        grid-template-columns:1fr;
+        gap:4px;
+      }
+      .team-size-6 .item-assign-card .card-actions .primary-btn,
+      .team-size-6 .item-assign-card .card-actions .ghost-btn{
+        min-height:30px;
+        padding:5px 6px;
+        font-size:.66rem;
+      }
+      .team-size-6 .preview-card-list{
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:4px;
+      }
+      .team-size-6 .preview-card{
+        grid-template-columns:34px minmax(0,1fr);
+        gap:4px;
+        min-height:0;
+        padding:5px;
+      }
+      .team-size-6 .preview-card .sprite.sm{
+        width:26px;
+        height:26px;
+      }
+      .team-size-6 .preview-rank{
+        width:20px;
+        height:20px;
+        font-size:.62rem;
+      }
+      .team-size-6 .preview-copy strong{
+        font-size:.7rem;
+      }
+      .team-size-6 .preview-actions{
+        grid-column:1 / -1;
+        justify-content:start;
+      }
+      .team-size-6 .preview-side-panel .actions .primary-btn,
+      .team-size-6 .preview-side-panel .actions .ghost-btn{
+        min-height:32px;
+        padding:6px 8px;
+        font-size:.68rem;
+      }
+      .team-size-6 .battle-header p{
+        display:none;
+      }
+      .team-size-6 .battle-stage{
+        height:250px;
+        min-height:250px;
+      }
+      .team-size-6 .battle-panel .bench-grid{
+        display:flex;
+        gap:4px;
+        overflow-x:auto;
+        overflow-y:hidden;
+        padding-bottom:2px;
+      }
+      .team-size-6 .battle-panel .bench-grid::-webkit-scrollbar{display:none}
+      .team-size-6 .battle-panel .bench-card{
+        flex:0 0 31%;
+        min-height:58px;
+        padding:4px;
+      }
+      .team-size-6 .battle-panel .bench-card-switch{
+        grid-template-columns:1fr;
+        justify-items:center;
+        text-align:center;
+        gap:3px;
+      }
+      .team-size-6 .battle-panel .bench-card-copy{
+        justify-items:center;
+      }
+      .team-size-6 .battle-panel .bench-card .tiny,
+      .team-size-6 .battle-panel .bench-card .bench-card-switch-note{
+        display:none;
+      }
+      .team-size-6 .battle-panel .bench-card strong{
+        font-size:.66rem;
+      }
+      .team-size-6 .battle-panel .bench-card .info-chip{
+        padding:3px 5px;
+        font-size:.58rem;
+      }
+      .team-size-6 .battle-panel .sprite.sm{
+        width:34px;
+        height:34px;
+      }
+      .team-size-6 .battle-actions-panel{
+        padding:5px;
+      }
+      .team-size-6 .choice-grid{
+        gap:4px;
+      }
+      .team-size-6 .choice-btn{
+        min-height:32px;
+        padding:4px 6px;
+        font-size:.72rem;
       }
     }
   `;
