@@ -3046,7 +3046,9 @@ function injectStyles() {
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      padding:7px 10px;
+      min-width:46px;
+      min-height:32px;
+      padding:8px 12px;
       border-radius:999px;
       background:rgba(18,29,22,.82);
       color:#f7f3e8;
@@ -3056,8 +3058,9 @@ function injectStyles() {
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.08), 0 6px 16px rgba(0,0,0,.12);
     }
     .info-chip:hover{
-      background:rgba(28,42,33,.92);
+      background:rgba(42,66,52,.96);
       color:#fffdf7;
+      box-shadow:inset 0 0 0 1px rgba(196,230,255,.48), 0 0 0 3px rgba(126,188,255,.18), 0 10px 20px rgba(0,0,0,.16);
     }
     .primary-btn,.choice-btn{
       background:linear-gradient(180deg,#f2d97b,#c6a548);
@@ -4180,8 +4183,19 @@ function injectStyles() {
       display:flex;
       align-items:center;
       justify-content:space-between;
-      gap:8px;
+      gap:10px;
       min-width:0;
+    }
+    .battle-status .info-chip{
+      position:relative;
+      z-index:2;
+      min-width:54px;
+      min-height:36px;
+      padding:9px 14px;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.1), 0 8px 18px rgba(0,0,0,.16);
+    }
+    .battle-status .info-chip:hover{
+      transform:translateY(-1px);
     }
     .battle-status-name-row strong{
       min-width:0;
@@ -4325,8 +4339,13 @@ function injectStyles() {
     }
     .battle-panel .bench-card .info-chip{
       justify-self:end;
-      padding:6px 8px;
+      position:relative;
+      z-index:3;
+      min-width:56px;
+      min-height:36px;
+      padding:9px 14px;
       font-size:.72rem;
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.1), 0 8px 18px rgba(0,0,0,.14);
     }
     .team-size-6 .battle-panel .bench-grid{
       display:flex;
@@ -4359,7 +4378,9 @@ function injectStyles() {
     }
     .team-size-6 .battle-panel .bench-card .info-chip{
       justify-self:center;
-      padding:4px 6px;
+      min-width:48px;
+      min-height:30px;
+      padding:6px 10px;
       font-size:.62rem;
     }
     .team-size-6 .battle-panel .sprite.sm{
@@ -6422,12 +6443,18 @@ function injectStyles() {
       }
       .battle-status-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:36%;max-width:none}
       .battle-status-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:38%;max-width:none}
-      .battle-status .info-chip{padding:6px 8px}
+      .battle-status .info-chip{
+        min-width:50px;
+        min-height:34px;
+        padding:8px 12px;
+      }
       .battle-status-name-row{
         gap:6px;
       }
       .battle-status-player .info-chip{
-        padding:4px 7px;
+        min-width:46px;
+        min-height:30px;
+        padding:6px 10px;
         font-size:.62rem;
       }
       .battle-status-meta{
@@ -6499,7 +6526,9 @@ function injectStyles() {
         font-size:.62rem;
       }
       .battle-panel .bench-card .info-chip{
-        padding:4px 6px;
+        min-width:50px;
+        min-height:32px;
+        padding:7px 11px;
         font-size:.66rem;
       }
       .battle-panel .sprite.sm{width:54px;height:54px}
@@ -6539,7 +6568,9 @@ function injectStyles() {
         font-size:.7rem;
       }
       .team-size-6 .battle-panel .bench-card .info-chip{
-        padding:3px 5px;
+        min-width:44px;
+        min-height:28px;
+        padding:5px 8px;
         font-size:.6rem;
       }
       .team-size-6 .battle-panel .sprite.sm{
@@ -7125,7 +7156,9 @@ function injectStyles() {
         font-size:.66rem;
       }
       .team-size-6 .battle-panel .bench-card .info-chip{
-        padding:3px 5px;
+        min-width:42px;
+        min-height:26px;
+        padding:4px 7px;
         font-size:.58rem;
       }
       .team-size-6 .battle-panel .sprite.sm{
