@@ -1712,12 +1712,6 @@ function renderModeSettingsStage() {
         <div class="draft-kicker-row"><span class="label">Mode setup</span><span class="draft-status-pill">${modeLabel}</span></div>
         <h2>Set the draft rules before the run starts.</h2>
         <p>Pick how moves are generated, how many Pokemon the run uses, whether rerolls are available, and whether held items are drafted after the team is locked.</p>
-        <div class="draft-chip-row">
-          <span>${attackModeLabel()}</span>
-          <span>${settings.teamSize} Pokemon</span>
-          <span>${settings.attackReroll ? `${settings.rerollCount} attack rerolls` : 'No attack rerolls'}</span>
-          <span>${settings.itemDraft ? 'Gen 5 held item draft on' : 'Held item draft off'}</span>
-        </div>
       </div>
       <aside class="mode-settings-summary">
         <div class="label">Current rules</div>
@@ -5417,19 +5411,7 @@ function injectStyles() {
         justify-content:flex-start;
       }
       .mode-settings-notes{
-        grid-template-columns:1fr;
-        gap:8px;
-      }
-      .mode-settings-note{
-        padding:10px 12px;
-        gap:6px;
-      }
-      .mode-settings-note strong{
-        font-size:.92rem;
-      }
-      .mode-settings-note span{
-        font-size:.74rem;
-        line-height:1.25;
+        display:none;
       }
       .mode-settings-actions{
         margin-top:auto;
@@ -5438,6 +5420,12 @@ function injectStyles() {
         width:100%;
         justify-content:center;
         padding:10px 14px;
+      }
+      .mode-settings-shell .draft-topbar{
+        grid-template-columns:minmax(0,1fr);
+      }
+      .mode-settings-shell .draft-topbar-meta{
+        display:none;
       }
       .link-setup-shell .link-setup-actions{
         display:none;
@@ -5522,6 +5510,10 @@ function injectStyles() {
       .mode-settings-copy h2{
         font-size:clamp(1.3rem,6.5vw,1.9rem);
       }
+      .mode-settings-copy p{
+        font-size:.78rem;
+        line-height:1.26;
+      }
       .team-size-6 .draft-hero-copy h2{
         font-size:clamp(1.25rem,6.2vw,1.7rem);
       }
@@ -5530,16 +5522,6 @@ function injectStyles() {
         font-size:.68rem;
       }
       .draft-chip-row span:nth-child(n+4){display:none}
-      .mode-settings-copy .draft-chip-row span:nth-child(n+4){
-        display:inline-flex;
-      }
-      .mode-settings-copy .draft-chip-row{
-        gap:6px;
-      }
-      .mode-settings-copy .draft-chip-row span{
-        padding:4px 7px;
-        font-size:.63rem;
-      }
       .draft-mobile-swipe-hint{
         display:flex;
         padding:8px 10px;
