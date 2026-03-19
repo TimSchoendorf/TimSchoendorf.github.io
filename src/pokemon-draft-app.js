@@ -2118,7 +2118,8 @@ function renderChoiceButtons() {
     const selected = state.selectedChoice === `move ${index + 1}` ? 'selected' : '';
     const moveData = dex.moves.get(move.id || move.move || '');
     const tone = typeColors(moveData?.type);
-    const disabled = move.disabled || !(move.pp > 0);
+    const hasTrackedPp = Number.isFinite(move.pp);
+    const disabled = move.disabled || (hasTrackedPp && move.pp <= 0);
     const ppText = Number.isFinite(move.pp) && Number.isFinite(move.maxpp) ? `<span class="choice-btn-pp">${move.pp}/${move.maxpp} PP</span>` : '';
     return `<button class="choice-btn choice-btn-move ${selected}" style="--choice-type-bg:${tone.bg};--choice-type-fg:${tone.fg}" data-choice="move ${index + 1}" data-choice-kind="move" data-move-name="${move.move}" ${disabled ? 'disabled' : ''}><strong class="choice-btn-name">${move.move}</strong>${ppText}</button>`;
   }).join('') || '';
@@ -2259,7 +2260,9 @@ function selectedMoveChoice(request = state.playerRequest) {
   if (!request || request.forceSwitch || !state.selectedChoice?.startsWith('move ')) return '';
   const slot = Number(state.selectedChoice.split(' ')[1]) - 1;
   const move = request.active?.[0]?.moves?.[slot];
-  return move && !move.disabled && move.pp > 0 ? state.selectedChoice : '';
+  if (!move || move.disabled) return '';
+  if (Number.isFinite(move.pp) && move.pp <= 0) return '';
+  return state.selectedChoice;
 }
 
 function maybeSubmitHeldMove(request = state.playerRequest) {
