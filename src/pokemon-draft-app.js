@@ -1626,22 +1626,22 @@ function renderMenuStage() {
   </section>`;
 }
 
-function renderSettingCard(label, title, options) {
+function renderSettingCard(label, title, options, rowClass = '') {
   return `<article class="mode-settings-card">
     <div class="label">${label}</div>
     <h3>${title}</h3>
-    <div class="mode-settings-toggle-row">${options.join('')}</div>
+    <div class="mode-settings-toggle-row ${rowClass}">${options.join('')}</div>
   </article>`;
 }
 
-function renderSettingRow(label, title, options, note = '') {
+function renderSettingRow(label, title, options, note = '', rowClass = '') {
   return `<article class="mode-settings-row">
     <div class="mode-settings-row-copy">
       <div class="label">${label}</div>
       <h3>${title}</h3>
       ${note ? `<p>${note}</p>` : ''}
     </div>
-    <div class="mode-settings-toggle-row">${options.join('')}</div>
+    <div class="mode-settings-toggle-row ${rowClass}">${options.join('')}</div>
   </article>`;
 }
 
@@ -1649,13 +1649,12 @@ function renderModeSettingsStage() {
   const settings = normalizedModeSettings();
   const modeLabel = state.pendingMode === 'bot' ? 'Bot Run' : 'Link Battle';
   const button = (action, text, active, extra = '') => `<button class="mode-settings-toggle ${active ? 'active' : ''} ${extra}" data-action="${action}">${text}</button>`;
-  const rerollControls = settings.attackReroll
-    ? `<div class="mode-settings-counter">
-        <button class="mini-btn" data-action="mode-reroll-minus" ${settings.rerollCount <= 1 ? 'disabled' : ''}>-</button>
+  const rerollControls = `<div class="mode-settings-counter ${settings.attackReroll ? '' : 'disabled'}">
+        <button class="mini-btn" data-action="mode-reroll-minus" ${!settings.attackReroll || settings.rerollCount <= 1 ? 'disabled' : ''}>-</button>
         <span>${settings.rerollCount}X</span>
-        <button class="mini-btn" data-action="mode-reroll-plus" ${settings.rerollCount >= 9 ? 'disabled' : ''}>+</button>
+        <button class="mini-btn" data-action="mode-reroll-plus" ${!settings.attackReroll || settings.rerollCount >= 9 ? 'disabled' : ''}>+</button>
       </div>`
-    : '';
+  ;
   const summaryRows = [
     ['Attack rules', attackModeLabel()],
     ['Team size', `${settings.teamSize} Pokemon`],
@@ -1670,9 +1669,9 @@ function renderModeSettingsStage() {
       ])}
       ${renderSettingCard('Rerolls', 'Attack reroll budget', [
         button('mode-reroll-off', 'Off', !settings.attackReroll),
-        button('mode-reroll-on', `Attack reroll ${settings.rerollCount}X`, settings.attackReroll),
+        button('mode-reroll-on', 'On', settings.attackReroll),
         rerollControls,
-      ])}
+      ], 'reroll-toggle-row')}
       ${renderSettingCard('Roster', 'Team size', [
         button('mode-team-3', '3 Pokemon', settings.teamSize === 3),
         button('mode-team-6', '6 Pokemon', settings.teamSize === 6),
@@ -1690,9 +1689,9 @@ function renderModeSettingsStage() {
       ], 'Choose curated sets or fully random legal moves.')}
       ${renderSettingRow('Rerolls', 'Attack rerolls', [
         button('mode-reroll-off', 'Off', !settings.attackReroll),
-        button('mode-reroll-on', `${settings.rerollCount}X`, settings.attackReroll),
+        button('mode-reroll-on', 'On', settings.attackReroll),
         rerollControls,
-      ], 'Spend rerolls after the Pokemon draft ends.')}
+      ], 'Spend rerolls after the Pokemon draft ends.', 'reroll-toggle-row')}
       ${renderSettingRow('Roster', 'Team size', [
         button('mode-team-3', '3', settings.teamSize === 3),
         button('mode-team-6', '6', settings.teamSize === 6),
@@ -4642,12 +4641,20 @@ function injectStyles() {
       grid-template-columns:repeat(2,minmax(0,1fr));
       gap:10px;
     }
+    .mode-settings-toggle-row.reroll-toggle-row{
+      grid-template-columns:repeat(2,minmax(0,1fr)) auto;
+      align-items:center;
+    }
     .mode-settings-counter{
-      grid-column:1 / -1;
       display:flex;
       align-items:center;
       justify-content:flex-end;
       gap:8px;
+      min-height:38px;
+      min-width:0;
+    }
+    .reroll-toggle-row .mode-settings-counter{
+      grid-column:auto;
     }
     .mode-settings-counter span{
       min-width:42px;
@@ -4657,6 +4664,17 @@ function injectStyles() {
       background:rgba(255,255,255,.08);
       color:var(--text);
       font-weight:800;
+    }
+    .mode-settings-counter.disabled{
+      opacity:.62;
+    }
+    .mode-settings-counter.disabled span{
+      background:rgba(255,255,255,.04);
+      color:rgba(238,243,232,.68);
+    }
+    .mode-settings-counter .mini-btn[disabled]{
+      opacity:.45;
+      cursor:default;
     }
     .mode-settings-toggle{
       padding:12px;
@@ -5403,12 +5421,21 @@ function injectStyles() {
       .mode-settings-toggle-row{
         gap:8px;
       }
+      .mode-settings-toggle-row.reroll-toggle-row{
+        grid-template-columns:repeat(2,minmax(0,1fr)) auto;
+        gap:6px;
+      }
       .mode-settings-toggle{
         padding:10px 8px;
         font-size:.9rem;
       }
       .mode-settings-counter{
         justify-content:flex-start;
+        min-height:34px;
+      }
+      .reroll-toggle-row .mode-settings-counter span{
+        min-width:38px;
+        padding:6px 6px;
       }
       .mode-settings-notes{
         display:none;
