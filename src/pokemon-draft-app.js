@@ -1277,17 +1277,17 @@ function autoDraftItemsForTeam(team) {
 
 function allKnownMembers() {
   return [
+    ...ownTeamState(),
+    ...foeTeamState(),
+    ...state.playerPreview,
+    ...state.opponentPreview,
+    ...state.playerLoadout,
+    ...state.opponentLoadout,
+    ...state.link.localPack,
+    ...state.link.remotePack,
     ...state.pack,
     ...state.playerDraft,
     ...state.opponentDraft,
-    ...state.playerLoadout,
-    ...state.opponentLoadout,
-    ...state.playerPreview,
-    ...state.opponentPreview,
-    ...state.link.localPack,
-    ...state.link.remotePack,
-    ...ownTeamState(),
-    ...foeTeamState(),
   ];
 }
 
@@ -1749,18 +1749,30 @@ function renderRerollMoveCard(member, memberIndex) {
     const move = dex.moves.get(moveId);
     if (!move?.exists) return '';
     const tone = typeColors(move.type);
-    return `<div class="reroll-move-row">
-      <span class="move-chip" style="--type-bg:${tone.bg};--type-fg:${tone.fg}">${move.name}</span>
-      <button class="ghost-btn compact-btn" data-reroll-member="${memberIndex}" data-reroll-move="${moveIndex}" ${state.rerollsLeft <= 0 ? 'disabled' : ''}>Reroll</button>
+    return `<div class="reroll-move-tile">
+      <div class="reroll-move-top">
+        <span class="label">Slot ${moveIndex + 1}</span>
+        <span class="move-chip" style="--type-bg:${tone.bg};--type-fg:${tone.fg}">${move.name}</span>
+      </div>
+      <button class="ghost-btn compact-btn reroll-move-btn" data-reroll-member="${memberIndex}" data-reroll-move="${moveIndex}" ${state.rerollsLeft <= 0 ? 'disabled' : ''}>Reroll move</button>
     </div>`;
   }).join('');
   return `<article class="reroll-card" style="background:${typeGradient(member.types)}">
-    <div class="draft-choice-head">
-      <div><div class="label">#${member.num}</div><h3>${member.name}</h3></div>
+    <div class="reroll-card-head">
+      <div class="reroll-card-title">
+        <div class="label">#${member.num}</div>
+        <h3>${member.name}</h3>
+      </div>
       <button class="info-chip" data-inspect="${member.name}">Info</button>
     </div>
     <div class="reroll-card-body">
-      <div class="reroll-card-sprite">${spriteTag(member, 'front', 'sm')}</div>
+      <div class="reroll-card-sprite-wrap">
+        <div class="reroll-card-sprite">${spriteTag(member, 'front', 'sm')}</div>
+        <div class="reroll-card-meta">
+          <div class="types">${member.types.map((type) => moveTypeBadge(type)).join('')}</div>
+          <div class="tiny">${moveSummaryText(member, 4)}</div>
+        </div>
+      </div>
       <div class="reroll-move-list">${rows}</div>
     </div>
   </article>`;
@@ -1770,21 +1782,33 @@ function renderRerollStage() {
   const modeLabel = state.playMode === 'bot' ? 'Bot Run' : 'Link Battle';
   const nextLabel = itemDraftEnabled() ? 'Continue to items' : 'Continue';
   const compactCopy = currentTeamSize() === 6;
+  const attackRuleText = state.modeSettings.attackMode === 'randomized' ? 'Randomized learnset mode' : 'Fixed curated sets';
+  const summary = [
+    ['Rerolls left', `${state.rerollsLeft}`],
+    ['Team size', `${currentTeamSize()} Pokemon`],
+    ['Attack rules', attackRuleText],
+    ['Next step', itemDraftEnabled() ? 'Held item draft' : 'Lead order'],
+  ];
   return `<section class="draft-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
       <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${modeLabel}</span></div>
     </div>
-    <section class="draft-hero-panel">
-      <div class="draft-hero-copy">
+    <section class="draft-hero-panel reroll-hero-panel">
+      <div class="draft-hero-copy reroll-hero-copy">
         <div class="draft-kicker-row"><span class="label">Move lab</span><span class="draft-status-pill">${state.rerollsLeft} rerolls left</span></div>
-        <h2>Tune your moves before the battle order is locked.</h2>
-        ${compactCopy ? '' : '<p>Spend your rerolls across the whole team. Each reroll swaps one move for another legal move for that Pokemon, or from the full pool if it has no unused legal move left.</p>'}
-        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${currentTeamSize()} Pokemon</span><span>${attackModeLabel()}</span></div>
+        <h2>Refine your team before the final setup.</h2>
+        ${compactCopy ? '' : '<p>Reroll any move slot once at a time. Every change is saved immediately for the next phase.</p>'}
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${currentTeamSize()} Pokemon</span><span>${attackModeLabel()}</span><span>${itemDraftEnabled() ? 'Items next' : 'Preview next'}</span></div>
       </div>
+      <aside class="mode-settings-summary reroll-summary-panel">
+        <div class="label">Workshop summary</div>
+        <div class="mode-settings-summary-list">${summary.map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join('')}</div>
+        <div class="mode-settings-summary-note">If a Pokemon runs out of unused legal moves, rerolls fall back to the full Gen 1 move pool.</div>
+      </aside>
     </section>
-    <section class="reroll-grid">${state.playerLoadout.map((member, index) => renderRerollMoveCard(member, index)).join('')}</section>
-    <div class="actions mode-settings-actions"><button class="primary-btn" data-action="finish-rerolls">${state.rerollsLeft > 0 ? 'Continue' : nextLabel}</button></div>
+    <section class="reroll-grid reroll-workshop-grid">${state.playerLoadout.map((member, index) => renderRerollMoveCard(member, index)).join('')}</section>
+    <div class="actions mode-settings-actions"><button class="primary-btn" data-action="finish-rerolls">${nextLabel}</button></div>
   </section>`;
 }
 
@@ -4779,17 +4803,70 @@ function injectStyles() {
     .reroll-grid{
       grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
     }
+    .reroll-hero-panel{
+      grid-template-columns:minmax(0,1.18fr) minmax(280px,.82fr);
+      align-items:stretch;
+    }
+    .reroll-hero-copy h2{
+      font-size:clamp(1.75rem,2.7vw,2.55rem);
+    }
+    .reroll-hero-copy p{
+      font-size:.92rem;
+      line-height:1.35;
+    }
+    .reroll-summary-panel{
+      display:grid;
+      gap:12px;
+      align-content:start;
+    }
+    .reroll-summary-panel .mode-settings-summary-list{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:8px;
+    }
+    .reroll-summary-panel .mode-settings-summary-note{
+      font-size:.76rem;
+      line-height:1.3;
+    }
+    .reroll-workshop-grid{
+      align-items:start;
+    }
     .reroll-card{
       color:var(--ink);
       box-shadow:inset 0 0 0 999px rgba(255,255,255,.14);
       display:grid;
       gap:12px;
+      padding:16px;
+      border-radius:24px;
+    }
+    .reroll-card-head{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:12px;
+    }
+    .reroll-card-title{
+      display:grid;
+      gap:4px;
+      min-width:0;
+    }
+    .reroll-card-title h3{
+      margin:0;
+      line-height:1.02;
     }
     .reroll-card-body{
       display:grid;
-      grid-template-columns:auto 1fr;
-      gap:12px;
+      grid-template-columns:minmax(88px,auto) 1fr;
+      gap:14px;
       align-items:start;
+    }
+    .reroll-card-sprite-wrap{
+      display:grid;
+      gap:10px;
+      align-content:start;
+    }
+    .reroll-card-meta{
+      display:grid;
+      gap:8px;
     }
     .item-assign-head{
       display:grid;
@@ -4832,6 +4909,31 @@ function injectStyles() {
       gap:10px;
       align-items:center;
       justify-content:space-between;
+    }
+    .reroll-move-list{
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+    }
+    .reroll-move-tile{
+      display:grid;
+      gap:8px;
+      padding:10px;
+      border-radius:18px;
+      background:rgba(255,255,255,.16);
+      border:1px solid rgba(0,0,0,.08);
+      box-shadow:inset 0 1px 0 rgba(255,255,255,.12);
+    }
+    .reroll-move-top{
+      display:grid;
+      gap:6px;
+    }
+    .reroll-move-top .move-chip{
+      justify-self:start;
+      max-width:100%;
+    }
+    .reroll-move-btn{
+      width:100%;
+      justify-content:center;
     }
     .compact-btn{
       padding:8px 10px;
@@ -5471,6 +5573,13 @@ function injectStyles() {
         grid-template-columns:1fr;
         gap:8px;
       }
+      .reroll-hero-panel{
+        grid-template-columns:1fr;
+        gap:8px;
+      }
+      .reroll-summary-panel{
+        display:none;
+      }
       .mode-settings-summary{
         display:none;
       }
@@ -5537,6 +5646,35 @@ function injectStyles() {
       }
       .mode-settings-shell .draft-topbar-meta{
         display:none;
+      }
+      .reroll-card{
+        padding:10px;
+        gap:8px;
+      }
+      .reroll-card-body{
+        grid-template-columns:56px minmax(0,1fr);
+        gap:8px;
+      }
+      .reroll-card-sprite .sprite.sm{
+        width:42px;
+        height:42px;
+      }
+      .reroll-card-meta .tiny{
+        display:none;
+      }
+      .reroll-move-list{
+        grid-template-columns:1fr 1fr;
+        gap:6px;
+      }
+      .reroll-move-tile{
+        padding:8px;
+        gap:6px;
+        border-radius:16px;
+      }
+      .reroll-move-btn{
+        min-height:32px;
+        padding:5px 6px;
+        font-size:.72rem;
       }
       .link-setup-shell .link-setup-actions{
         display:none;
@@ -6503,6 +6641,19 @@ function injectStyles() {
         width:38px;
         height:38px;
       }
+      .team-size-6 .reroll-move-list{
+        grid-template-columns:1fr 1fr;
+        gap:5px;
+      }
+      .team-size-6 .reroll-move-tile{
+        padding:7px;
+        gap:6px;
+      }
+      .team-size-6 .reroll-move-btn{
+        min-height:30px;
+        padding:5px 6px;
+        font-size:.7rem;
+      }
       .team-size-6 .item-assign-list{
         grid-template-columns:1fr;
         gap:6px;
@@ -6656,6 +6807,30 @@ function injectStyles() {
       .link-preview-ready-panel .actions .ghost-btn{
         padding:7px 8px;
         font-size:.74rem;
+      }
+      .reroll-card{
+        padding:8px;
+        gap:6px;
+      }
+      .reroll-card-body{
+        grid-template-columns:46px minmax(0,1fr);
+        gap:6px;
+      }
+      .reroll-card-sprite .sprite.sm{
+        width:36px;
+        height:36px;
+      }
+      .reroll-move-list{
+        gap:5px;
+      }
+      .reroll-move-tile{
+        padding:6px;
+        gap:5px;
+      }
+      .reroll-move-btn{
+        min-height:28px;
+        padding:4px 5px;
+        font-size:.66rem;
       }
       .team-size-6 .item-draft-team-strip{
         grid-template-columns:repeat(6,minmax(0,1fr));
