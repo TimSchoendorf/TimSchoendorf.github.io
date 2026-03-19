@@ -238,6 +238,7 @@ const state = {
   itemDraftRound: 0,
   itemAssignments: {},
   selectedDraftItem: '',
+  itemDraftSequence: 0,
   runWins: 0,
   bestRun: loadBestRun(),
   enemyNumber: 1,
@@ -315,6 +316,21 @@ function itemIconTag(itemId, extraClass = '') {
   if (!path) return '<span class="item-icon item-icon-fallback"></span>';
   const className = `item-icon ${extraClass}`.trim();
   return `<img class="${className}" src="${path}" alt="${itemName(itemId)}" loading="lazy">`;
+}
+
+function createDraftedItemEntry(itemId) {
+  state.itemDraftSequence += 1;
+  return {key: `draft-item-${state.itemDraftSequence}`, id: itemId};
+}
+
+function draftedItemEntry(key) {
+  return state.draftedItems.find((entry) => entry.key === key) || null;
+}
+
+function draftedItemId(keyOrId, draftedItems = state.draftedItems) {
+  if (!keyOrId) return '';
+  const entry = draftedItems.find((item) => item.key === keyOrId);
+  return entry?.id || keyOrId;
 }
 
 function memberMoveSplit(member) {
@@ -1206,11 +1222,18 @@ function buildItemPack(used = new Set(), count = 3, team = state.playerLoadout) 
 }
 
 function playerAssignedItemFor(name) {
+  return draftedItemId(state.itemAssignments[name] || '');
+}
+
+function playerAssignedItemKeyFor(name) {
   return state.itemAssignments[name] || '';
 }
 
 function applyAssignedItems(loadout, assignments) {
-  return loadout.map((member) => createLoadout(member, {moves: member.set?.moves || member.previewSet?.moves, item: assignments[member.name] || ''}));
+  return loadout.map((member) => createLoadout(member, {
+    moves: member.set?.moves || member.previewSet?.moves,
+    item: draftedItemId(assignments[member.name] || ''),
+  }));
 }
 
 function buildLoadoutFromDraft(draftTeam) {
@@ -1824,22 +1847,23 @@ function renderItemDraftStage() {
         <div class="draft-team-slot-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="tiny">${moveSummaryText(member, 2)}</div></div></div>
         <button class="info-chip" data-inspect="${member.name}">Info</button>
       </div>`).join('')}</div>
-    </section>
-    <section class="draft-team-panel">
-      <div class="draft-section-head"><div><div class="label">Drafted items</div><h3>${state.draftedItems.length ? `${state.draftedItems.length} items in your pool` : 'No items drafted yet'}</h3></div><p>Every pick stays available for the assignment step.</p></div>
-      <div class="item-pool-strip">${state.draftedItems.length ? state.draftedItems.map((itemId) => `<span class="item-pill">${itemIconTag(itemId, 'small')}${itemName(itemId)}</span>`).join('') : '<div class="empty">Your drafted items appear here.</div>'}</div>
-    </section>
-    <section class="draft-board">
-      <div class="draft-section-head"><div><div class="label">Selection</div><h3>Pick 1 of 3 held items</h3></div><p>Choose the item that gives your team the best edge.</p></div>
-      <section class="draft-choice-grid item-draft-grid">${state.itemPack.map((item) => renderItemDraftCard(item)).join('')}</section>
-    </section>
+      </section>
+      <section class="draft-team-panel">
+        <div class="draft-section-head"><div><div class="label">Drafted items</div><h3>${state.draftedItems.length ? `${state.draftedItems.length} items in your pool` : 'No items drafted yet'}</h3></div><p>Every pick stays available for the assignment step.</p></div>
+        <div class="item-pool-strip">${state.draftedItems.length ? state.draftedItems.map((entry) => `<span class="item-pill">${itemIconTag(entry.id, 'small')}${itemName(entry.id)}</span>`).join('') : '<div class="empty">Your drafted items appear here.</div>'}</div>
+      </section>
+      <section class="draft-board">
+        <div class="draft-section-head"><div><div class="label">Selection</div><h3>Pick 1 of 3 held items</h3></div><p>Choose the item that gives your team the best edge.</p></div>
+        <section class="draft-choice-grid item-draft-grid">${state.itemPack.map((item) => renderItemDraftCard(item)).join('')}</section>
+      </section>
   </section>`;
 }
 
 function renderItemAssignStage() {
   const compactCopy = currentTeamSize() === 6;
   const assignedItems = new Set(Object.values(state.itemAssignments));
-  const highlightedItemId = state.selectedDraftItem || state.draftedItems.find((itemId) => assignedItems.has(itemId)) || state.draftedItems[0] || '';
+  const highlightedItemKey = state.selectedDraftItem || state.draftedItems.find((entry) => assignedItems.has(entry.key))?.key || state.draftedItems[0]?.key || '';
+  const highlightedItem = draftedItemEntry(highlightedItemKey);
   return `<section class="preview-shell item-assign-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
       <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
@@ -1850,13 +1874,13 @@ function renderItemAssignStage() {
         <div class="draft-kicker-row"><span class="label">Item assign</span><span class="draft-status-pill">${state.draftedItems.length} drafted</span></div>
         <h2>Assign your held items to the team.</h2>
         ${compactCopy ? '' : '<p>Select an item from the pool, then click the Pokemon that should carry it. Each Pokemon can hold one item, and unassigned items can stay unused.</p>'}
-        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${currentTeamSize()} Pokemon</span><span>${state.selectedDraftItem ? `Selected: ${itemName(state.selectedDraftItem)}` : 'Select an item to inspect or assign'}</span></div>
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${currentTeamSize()} Pokemon</span><span>${highlightedItem ? `Selected: ${itemName(highlightedItem.id)}` : 'Select an item to inspect or assign'}</span></div>
       </div>
     </section>
     <section class="draft-team-panel">
       <div class="draft-section-head"><div><div class="label">Drafted item pool</div><h3>Choose one to assign</h3></div><p>Click an item to arm it, then click a team card to place it.</p></div>
-      <div class="item-pool-strip">${state.draftedItems.map((itemId) => `<button class="item-pill ${state.selectedDraftItem === itemId ? 'selected' : ''} ${assignedItems.has(itemId) ? 'assigned' : ''}" data-select-item="${itemId}">${itemIconTag(itemId, 'small')}${itemName(itemId)}</button>`).join('')}</div>
-      ${highlightedItemId ? renderItemInfoCard(highlightedItemId, {selected: state.selectedDraftItem === highlightedItemId, assigned: assignedItems.has(highlightedItemId)}) : ''}
+      <div class="item-pool-strip">${state.draftedItems.map((entry) => `<button class="item-pill ${state.selectedDraftItem === entry.key ? 'selected' : ''} ${assignedItems.has(entry.key) ? 'assigned' : ''}" data-select-item="${entry.key}">${itemIconTag(entry.id, 'small')}${itemName(entry.id)}</button>`).join('')}</div>
+      ${highlightedItem ? renderItemInfoCard(highlightedItem.id, {selected: state.selectedDraftItem === highlightedItem.key, assigned: assignedItems.has(highlightedItem.key)}) : ''}
     </section>
     <section class="draft-board item-assign-board">
       <div class="draft-section-head"><div><div class="label">Your team</div><h3>Place your held items</h3></div><p class="preview-order-note">Click a card while an item is selected to assign it. Use Clear to remove an item from a Pokemon.</p></div>
@@ -2205,6 +2229,7 @@ function resetDraftProgress() {
   state.itemDraftRound = 0;
   state.itemAssignments = {};
   state.selectedDraftItem = '';
+  state.itemDraftSequence = 0;
 }
 
 function selectedMoveChoice(request = state.playerRequest) {
@@ -2329,7 +2354,7 @@ function prepareLinkPreview(message = 'Your hidden team is ready. Set the order 
 function beginItemDraftPhase() {
   state.phase = 'item-draft';
   state.itemDraftRound = Math.max(1, state.draftedItems.length + 1);
-  state.itemPack = buildItemPack(new Set(state.draftedItems), 3, state.playerLoadout);
+  state.itemPack = buildItemPack(new Set(state.draftedItems.map((entry) => entry.id)), 3, state.playerLoadout);
   state.message = 'Draft one held item from this round.';
   render();
 }
@@ -2348,6 +2373,7 @@ function startPostDraftFlow() {
   state.itemDraftRound = 0;
   state.itemAssignments = {};
   state.selectedDraftItem = '';
+  state.itemDraftSequence = 0;
   if (state.rerollsLeft > 0) {
     state.phase = 'reroll';
     state.message = 'Spend your attack rerolls across the drafted team.';
@@ -2376,26 +2402,26 @@ function setRerollFocus(memberIndex) {
 
 function pickDraftItem(itemId) {
   if (!state.itemPack.some((item) => item.id === itemId)) return;
-  state.draftedItems.push(itemId);
+  state.draftedItems.push(createDraftedItemEntry(itemId));
   state.itemDraftRound += 1;
   if (state.draftedItems.length >= currentTeamSize()) {
     state.phase = 'item-assign';
-    state.selectedDraftItem = state.draftedItems[0] || '';
+    state.selectedDraftItem = state.draftedItems[0]?.key || '';
     return render();
   }
-  state.itemPack = buildItemPack(new Set(state.draftedItems), 3, state.playerLoadout);
+  state.itemPack = buildItemPack(new Set(state.draftedItems.map((entry) => entry.id)), 3, state.playerLoadout);
   render();
 }
 
-function selectDraftItem(itemId) {
-  state.selectedDraftItem = state.selectedDraftItem === itemId ? '' : itemId;
+function selectDraftItem(itemKey) {
+  state.selectedDraftItem = state.selectedDraftItem === itemKey ? '' : itemKey;
   render();
 }
 
 function assignDraftItem(memberName) {
   if (!state.selectedDraftItem) return;
-  for (const [name, itemId] of Object.entries(state.itemAssignments)) {
-    if (itemId === state.selectedDraftItem) delete state.itemAssignments[name];
+  for (const [name, itemKey] of Object.entries(state.itemAssignments)) {
+    if (itemKey === state.selectedDraftItem) delete state.itemAssignments[name];
   }
   state.itemAssignments[memberName] = state.selectedDraftItem;
   state.selectedDraftItem = '';
