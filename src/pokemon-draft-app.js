@@ -1261,7 +1261,7 @@ function renderInspectModal() {
             ${spriteTag(member, 'front', 'lg')}
             <div class="inspect-summary-meta">
               <div class="inspect-summary-head"><span>#${member.num}</span><strong>${member.name}</strong></div>
-              <div class="types">${member.types.map((type) => `<span>${type}</span>`).join('')}</div>
+              <div class="types">${member.types.map((type) => moveTypeBadge(type)).join('')}</div>
             </div>
           </div>
           <div class="modal-stats inspect-stat-panel">
