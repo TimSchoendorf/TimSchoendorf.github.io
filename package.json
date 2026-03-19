@@ -12,6 +12,7 @@
     "build:pokemon-draft": "npm run build:pokemon-draft:data && npm run build:pokemon-draft:bundle",
     "check:pokemon-attack-preview": "node scripts/check-pokemon-attack-preview.mjs",
     "check:pokemon-draft": "node scripts/check-pokemon-draft.mjs",
+    "check:pokemon-draft:items": "node scripts/check-pokemon-draft-items.mjs",
     "check:pokemon-draft:mechanics": "node scripts/check-pokemon-gen1-mechanics.mjs",
     "check:pokemon-draft:moves": "node scripts/check-pokemon-gen1-moves.mjs",
     "check:soanw-studio": "node scripts/check-soanw-studio.mjs"

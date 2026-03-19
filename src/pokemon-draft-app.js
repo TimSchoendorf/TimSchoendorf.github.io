@@ -127,12 +127,9 @@ const ITEM_ICON_SLUGS = {
   lumberry: 'lum-berry',
   sitrusberry: 'sitrus-berry',
   lifeorb: 'life-orb',
-  choicescarf: 'choice-scarf',
   choiceband: 'choice-band',
   choicespecs: 'choice-specs',
   expertbelt: 'expert-belt',
-  scopelens: 'scope-lens',
-  quickclaw: 'quick-claw',
   eviolite: 'eviolite',
   airballoon: 'air-balloon',
 };
@@ -151,13 +148,6 @@ const HELD_ITEM_POOL = [
   'lumberry',
   'sitrusberry',
   'lifeorb',
-  'choicescarf',
-  'choiceband',
-  'choicespecs',
-  'expertbelt',
-  'scopelens',
-  'quickclaw',
-  'eviolite',
   'airballoon',
 ];
 const BATTLE_DECOR_ZONES = [
@@ -326,11 +316,6 @@ function itemIconTag(itemId, extraClass = '') {
   return `<img class="${className}" src="${path}" alt="${itemName(itemId)}" loading="lazy">`;
 }
 
-function memberIsNFE(member) {
-  const species = dex.species.get(member.id || member.name || '');
-  return !!species?.nfe;
-}
-
 function memberMoveSplit(member) {
   const summary = {physical: 0, special: 0, status: 0};
   const moves = member?.set?.moves || [];
@@ -346,22 +331,9 @@ function memberMoveSplit(member) {
 
 function itemRelevanceScore(itemId, member) {
   const split = memberMoveSplit(member);
-  const highestAttack = Math.max(member?.battleStats?.atk || 0, member?.battleStats?.spc || 0);
   switch (itemId) {
-    case 'choiceband':
-      return split.physical >= 2 ? 6 + split.physical : 0;
-    case 'choicespecs':
-      return split.special >= 2 ? 6 + split.special : 0;
-    case 'choicescarf':
-      return split.physical + split.special >= 2 ? 5 + Math.min(split.physical, split.special) : 2;
-    case 'expertbelt':
-      return split.physical + split.special >= 2 ? 5 : 2;
     case 'lifeorb':
       return split.physical + split.special >= 2 ? 7 : 1;
-    case 'scopelens':
-      return highestAttack >= 250 ? 4 : 1;
-    case 'quickclaw':
-      return (member?.battleStats?.spe || 0) < 260 ? 4 : 2;
     case 'focussash':
       return (member?.battleStats?.hp || 0) < 320 ? 5 : 3;
     case 'leftovers':
@@ -372,8 +344,6 @@ function itemRelevanceScore(itemId, member) {
       return 4;
     case 'sitrusberry':
       return 5;
-    case 'eviolite':
-      return memberIsNFE(member) ? 8 : 0;
     case 'airballoon':
       return member?.types?.includes('Flying') ? 0 : 4;
     default:
@@ -1532,7 +1502,6 @@ function renderInspectModal() {
             <div class="inspect-summary-meta">
               <div class="inspect-summary-head"><span>#${member.num}</span><strong>${member.name}</strong></div>
               <div class="types">${member.types.map((type) => moveTypeBadge(type)).join('')}</div>
-              ${member.set?.item ? `<div class="inspect-held-item"><span class="label">Held item</span><div class="inspect-held-item-head">${itemIconTag(member.set.item)}<strong>${itemName(member.set.item)}</strong></div><div class="tiny">${itemDesc(member.set.item)}</div></div>` : ''}
             </div>
           </div>
           <div class="modal-stats inspect-stat-panel">
@@ -1544,6 +1513,7 @@ function renderInspectModal() {
               <div><span>SPC</span><strong>${member.battleStats.spc}</strong></div>
               <div><span>SPE</span><strong>${member.battleStats.spe}</strong></div>
             </div>
+            ${member.set?.item ? `<div class="inspect-held-item"><span class="label">Held item</span><div class="inspect-held-item-head">${itemIconTag(member.set.item)}<strong>${itemName(member.set.item)}</strong></div><div class="tiny">${itemDesc(member.set.item)}</div></div>` : ''}
           </div>
         </div>
         <div class="inspect-details">
@@ -1700,7 +1670,7 @@ function renderModeSettingsStage() {
       ${renderSettingRow('Items', 'Held item draft', [
         button('mode-items-off', 'Off', !settings.itemDraft),
         button('mode-items-on', 'On', settings.itemDraft),
-      ], 'Uses later-generation held items with live battle effects.')}
+      ], 'Uses a curated pool of later-generation held items with live battle effects.')}
     </section>`;
   return `<section class="mode-settings-shell">
     <div class="draft-topbar">
@@ -1716,7 +1686,7 @@ function renderModeSettingsStage() {
       <aside class="mode-settings-summary">
         <div class="label">Current rules</div>
         <div class="mode-settings-summary-list">${summaryRows.map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join('')}</div>
-        <div class="mode-settings-summary-note">Gen 1 uses Gen 5 held items only when item draft is enabled.</div>
+        <div class="mode-settings-summary-note">Gen 1 uses a curated later-generation held item pool only when item draft is enabled.</div>
       </aside>
     </section>
     <div class="mode-settings-desktop">${desktopControls}</div>
@@ -1724,7 +1694,7 @@ function renderModeSettingsStage() {
     <section class="mode-settings-notes">
       <div class="mode-settings-note"><strong>Randomized attacks</strong><span>Each Pokemon gets four random moves from its own legal learnset. If it runs out of legal moves, the remaining slots pull from the full Gen 1 move pool.</span></div>
       <div class="mode-settings-note"><strong>Attack rerolls</strong><span>After the Pokemon draft, you can reroll one move at a time across your team. The default budget is 3 whenever rerolls are enabled.</span></div>
-      <div class="mode-settings-note"><strong>Held item draft</strong><span>Gen 1 had no held items, so this mode uses a compact pool of Gen 5 era held items with real battle effects. After the Pokemon draft, you draft from three choices at a time and assign the items you want before battle.</span></div>
+      <div class="mode-settings-note"><strong>Held item draft</strong><span>Gen 1 had no held items, so this mode uses a compact curated pool of later-generation held items with real battle effects. After the Pokemon draft, you draft from three choices at a time and assign the items you want before battle.</span></div>
     </section>
     <div class="actions mode-settings-actions">
       <button class="primary-btn" data-action="confirm-mode-settings">Continue</button>
@@ -1844,7 +1814,7 @@ function renderItemDraftStage() {
         <div class="draft-kicker-row"><span class="label">Held item draft</span><span class="draft-status-pill">Round ${round} of ${currentTeamSize()}</span></div>
         <h2>Pick one held item from this item pack.</h2>
         <p>Each round adds one item to your drafted item pool. After the item draft, you can assign any of your drafted items to your team.</p>
-        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${state.draftedItems.length} of ${currentTeamSize()} items drafted</span><span>Gen 5 item pool</span></div>
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${state.draftedItems.length} of ${currentTeamSize()} items drafted</span><span>Curated held item pool</span></div>
       </div>
     </section>
     <section class="draft-team-panel">
@@ -2039,7 +2009,7 @@ function renderCombatant(mon, label, facing, sideKey, side) {
       </div>
       <div class="battle-status-meta"><span>Lv100</span><span>${mon.status || 'OK'}</span></div>
       <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill ${hpTone(percent)}" style="width:${percent}%"></div></div></div>
-      <div class="tiny">${mon.condition}${mon.set?.item ? ` | ${itemName(mon.set.item)}` : ''}</div>
+      <div class="tiny">${mon.condition}</div>
     </div>
     <div class="battle-sprite-wrap battle-sprite-${side}">
       <div class="battle-shadow"></div>
@@ -2066,7 +2036,7 @@ function renderBench(team, own) {
     const clickable = Boolean(switchChoice) && !state.actionLocked;
     return `<div class="bench-card bench-card-switch ${clickable ? 'bench-card-actionable' : ''}" ${clickable ? `data-choice="${switchChoice}" data-choice-kind="switch"` : ''} style="background:${typeGradient(member.types || ['Normal'])}">
       <div class="bench-card-sprite">${spriteTag(member, 'front', 'sm')}</div>
-      <div class="bench-card-copy"><strong>${member.name}</strong><div class="tiny">${member.condition}${member.set?.item ? ` | ${itemName(member.set.item)}` : ''}</div>${switchState ? `<div class="bench-card-switch-note">${switchState}</div>` : ''}</div>
+      <div class="bench-card-copy"><strong>${member.name}</strong><div class="tiny">${member.condition}</div>${switchState ? `<div class="bench-card-switch-note">${switchState}</div>` : ''}</div>
       <button class="info-chip" data-inspect="${member.name}">Info</button>
     </div>`;
   }).join('')}</div>`;
