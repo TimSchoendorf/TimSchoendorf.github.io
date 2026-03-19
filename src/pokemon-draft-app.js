@@ -119,6 +119,23 @@ const MENU_SHOWCASE = {
   player: POKEMON_POOL.find((species) => species.name === 'Charizard') || POKEMON_POOL[1] || POKEMON_POOL[0],
 };
 const STARTER_ART_PATH = '../assets/firstgenstarter-cutout.png';
+const ITEM_ICON_BASE_PATH = '../assets/pokemon-item-icons';
+const ITEM_ICON_SLUGS = {
+  leftovers: 'leftovers',
+  blacksludge: 'black-sludge',
+  focussash: 'focus-sash',
+  lumberry: 'lum-berry',
+  sitrusberry: 'sitrus-berry',
+  lifeorb: 'life-orb',
+  choicescarf: 'choice-scarf',
+  choiceband: 'choice-band',
+  choicespecs: 'choice-specs',
+  expertbelt: 'expert-belt',
+  scopelens: 'scope-lens',
+  quickclaw: 'quick-claw',
+  eviolite: 'eviolite',
+  airballoon: 'air-balloon',
+};
 const ATTACK_PREVIEW_DATA_PATH = './pokemon-attack-preview-data.json';
 const DEFAULT_MODE_SETTINGS = {
   attackMode: 'fixed',
@@ -294,6 +311,18 @@ function itemName(itemId) {
 function itemDesc(itemId) {
   const item = dex.items.get(itemId);
   return item?.shortDesc || item?.desc || 'Held item effect.';
+}
+
+function itemIconPath(itemId) {
+  const slug = ITEM_ICON_SLUGS[itemId];
+  return slug ? `${ITEM_ICON_BASE_PATH}/${slug}.png` : '';
+}
+
+function itemIconTag(itemId, extraClass = '') {
+  const path = itemIconPath(itemId);
+  if (!path) return '<span class="item-icon item-icon-fallback"></span>';
+  const className = `item-icon ${extraClass}`.trim();
+  return `<img class="${className}" src="${path}" alt="${itemName(itemId)}" loading="lazy">`;
 }
 
 function memberIsNFE(member) {
@@ -1111,6 +1140,19 @@ function moveSummaryText(member, limit = 4) {
   return `${moves.slice(0, limit).join(', ')} +${moves.length - limit} more`;
 }
 
+function renderItemInfoCard(itemId, {selected = false, assigned = false, compact = false} = {}) {
+  return `<article class="item-info-card ${selected ? 'selected' : ''} ${assigned ? 'assigned' : ''} ${compact ? 'compact' : ''}">
+    <div class="item-info-head">
+      ${itemIconTag(itemId)}
+      <div>
+        <strong>${itemName(itemId)}</strong>
+        <div class="tiny">${assigned ? 'Assigned to a team member' : 'Available to assign'}</div>
+      </div>
+    </div>
+    <div class="tiny item-info-desc">${itemDesc(itemId)}</div>
+  </article>`;
+}
+
 function compactMeta(parts) {
   return parts.filter(Boolean).join(' | ');
 }
@@ -1197,6 +1239,10 @@ function playerAssignedItemFor(name) {
 
 function applyAssignedItems(loadout, assignments) {
   return loadout.map((member) => createLoadout(member, {moves: member.set?.moves || member.previewSet?.moves, item: assignments[member.name] || ''}));
+}
+
+function buildLoadoutFromDraft(draftTeam) {
+  return draftTeam.map((member) => createLoadout(member));
 }
 
 function autoUseRerolls(loadout) {
@@ -1289,6 +1335,12 @@ function renderInspectMoveCard(move) {
     </div>
     <p><span>Effect</span>${effectText}</p>
   </article>`;
+}
+
+function renderInspectMoveColumns(moves) {
+  const midpoint = Math.ceil(moves.length / 2);
+  const columns = [moves.slice(0, midpoint), moves.slice(midpoint)];
+  return columns.map((column) => `<div class="inspect-move-column">${column.map((move) => renderInspectMoveCard(move)).join('')}</div>`).join('');
 }
 
 function logLine(text) {
@@ -1460,7 +1512,7 @@ function renderPreviewShell({mode, title, statusCopy, chips, actionLabel, player
 function renderPreviewCard(member, index, controls) {
   return `<div class="preview-card" style="background:${typeGradient(member.types)}">
     <div class="preview-card-media"><span class="preview-rank">${index + 1}</span>${spriteTag(member, 'front', 'sm')}</div>
-    <div class="preview-copy"><strong>${member.name}</strong><div class="tiny">${member.moveNames.join(', ')}${member.set?.item ? ` | ${itemName(member.set.item)}` : ''}</div></div>
+    <div class="preview-copy"><strong>${member.name}</strong><div class="tiny">${moveSummaryText(member, currentTeamSize() === 6 ? 2 : 4)}${member.set?.item ? ` | ${itemName(member.set.item)}` : ''}</div></div>
     <div class="preview-actions"><button class="info-chip" data-inspect="${member.name}">Info</button>${controls ? `<button class="mini-btn" data-move-index="${index}" data-move-dir="-1" ${index === 0 ? 'disabled' : ''}>Up</button><button class="mini-btn" data-move-index="${index}" data-move-dir="1" ${index === state.playerPreview.length - 1 ? 'disabled' : ''}>Down</button>` : ''}</div>
   </div>`;
 }
@@ -1479,7 +1531,7 @@ function renderInspectModal() {
             <div class="inspect-summary-meta">
               <div class="inspect-summary-head"><span>#${member.num}</span><strong>${member.name}</strong></div>
               <div class="types">${member.types.map((type) => moveTypeBadge(type)).join('')}</div>
-              ${member.set?.item ? `<div class="inspect-held-item"><span class="label">Held item</span><strong>${itemName(member.set.item)}</strong><div class="tiny">${itemDesc(member.set.item)}</div></div>` : ''}
+              ${member.set?.item ? `<div class="inspect-held-item"><span class="label">Held item</span><div class="inspect-held-item-head">${itemIconTag(member.set.item)}<strong>${itemName(member.set.item)}</strong></div><div class="tiny">${itemDesc(member.set.item)}</div></div>` : ''}
             </div>
           </div>
           <div class="modal-stats inspect-stat-panel">
@@ -1496,7 +1548,7 @@ function renderInspectModal() {
         <div class="inspect-details">
           <div class="modal-moves inspect-move-panel">
             <strong>Moves</strong>
-            <div class="inspect-move-list">${moves.map((move) => renderInspectMoveCard(move)).join('')}</div>
+            <div class="inspect-move-list">${renderInspectMoveColumns(moves)}</div>
           </div>
         </div>
       </div>
@@ -1700,9 +1752,11 @@ function renderRerollStage() {
 
 function renderItemDraftCard(item) {
   return `<article class="item-draft-card">
-    <div class="label">${item.name}</div>
-    <h3>${item.shortDesc || item.desc || 'Held item effect'}</h3>
-    <div class="tiny">Held item</div>
+    <div class="item-draft-head">
+      ${itemIconTag(item.id)}
+      <div><div class="label">Held item</div><h3>${item.name}</h3></div>
+    </div>
+    <div class="tiny">${item.shortDesc || item.desc || 'Held item effect'}</div>
     <div class="card-actions"><button class="primary-btn" data-item-pick="${item.id}">Pick item</button></div>
   </article>`;
 }
@@ -1719,12 +1773,19 @@ function renderItemDraftStage() {
         <div class="draft-kicker-row"><span class="label">Held item draft</span><span class="draft-status-pill">Round ${round} of ${currentTeamSize()}</span></div>
         <h2>Pick one held item from this item pack.</h2>
         <p>Each round adds one item to your drafted item pool. After the item draft, you can assign any of your drafted items to your team.</p>
-        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${state.draftedItems.length}/${currentTeamSize()} items drafted</span><span>Gen 5 item pool</span></div>
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${state.draftedItems.length} of ${currentTeamSize()} items drafted</span><span>Gen 5 item pool</span></div>
       </div>
     </section>
     <section class="draft-team-panel">
-      <div class="draft-section-head"><div><div class="label">Drafted items</div><h3>${state.draftedItems.length ? 'Your current pool' : 'No items drafted yet'}</h3></div><p>Every pick stays available for the assignment step.</p></div>
-      <div class="item-pool-strip">${state.draftedItems.length ? state.draftedItems.map((itemId) => `<span class="item-pill">${itemName(itemId)}</span>`).join('') : '<div class="empty">Your drafted items appear here.</div>'}</div>
+      <div class="draft-section-head"><div><div class="label">Your lineup</div><h3>${currentTeamSize()} Pokemon waiting for items</h3></div><p>Use Info to check moves and stats while you draft held items.</p></div>
+      <div class="draft-team-strip item-draft-team-strip">${state.playerLoadout.map((member) => `<div class="draft-team-slot filled compact" style="background:${typeGradient(member.types)}">
+        <div class="draft-team-slot-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="tiny">${moveSummaryText(member, 2)}</div></div></div>
+        <button class="info-chip" data-inspect="${member.name}">Info</button>
+      </div>`).join('')}</div>
+    </section>
+    <section class="draft-team-panel">
+      <div class="draft-section-head"><div><div class="label">Drafted items</div><h3>${state.draftedItems.length ? `${state.draftedItems.length} items in your pool` : 'No items drafted yet'}</h3></div><p>Every pick stays available for the assignment step.</p></div>
+      <div class="item-pool-strip">${state.draftedItems.length ? state.draftedItems.map((itemId) => `<span class="item-pill">${itemIconTag(itemId, 'small')}${itemName(itemId)}</span>`).join('') : '<div class="empty">Your drafted items appear here.</div>'}</div>
     </section>
     <section class="draft-board">
       <div class="draft-section-head"><div><div class="label">Selection</div><h3>Pick 1 of 3 held items</h3></div><p>Choose the item that gives your team the best edge.</p></div>
@@ -1735,6 +1796,8 @@ function renderItemDraftStage() {
 
 function renderItemAssignStage() {
   const compactCopy = currentTeamSize() === 6;
+  const assignedItems = new Set(Object.values(state.itemAssignments));
+  const highlightedItemId = state.selectedDraftItem || state.draftedItems.find((itemId) => assignedItems.has(itemId)) || state.draftedItems[0] || '';
   return `<section class="preview-shell item-assign-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
       <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
@@ -1745,12 +1808,13 @@ function renderItemAssignStage() {
         <div class="draft-kicker-row"><span class="label">Item assign</span><span class="draft-status-pill">${state.draftedItems.length} drafted</span></div>
         <h2>Assign your held items to the team.</h2>
         ${compactCopy ? '' : '<p>Select an item from the pool, then click the Pokemon that should carry it. Each Pokemon can hold one item, and unassigned items can stay unused.</p>'}
-        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${currentTeamSize()} Pokemon</span><span>${state.selectedDraftItem ? `Selected: ${itemName(state.selectedDraftItem)}` : 'Choose an item below'}</span></div>
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${currentTeamSize()} Pokemon</span><span>${state.selectedDraftItem ? `Selected: ${itemName(state.selectedDraftItem)}` : 'Select an item to inspect or assign'}</span></div>
       </div>
     </section>
     <section class="draft-team-panel">
       <div class="draft-section-head"><div><div class="label">Drafted item pool</div><h3>Choose one to assign</h3></div><p>Click an item to arm it, then click a team card to place it.</p></div>
-      <div class="item-pool-strip">${state.draftedItems.map((itemId) => `<button class="item-pill ${state.selectedDraftItem === itemId ? 'selected' : ''}" data-select-item="${itemId}">${itemName(itemId)}</button>`).join('')}</div>
+      <div class="item-pool-strip">${state.draftedItems.map((itemId) => `<button class="item-pill ${state.selectedDraftItem === itemId ? 'selected' : ''} ${assignedItems.has(itemId) ? 'assigned' : ''}" data-select-item="${itemId}">${itemIconTag(itemId, 'small')}${itemName(itemId)}</button>`).join('')}</div>
+      ${highlightedItemId ? renderItemInfoCard(highlightedItemId, {selected: state.selectedDraftItem === highlightedItemId, assigned: assignedItems.has(highlightedItemId)}) : ''}
     </section>
     <section class="draft-board item-assign-board">
       <div class="draft-section-head"><div><div class="label">Your team</div><h3>Place your held items</h3></div><p class="preview-order-note">Click a card while an item is selected to assign it. Use Clear to remove an item from a Pokemon.</p></div>
@@ -2137,7 +2201,7 @@ function draftSpecies(id) {
     state.draftedIds.add(opponentPick.id);
   }
   if (state.playerDraft.length === currentTeamSize()) {
-    state.playerLoadout = state.playerDraft.map((member) => createLoadout(member, {moves: member.previewSet?.moves}));
+    state.playerLoadout = buildLoadoutFromDraft(state.playerDraft);
     startPostDraftFlow();
     return;
   }
@@ -2403,8 +2467,8 @@ function maybeFinishLinkRound() {
 }
 
 function finishLinkDraft() {
-  state.playerLoadout = state.playerDraft.map((member) => createLoadout(member, {moves: member.previewSet?.moves}));
-  state.opponentLoadout = state.opponentDraft.map((member) => createLoadout(member, {moves: member.previewSet?.moves}));
+  state.playerLoadout = buildLoadoutFromDraft(state.playerDraft);
+  state.opponentLoadout = buildLoadoutFromDraft(state.opponentDraft);
   sendLinkMessage({type: 'link-draft-done', remoteDraftCount: state.playerDraft.length});
   startPostDraftFlow();
 }
@@ -2489,7 +2553,7 @@ function handleLinkMessage(message) {
   if (message.type === 'link-draft-done') {
     state.link.remoteDraftCount = message.remoteDraftCount;
     if (state.playerDraft.length === currentTeamSize()) {
-      state.playerLoadout = state.playerDraft.map((member) => createLoadout(member, {moves: member.previewSet?.moves}));
+      state.playerLoadout = buildLoadoutFromDraft(state.playerDraft);
       startPostDraftFlow();
     }
   }
@@ -4359,6 +4423,12 @@ function injectStyles() {
       grid-template-columns:repeat(2,minmax(0,1fr));
       gap:12px;
     }
+    .inspect-move-column{
+      display:grid;
+      gap:12px;
+      align-content:start;
+      min-width:0;
+    }
     .inspect-move-card{
       display:grid;
       gap:10px;
@@ -4436,6 +4506,31 @@ function injectStyles() {
       border:1px solid var(--line);
       background:rgba(255,255,255,.05);
     }
+    .item-draft-head,.item-info-head,.inspect-held-item-head{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      min-width:0;
+    }
+    .item-icon{
+      width:28px;
+      height:28px;
+      object-fit:contain;
+      image-rendering:pixelated;
+      flex:0 0 auto;
+      filter:drop-shadow(0 4px 10px rgba(0,0,0,.16));
+    }
+    .item-icon.small{
+      width:20px;
+      height:20px;
+    }
+    .item-icon-fallback{
+      display:inline-grid;
+      width:28px;
+      height:28px;
+      border-radius:8px;
+      background:rgba(255,255,255,.12);
+    }
     .mode-settings-card,.item-draft-card,.mode-settings-note{
       display:grid;
       gap:12px;
@@ -4508,6 +4603,29 @@ function injectStyles() {
     .item-assign-list{
       grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
     }
+    .item-info-card{
+      display:grid;
+      gap:10px;
+      padding:14px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.05);
+    }
+    .item-info-card.selected{
+      border-color:rgba(242,217,123,.55);
+      box-shadow:0 0 0 1px rgba(242,217,123,.22) inset;
+    }
+    .item-info-card.assigned{
+      background:linear-gradient(180deg,rgba(54,112,86,.26),rgba(31,71,57,.2));
+      border-color:rgba(111,197,145,.28);
+    }
+    .item-info-card.compact{
+      padding:12px;
+      gap:8px;
+    }
+    .item-info-desc{
+      line-height:1.35;
+    }
     .reroll-move-row{
       display:flex;
       gap:10px;
@@ -4525,6 +4643,7 @@ function injectStyles() {
       display:inline-flex;
       align-items:center;
       justify-content:center;
+      gap:8px;
       padding:10px 12px;
       border-radius:999px;
       border:1px solid rgba(255,255,255,.08);
@@ -4539,6 +4658,10 @@ function injectStyles() {
     .item-pill.selected,.item-pill.assigned{
       background:linear-gradient(180deg,#f2d97b,#c6a548);
       color:var(--ink);
+    }
+    .item-pill.assigned:not(.selected){
+      background:linear-gradient(180deg,rgba(111,197,145,.9),rgba(54,112,86,.94));
+      color:#f3fff8;
     }
     .item-pill.empty{
       background:rgba(255,255,255,.05);
@@ -4574,6 +4697,20 @@ function injectStyles() {
     }
     .inspect-held-item strong{
       font-size:1rem;
+    }
+    .item-draft-team-strip{
+      grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    }
+    .draft-team-slot.compact{
+      grid-template-columns:minmax(0,1fr) auto;
+      align-items:center;
+    }
+    .draft-team-slot-head{
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr);
+      align-items:center;
+      gap:10px;
+      min-width:0;
     }
     @media (min-width:721px){
       .battle-view{
@@ -4624,6 +4761,9 @@ function injectStyles() {
       .preview-shell .draft-hero-copy h2{
         font-size:clamp(2rem,3.6vw,3.2rem);
       }
+      .inspect-move-column .inspect-move-card{
+        min-height:0;
+      }
       .team-size-6 .preview-hero-slot{
         padding:10px;
       }
@@ -4646,6 +4786,7 @@ function injectStyles() {
       }
       .team-size-6 .reroll-grid{
         grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:10px;
       }
       .team-size-6 .reroll-card{
         padding:10px;
@@ -4666,25 +4807,32 @@ function injectStyles() {
         padding:12px;
         gap:10px;
       }
+      .item-draft-team-strip .draft-team-slot{
+        min-height:0;
+        padding:10px 12px;
+      }
       .item-assign-head .sprite.sm{
         width:42px;
         height:42px;
       }
       .team-size-6 .item-assign-card{
-        padding:10px;
-        gap:8px;
+        padding:9px;
+        gap:7px;
       }
       .team-size-6 .item-assign-head .tiny{
         display:none;
       }
+      .team-size-6 .item-assign-head{
+        gap:8px;
+      }
       .team-size-6 .item-assign-current .item-pill{
-        padding:7px 10px;
-        font-size:.78rem;
+        padding:6px 9px;
+        font-size:.74rem;
       }
       .team-size-6 .item-assign-card .card-actions .primary-btn,
       .team-size-6 .item-assign-card .card-actions .ghost-btn{
-        padding:8px 10px;
-        font-size:.78rem;
+        padding:7px 9px;
+        font-size:.74rem;
       }
       .preview-card{
         grid-template-columns:auto minmax(0,1fr) auto;
@@ -4830,15 +4978,37 @@ function injectStyles() {
         gap:10px;
       }
       .team-size-6 .draft-shell{
-        gap:8px;
+        gap:6px;
+      }
+      .team-size-6.preview-shell{
+        gap:6px;
+        padding:6px 0 2px;
       }
       .team-size-6 .draft-hero-panel,
       .team-size-6 .draft-team-panel,
       .team-size-6 .draft-board{
-        padding:12px;
+        padding:10px;
+      }
+      .team-size-6 .draft-topbar .back{
+        padding:8px 12px;
+      }
+      .team-size-6 .item-assign-shell .draft-hero-copy h2{
+        font-size:clamp(1.7rem,3vw,2.4rem);
+      }
+      .team-size-6 .item-assign-shell .item-pool-strip{
+        gap:10px;
+      }
+      .team-size-6 .item-assign-shell .item-info-card{
+        padding:10px 12px;
+      }
+      .team-size-6 .item-assign-shell .draft-board{
+        gap:8px;
       }
       .team-size-6 .mode-settings-actions .primary-btn{
         padding:8px 14px;
+      }
+      .team-size-6 .item-draft-team-strip{
+        grid-template-columns:repeat(3,minmax(0,1fr));
       }
       .draft-team-strip,.draft-choice-grid{
         gap:10px;
@@ -5106,6 +5276,9 @@ function injectStyles() {
         padding:8px;
         gap:6px;
       }
+      .inspect-move-list{
+        grid-template-columns:1fr;
+      }
       .link-preview-main{
         grid-template-columns:1fr;
         grid-template-rows:auto auto;
@@ -5154,6 +5327,10 @@ function injectStyles() {
       .draft-team-panel,.draft-board{
         padding:10px;
         gap:8px;
+      }
+      .item-draft-team-strip{
+        grid-template-columns:1fr 1fr;
+        gap:6px;
       }
       .preview-card-list,.preview-status-stack{
         gap:8px;
@@ -5229,6 +5406,14 @@ function injectStyles() {
       .team-size-6 .preview-side-panel .actions .ghost-btn{
         padding:7px 8px;
         font-size:.72rem;
+      }
+      .item-pill{
+        padding:8px 10px;
+        font-size:.76rem;
+      }
+      .item-icon.small{
+        width:18px;
+        height:18px;
       }
       .preview-side-panel .actions{
         display:grid;
