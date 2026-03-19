@@ -2031,10 +2031,15 @@ function renderBench(team, own) {
       : [],
   );
   return `<div class="bench-grid">${bench.map((member) => {
+    const fainted = member.condition?.endsWith(' fnt') || member.status === 'fainted';
     const switchChoice = own ? switchChoices.get(member.name) || '' : '';
-    const switchState = own && switchChoice ? (state.playerRequest?.forceSwitch ? 'Forced switch' : 'Tap card to switch in') : '';
+    const switchState = fainted
+      ? 'Fainted'
+      : own && switchChoice
+        ? (state.playerRequest?.forceSwitch ? 'Forced switch' : 'Tap card to switch in')
+        : '';
     const clickable = Boolean(switchChoice) && !state.actionLocked;
-    return `<div class="bench-card bench-card-switch ${clickable ? 'bench-card-actionable' : ''}" ${clickable ? `data-choice="${switchChoice}" data-choice-kind="switch"` : ''} style="background:${typeGradient(member.types || ['Normal'])}">
+    return `<div class="bench-card bench-card-switch ${clickable ? 'bench-card-actionable' : ''} ${fainted ? 'bench-card-fainted' : ''}" ${clickable ? `data-choice="${switchChoice}" data-choice-kind="switch"` : ''} style="background:${typeGradient(member.types || ['Normal'])}">
       <div class="bench-card-sprite">${spriteTag(member, 'front', 'sm')}</div>
       <div class="bench-card-copy"><strong>${member.name}</strong><div class="tiny">${member.condition}</div>${switchState ? `<div class="bench-card-switch-note">${switchState}</div>` : ''}</div>
       <button class="info-chip" data-inspect="${member.name}">Info</button>
@@ -4324,6 +4329,35 @@ function injectStyles() {
     .bench-card-actionable:hover{
       transform:translateY(-1px);
       box-shadow:inset 0 0 0 999px rgba(255,255,255,.22),0 14px 24px rgba(0,0,0,.16);
+    }
+    .bench-card-fainted{
+      position:relative;
+      background:
+        linear-gradient(180deg,rgba(49,28,30,.9),rgba(27,18,20,.94)) !important;
+      border-color:rgba(221,115,115,.42);
+      box-shadow:inset 0 0 0 999px rgba(33,18,20,.42), 0 12px 24px rgba(0,0,0,.14);
+    }
+    .bench-card-fainted::after{
+      content:"";
+      position:absolute;
+      inset:0;
+      border-radius:inherit;
+      background:
+        linear-gradient(135deg,transparent 44%,rgba(255,255,255,.08) 44%,rgba(255,255,255,.08) 48%,transparent 48%,transparent 52%,rgba(255,255,255,.08) 52%,rgba(255,255,255,.08) 56%,transparent 56%);
+      pointer-events:none;
+    }
+    .bench-card-fainted .bench-card-sprite{
+      filter:grayscale(1) brightness(.78) contrast(1.05);
+      opacity:.82;
+    }
+    .bench-card-fainted strong,
+    .bench-card-fainted .tiny,
+    .bench-card-fainted .bench-card-switch-note{
+      color:#f6d7d7 !important;
+    }
+    .bench-card-fainted .bench-card-switch-note{
+      text-transform:uppercase;
+      letter-spacing:.08em;
     }
     .battle-panel .bench-card strong{
       font-size:.9rem;
