@@ -52,6 +52,7 @@ const app = document.getElementById('app');
 const BEST_RUN_KEY = 'pokemon-battler-rby-best-run-v4';
 const ENEMY_NAMES = ['Brock', 'Misty', 'Surge', 'Erika', 'Koga', 'Sabrina', 'Blaine', 'Giovanni', 'Lorelei', 'Lance'];
 const BATTLE_LOGO_PATH = '../assets/pokemon-logo-cutout.png';
+const POKEBALL_STATUS_PATH = '../assets/pokeball-status.png';
 const GENERATION_CONFIG = {
   gen1: {
     id: 'gen1',
@@ -1998,18 +1999,32 @@ function hpTone(percent) {
   return 'hp-high';
 }
 
-function renderCombatant(mon, label, facing, sideKey, side) {
-  if (!mon || mon.condition?.endsWith(' fnt')) return `<div class="combatant combatant-${side} empty"></div>`;
+function renderBattleBallRow(team, side) {
+  const total = Math.max(team?.length || 0, currentTeamSize());
+  if (!total) return '';
+  return `<div class="battle-ball-row battle-ball-row-${side}" aria-hidden="true">${Array.from({length: total}, (_, index) => {
+    const member = team?.[index];
+    const fainted = !member || member.condition?.endsWith(' fnt') || member.status === 'fainted';
+    return `<span class="battle-ball ${fainted ? 'fainted' : ''}"><img src="${POKEBALL_STATUS_PATH}" alt=""></span>`;
+  }).join('')}</div>`;
+}
+
+function renderCombatant(mon, facing, sideKey, side, team = []) {
+  if (!mon || mon.condition?.endsWith(' fnt')) return `<div class="combatant combatant-${side} empty"><div class="battle-status-shell battle-status-shell-${side}">${side === 'player' ? renderBattleBallRow(team, side) : ''}${side === 'foe' ? renderBattleBallRow(team, side) : ''}</div></div>`;
   const percent = conditionToPercent(mon.condition);
-  const infoButton = side === 'player' ? `<button class="info-chip" data-inspect="${mon.name}">Info</button>` : '';
+  const infoButton = side === 'player' ? `<button class="info-chip battle-status-info" data-inspect="${mon.name}" aria-label="Inspect ${mon.name}">Info</button>` : '';
   return `<div class="combatant combatant-${side} ${state.flash[sideKey]}">
-    <div class="battle-status battle-status-${side}">
-      <div class="battle-status-top">
-        <div class="battle-status-name"><div class="label">${label}</div><div class="battle-status-name-row"><strong>${mon.name}</strong>${infoButton}</div></div>
+    <div class="battle-status-shell battle-status-shell-${side}">
+      ${side === 'player' ? renderBattleBallRow(team, side) : ''}
+      <div class="battle-status battle-status-${side}">
+        <div class="battle-status-top">
+          <div class="battle-status-name"><div class="battle-status-name-row"><strong>${mon.name}</strong>${infoButton}</div></div>
+        </div>
+        <div class="battle-status-meta"><span>Lv100</span><span>${mon.status || 'OK'}</span></div>
+        <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill ${hpTone(percent)}" style="width:${percent}%"></div></div></div>
+        <div class="tiny">${mon.condition}</div>
       </div>
-      <div class="battle-status-meta"><span>Lv100</span><span>${mon.status || 'OK'}</span></div>
-      <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill ${hpTone(percent)}" style="width:${percent}%"></div></div></div>
-      <div class="tiny">${mon.condition}</div>
+      ${side === 'foe' ? renderBattleBallRow(team, side) : ''}
     </div>
     <div class="battle-sprite-wrap battle-sprite-${side}">
       <div class="battle-shadow"></div>
@@ -2054,8 +2069,11 @@ function renderChoiceButtons() {
   }
   const moves = state.playerRequest.active?.[0]?.moves.map((move, index) => {
     const selected = state.selectedChoice === `move ${index + 1}` ? 'selected' : '';
-    const ppText = Number.isFinite(move.pp) && Number.isFinite(move.maxpp) ? `<span>${move.pp}/${move.maxpp} PP</span>` : '';
-    return `<button class="choice-btn ${selected}" data-choice="move ${index + 1}" data-choice-kind="move" data-move-name="${move.move}">${move.move}${ppText}</button>`;
+    const moveData = dex.moves.get(move.id || move.move || '');
+    const tone = typeColors(moveData?.type);
+    const disabled = move.disabled || !(move.pp > 0);
+    const ppText = Number.isFinite(move.pp) && Number.isFinite(move.maxpp) ? `<span class="choice-btn-pp">${move.pp}/${move.maxpp} PP</span>` : '';
+    return `<button class="choice-btn choice-btn-move ${selected}" style="--choice-type-bg:${tone.bg};--choice-type-fg:${tone.fg}" data-choice="move ${index + 1}" data-choice-kind="move" data-move-name="${move.move}" ${disabled ? 'disabled' : ''}><strong class="choice-btn-name">${move.move}</strong>${ppText}</button>`;
   }).join('') || '';
   return `<div class="choice-grid">${moves}</div>`;
 }
@@ -2074,14 +2092,14 @@ function renderBattleStage() {
       <button class="ghost-btn battle-mode-link" data-action="go-menu">Mode Select</button>
       <div class="battle-brand-logo"><img src="${BATTLE_LOGO_PATH}" alt="Pokemon logo"></div>
       <div class="battle-streak-badge"><span class="label">Run</span><strong>${streak}</strong></div>
-    </div>
-    <div class="battle-desktop-shell">
-      <div class="battle-center">
-        <div class="battle-header"><div><div class="label">Battle Phase</div><h2>${currentEnemyLabel()}</h2></div><p>${state.message}</p></div>
-        <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), currentEnemyLabel(), 'front', foeSide(), 'foe')}<div class="battle-field" data-battle-attack-field><canvas class="battle-layer" data-battle-attack-layer></canvas></div><div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'You', 'back', ownSide(), 'player')}</div></section>
-        <section class="battle-footer">
-          <div class="panel battle-panel"><div class="label">Your Bench</div>${renderBench(ownTeamState(), true)}</div>
-          <div class="panel battle-panel battle-actions-panel"><div class="label">Actions</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn battle-mobile-menu" data-action="go-menu">Mode Select</button></div></div>
+      </div>
+      <div class="battle-desktop-shell">
+        <div class="battle-center">
+          <div class="battle-header"><div><div class="label">Battle Phase</div><h2>Arena Battle</h2></div><p>${state.message}</p></div>
+          <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), 'front', foeSide(), 'foe', foeTeamState())}<div class="battle-field" data-battle-attack-field><canvas class="battle-layer" data-battle-attack-layer></canvas></div><div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'back', ownSide(), 'player', ownTeamState())}</div></section>
+          <section class="battle-footer">
+            <div class="panel battle-panel"><div class="label">Your Bench</div>${renderBench(ownTeamState(), true)}</div>
+            <div class="panel battle-panel battle-actions-panel"><div class="label">Actions</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn battle-mobile-menu" data-action="go-menu">Mode Select</button></div></div>
         </section>
         <div class="battle-starter-art"><img src="${STARTER_ART_PATH}" alt="First-generation starters"></div>
       </div>
@@ -3978,7 +3996,7 @@ function injectStyles() {
     .battle-ui{
       position:relative;
       display:grid;
-      gap:4px;
+      gap:2px;
       font-family:"Courier New",monospace;
       overflow:hidden;
     }
@@ -4028,7 +4046,7 @@ function injectStyles() {
     }
     .battle-center{
       display:grid;
-      gap:6px;
+      gap:4px;
       min-width:0;
     }
     .battle-brand-logo{
@@ -4150,8 +4168,8 @@ function injectStyles() {
     .combatant.flash-faint{opacity:.45}
     .combatant.flash-switch{transform:translateX(4px)}
     .battle-status{
-      position:absolute;
-      padding:2.4% 2.8%;
+      position:relative;
+      padding:2% 2.35%;
       border:3px solid #151d11;
       border-radius:8px;
       background:#f8f5e8;
@@ -4160,16 +4178,31 @@ function injectStyles() {
       pointer-events:auto;
       z-index:5;
     }
-    .battle-status-foe{
+    .battle-status-shell{
+      position:absolute;
+      display:grid;
+      gap:7px;
+      z-index:5;
+      pointer-events:none;
+    }
+    .battle-status-shell > *{
+      pointer-events:auto;
+    }
+    .battle-status-shell-foe{
       top:var(--battle-pad-top);
       left:var(--battle-pad-x);
-      width:24%;
+      width:23%;
       max-width:none;
     }
-    .battle-status-player{
+    .battle-status-shell-player{
       right:var(--battle-pad-x);
       bottom:calc(var(--battle-player-line) + 1.5%);
-      width:25%;
+      width:30%;
+      max-width:none;
+    }
+    .battle-status-foe,
+    .battle-status-player{
+      width:100%;
       max-width:none;
     }
     .battle-status-top,.battle-status-meta,.battle-hp-row{
@@ -4187,36 +4220,72 @@ function injectStyles() {
     .battle-status-name-row{
       display:flex;
       align-items:center;
-      justify-content:space-between;
-      gap:10px;
+      gap:6px;
       min-width:0;
     }
     .battle-status .info-chip{
       position:relative;
       z-index:2;
-      min-width:54px;
-      min-height:36px;
-      padding:9px 14px;
+      min-width:42px;
+      min-height:28px;
+      padding:6px 10px;
+      font-size:.65rem;
+      letter-spacing:.04em;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.1), 0 8px 18px rgba(0,0,0,.16);
     }
     .battle-status .info-chip:hover{
       transform:translateY(-1px);
     }
     .battle-status-name-row strong{
+      flex:1 1 auto;
       min-width:0;
       overflow:hidden;
       text-overflow:ellipsis;
       white-space:nowrap;
     }
     .battle-status-meta{
-      margin-top:4px;
+      margin-top:3px;
       color:#4d5b41;
-      font-size:.8rem;
+      font-size:.77rem;
       font-weight:700;
       text-transform:uppercase;
       letter-spacing:.08em;
     }
-    .battle-hp-row{margin-top:8px}
+    .battle-hp-row{margin-top:6px}
+    .battle-ball-row{
+      display:flex;
+      gap:5px;
+      align-items:center;
+    }
+    .battle-ball-row-player{
+      justify-content:flex-end;
+      margin-bottom:0;
+    }
+    .battle-ball-row-foe{
+      justify-content:flex-start;
+      margin-top:0;
+    }
+    .battle-status-info{
+      flex:0 0 auto;
+      border-radius:999px;
+    }
+    .battle-ball{
+      width:14px;
+      height:14px;
+      display:grid;
+      place-items:center;
+      filter:drop-shadow(0 1px 0 rgba(0,0,0,.18));
+    }
+    .battle-ball img{
+      width:100%;
+      height:100%;
+      display:block;
+      image-rendering:pixelated;
+    }
+    .battle-ball.fainted{
+      opacity:.42;
+      filter:grayscale(1) brightness(.72);
+    }
     .hp-label{
       color:#1e2b14;
       font-size:.86rem;
@@ -4438,11 +4507,25 @@ function injectStyles() {
       border:2px solid transparent;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.12);
     }
+    .choice-btn-move{
+      background:
+        linear-gradient(180deg,color-mix(in srgb,var(--choice-type-bg) 92%, #ffffff 8%),color-mix(in srgb,var(--choice-type-bg) 76%, #2a2e25 24%));
+      color:var(--choice-type-fg);
+      box-shadow:inset 0 0 0 1px rgba(255,255,255,.14), 0 10px 18px rgba(0,0,0,.12);
+    }
+    .choice-btn-name{
+      color:var(--choice-type-fg);
+      font-size:.92rem;
+      line-height:1.05;
+    }
     .choice-btn span{
       color:rgba(30,43,20,.76);
       font-size:.74rem;
       font-weight:700;
       white-space:nowrap;
+    }
+    .choice-btn-pp{
+      color:color-mix(in srgb,var(--choice-type-fg) 78%, #263224 22%);
     }
     .choice-btn:hover:not(:disabled){
       border-color:rgba(135,211,255,.88);
@@ -4457,13 +4540,20 @@ function injectStyles() {
     .choice-btn.selected span{
       color:#dbeaff;
     }
+    .choice-btn.selected .choice-btn-name,
+    .choice-btn.selected .choice-btn-pp{
+      color:#dbeaff;
+    }
     .choice-btn.alt.selected{
       border-color:transparent;
       background:linear-gradient(180deg,#cfdfab,#8ca85b);
       color:var(--ink);
     }
     .choice-btn:disabled{
-      opacity:.82;
+      opacity:.62;
+    }
+    .choice-btn-move:disabled{
+      filter:grayscale(.22) saturate(.7);
     }
     .synergy,.metrics{display:grid;gap:8px}
     .log-line{
@@ -5206,10 +5296,10 @@ function injectStyles() {
       .battle-starter-art{
         display:grid;
         place-items:center;
-        padding:6px 0 2px;
+        padding:2px 0 0;
       }
       .battle-starter-art img{
-        width:min(34vw,430px);
+        width:min(28vw,360px);
         height:auto;
         display:block;
         filter:drop-shadow(0 18px 24px rgba(0,0,0,.18));
@@ -6471,29 +6561,40 @@ function injectStyles() {
       }
       .combatant{inset:0}
       .battle-status{
-        padding:8px 10px;
+        padding:7px 9px;
         border-width:2px;
         border-radius:6px;
       }
-      .battle-status-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:36%;max-width:none}
-      .battle-status-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:38%;max-width:none}
+      .battle-status-shell{
+        gap:5px;
+      }
+      .battle-status-shell-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:36%;max-width:none}
+      .battle-status-shell-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:42%;max-width:none}
       .battle-status .info-chip{
-        min-width:50px;
-        min-height:34px;
-        padding:8px 12px;
+        min-width:42px;
+        min-height:28px;
+        padding:6px 9px;
+        font-size:.6rem;
       }
       .battle-status-name-row{
         gap:6px;
       }
       .battle-status-player .info-chip{
-        min-width:46px;
-        min-height:30px;
-        padding:6px 10px;
+        min-width:40px;
+        min-height:26px;
+        padding:5px 8px;
         font-size:.62rem;
       }
       .battle-status-meta{
         font-size:.68rem;
         letter-spacing:.05em;
+      }
+      .battle-ball{
+        width:12px;
+        height:12px;
+      }
+      .battle-ball-row{
+        gap:4px;
       }
       .battle-hp{height:12px}
       .battle-sprite-foe{
