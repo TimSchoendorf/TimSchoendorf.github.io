@@ -4325,7 +4325,7 @@ function injectStyles() {
     .battle-status-info{
       position:absolute !important;
       top:-2px;
-      right:-4px;
+      right:4px;
       flex:0 0 auto;
       border-radius:999px;
     }
