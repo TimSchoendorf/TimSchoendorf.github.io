@@ -215,6 +215,7 @@ const ATTACK_MOVE_SPECIFIC_DURATION = {
 const ATTACK_EFFECT_TILES = {droplet: 0x71, spiralBall: 0x7a};
 let attackAnimationAssetsPromise = null;
 let attackAnimationAssets = null;
+let battleFeedClearHandle = null;
 
 const state = {
   phase: 'menu',
@@ -1343,8 +1344,30 @@ function logLine(text) {
   state.logs = state.logs.slice(0, 100);
 }
 
+function clearBattleFeedNow() {
+  if (battleFeedClearHandle) {
+    clearTimeout(battleFeedClearHandle);
+    battleFeedClearHandle = null;
+  }
+  state.battleFeed = [];
+}
+
 function pushBattleFeed(text) {
+  if (battleFeedClearHandle) {
+    clearTimeout(battleFeedClearHandle);
+    battleFeedClearHandle = null;
+  }
   state.battleFeed = [text];
+}
+
+function scheduleBattleFeedClear(delay = 900) {
+  if (!state.battleFeed.length) return;
+  if (battleFeedClearHandle) clearTimeout(battleFeedClearHandle);
+  battleFeedClearHandle = setTimeout(() => {
+    battleFeedClearHandle = null;
+    state.battleFeed = [];
+    render();
+  }, delay);
 }
 
 function renderRosterCard(member, reveal) {
@@ -2108,7 +2131,7 @@ function renderBattleStage() {
     : state.playMode === 'bot' && state.battleFinished
       ? '<button class="primary-btn" data-action="retry-bot">Retry</button>'
       : '';
-  const latestFeed = state.battleFeed[0] || 'The battle is about to begin.';
+  const latestFeed = state.battleFeed[0] || '';
   const streak = `Win Streak ${state.runWins}`;
   return `<section class="battle-ui team-size-${currentTeamSize()}">
     ${renderBattleDecor()}
@@ -2196,6 +2219,7 @@ function bindEvents() {
 }
 
 function resetBattleState() {
+  clearBattleFeedNow();
   state.battle = null;
   state.playerRequest = null;
   state.pendingPlayerRequest = null;
@@ -2207,7 +2231,6 @@ function resetBattleState() {
   state.active = {p1: null, p2: null};
   state.lastMove = {p1: '', p2: ''};
   state.flash = {p1: '', p2: ''};
-  state.battleFeed = [];
 }
 
 function resetDraftProgress() {
@@ -2258,6 +2281,7 @@ function applyPendingPlayerRequest() {
   updateTeamStateFromRequest(ownSide(), state.playerRequest);
   state.actionLocked = false;
   if (!maybeSubmitHeldMove(state.playerRequest)) render();
+  scheduleBattleFeedClear(700);
   return true;
 }
 
@@ -2957,6 +2981,7 @@ async function animateBattleChunk(chunk) {
     if (delay) await sleep(delay);
   }
   state.battleAnimating = false;
+  scheduleBattleFeedClear();
   applyPendingPlayerRequest();
 }
 
