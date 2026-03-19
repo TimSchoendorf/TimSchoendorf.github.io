@@ -4206,7 +4206,9 @@ function injectStyles() {
     }
     .battle-status-shell{
       position:absolute;
-      display:grid;
+      display:flex;
+      flex-direction:column;
+      align-items:stretch;
       gap:7px;
       z-index:5;
       pointer-events:none;
@@ -4217,13 +4219,13 @@ function injectStyles() {
     .battle-status-shell-foe{
       top:var(--battle-pad-top);
       left:var(--battle-pad-x);
-      width:25%;
+      width:clamp(152px,25%,186px);
       max-width:none;
     }
     .battle-status-shell-player{
       right:var(--battle-pad-x);
       bottom:calc(var(--battle-player-line) + 1.5%);
-      width:27%;
+      width:clamp(168px,27%,208px);
       max-width:none;
     }
     .battle-status-foe,
@@ -4236,6 +4238,10 @@ function injectStyles() {
       align-items:center;
       justify-content:space-between;
       gap:10px;
+    }
+    .battle-status-top{
+      position:relative;
+      align-items:flex-start;
     }
     .battle-status-name{
       display:grid;
@@ -4292,6 +4298,9 @@ function injectStyles() {
       margin-top:0;
     }
     .battle-status-info{
+      position:absolute !important;
+      top:-2px;
+      right:-4px;
       flex:0 0 auto;
       border-radius:999px;
     }
@@ -5440,13 +5449,6 @@ function injectStyles() {
         --battle-foe-line:11.5%;
         --battle-player-line:20.5%;
       }
-      .battle-status-foe{
-        width:22%;
-      }
-      .battle-status-player{
-        width:22%;
-        bottom:calc(var(--battle-player-line) + .5%);
-      }
       .battle-sprite-foe{
         top:calc(var(--battle-foe-line) + .5%);
         right:7.5%;
@@ -6594,8 +6596,8 @@ function injectStyles() {
       .battle-status-shell{
         gap:5px;
       }
-      .battle-status-shell-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:36%;max-width:none}
-      .battle-status-shell-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:40%;max-width:none}
+      .battle-status-shell-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:clamp(120px,36%,154px);max-width:none}
+      .battle-status-shell-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:clamp(136px,40%,176px);max-width:none}
       .battle-status .info-chip{
         min-width:42px;
         min-height:28px;
@@ -6610,6 +6612,10 @@ function injectStyles() {
         min-height:26px;
         padding:5px 8px;
         font-size:.62rem;
+      }
+      .battle-status-info{
+        top:-3px;
+        right:-3px;
       }
       .battle-status-meta{
         font-size:.68rem;
