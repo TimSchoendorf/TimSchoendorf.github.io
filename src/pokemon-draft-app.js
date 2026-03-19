@@ -1634,6 +1634,17 @@ function renderSettingCard(label, title, options) {
   </article>`;
 }
 
+function renderSettingRow(label, title, options, note = '') {
+  return `<article class="mode-settings-row">
+    <div class="mode-settings-row-copy">
+      <div class="label">${label}</div>
+      <h3>${title}</h3>
+      ${note ? `<p>${note}</p>` : ''}
+    </div>
+    <div class="mode-settings-toggle-row">${options.join('')}</div>
+  </article>`;
+}
+
 function renderModeSettingsStage() {
   const settings = normalizedModeSettings();
   const modeLabel = state.pendingMode === 'bot' ? 'Bot Run' : 'Link Battle';
@@ -1645,24 +1656,13 @@ function renderModeSettingsStage() {
         <button class="mini-btn" data-action="mode-reroll-plus" ${settings.rerollCount >= 9 ? 'disabled' : ''}>+</button>
       </div>`
     : '';
-  return `<section class="mode-settings-shell">
-    <div class="draft-topbar">
-      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
-      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${modeLabel}</span></div>
-    </div>
-    <section class="draft-hero-panel mode-settings-hero">
-      <div class="draft-hero-copy">
-        <div class="draft-kicker-row"><span class="label">Mode setup</span><span class="draft-status-pill">${modeLabel}</span></div>
-        <h2>Set the draft rules before the run starts.</h2>
-        <p>Pick how moves are generated, how many Pokemon the run uses, whether rerolls are available, and whether held items are drafted after the team is locked.</p>
-        <div class="draft-chip-row">
-          <span>${attackModeLabel()}</span>
-          <span>${settings.teamSize} Pokemon</span>
-          <span>${settings.attackReroll ? `${settings.rerollCount} attack rerolls` : 'No attack rerolls'}</span>
-          <span>${settings.itemDraft ? 'Gen 5 held item draft on' : 'Held item draft off'}</span>
-        </div>
-      </div>
-    </section>
+  const summaryRows = [
+    ['Attack rules', attackModeLabel()],
+    ['Team size', `${settings.teamSize} Pokemon`],
+    ['Rerolls', settings.attackReroll ? `${settings.rerollCount} total rerolls` : 'Off'],
+    ['Held items', settings.itemDraft ? 'Gen 5 draft enabled' : 'Off'],
+  ];
+  const desktopControls = `
     <section class="mode-settings-grid">
       ${renderSettingCard('Attacks', 'Move generation', [
         button('mode-attack-fixed', 'Fixed attacks', settings.attackMode === 'fixed'),
@@ -1681,7 +1681,52 @@ function renderModeSettingsStage() {
         button('mode-items-off', 'Off', !settings.itemDraft),
         button('mode-items-on', 'On', settings.itemDraft),
       ])}
+    </section>`;
+  const mobileControls = `
+    <section class="mode-settings-mobile-panel">
+      ${renderSettingRow('Attacks', 'Move generation', [
+        button('mode-attack-fixed', 'Fixed', settings.attackMode === 'fixed'),
+        button('mode-attack-randomized', 'Randomized', settings.attackMode === 'randomized'),
+      ], 'Choose curated sets or fully random legal moves.')}
+      ${renderSettingRow('Rerolls', 'Attack rerolls', [
+        button('mode-reroll-off', 'Off', !settings.attackReroll),
+        button('mode-reroll-on', `${settings.rerollCount}X`, settings.attackReroll),
+        rerollControls,
+      ], 'Spend rerolls after the Pokemon draft ends.')}
+      ${renderSettingRow('Roster', 'Team size', [
+        button('mode-team-3', '3', settings.teamSize === 3),
+        button('mode-team-6', '6', settings.teamSize === 6),
+      ], 'Pick a short run or a full 6-Pokemon run.')}
+      ${renderSettingRow('Items', 'Held item draft', [
+        button('mode-items-off', 'Off', !settings.itemDraft),
+        button('mode-items-on', 'On', settings.itemDraft),
+      ], 'Uses later-generation held items with live battle effects.')}
+    </section>`;
+  return `<section class="mode-settings-shell">
+    <div class="draft-topbar">
+      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${modeLabel}</span></div>
+    </div>
+    <section class="draft-hero-panel mode-settings-hero">
+      <div class="draft-hero-copy mode-settings-copy">
+        <div class="draft-kicker-row"><span class="label">Mode setup</span><span class="draft-status-pill">${modeLabel}</span></div>
+        <h2>Set the draft rules before the run starts.</h2>
+        <p>Pick how moves are generated, how many Pokemon the run uses, whether rerolls are available, and whether held items are drafted after the team is locked.</p>
+        <div class="draft-chip-row">
+          <span>${attackModeLabel()}</span>
+          <span>${settings.teamSize} Pokemon</span>
+          <span>${settings.attackReroll ? `${settings.rerollCount} attack rerolls` : 'No attack rerolls'}</span>
+          <span>${settings.itemDraft ? 'Gen 5 held item draft on' : 'Held item draft off'}</span>
+        </div>
+      </div>
+      <aside class="mode-settings-summary">
+        <div class="label">Current rules</div>
+        <div class="mode-settings-summary-list">${summaryRows.map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join('')}</div>
+        <div class="mode-settings-summary-note">Gen 1 uses Gen 5 held items only when item draft is enabled.</div>
+      </aside>
     </section>
+    <div class="mode-settings-desktop">${desktopControls}</div>
+    <div class="mode-settings-mobile">${mobileControls}</div>
     <section class="mode-settings-notes">
       <div class="mode-settings-note"><strong>Randomized attacks</strong><span>Each Pokemon gets four random moves from its own legal learnset. If it runs out of legal moves, the remaining slots pull from the full Gen 1 move pool.</span></div>
       <div class="mode-settings-note"><strong>Attack rerolls</strong><span>After the Pokemon draft, you can reroll one move at a time across your team. The default budget is 3 whenever rerolls are enabled.</span></div>
@@ -4493,18 +4538,56 @@ function injectStyles() {
       flex-wrap:wrap;
       gap:10px;
     }
-    .mode-settings-shell,.mode-settings-grid,.mode-settings-notes,.reroll-grid,.item-pool-strip,.item-assign-list{
+    .mode-settings-shell,.mode-settings-grid,.mode-settings-notes,.reroll-grid,.item-pool-strip,.item-assign-list,.mode-settings-summary-list{
       display:grid;
       gap:14px;
     }
+    .mode-settings-desktop{
+      display:block;
+    }
+    .mode-settings-mobile{
+      display:none;
+    }
     .mode-settings-grid{
-      grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+      grid-template-columns:repeat(2,minmax(0,1fr));
+    }
+    .mode-settings-hero{
+      grid-template-columns:minmax(0,1.2fr) minmax(280px,.8fr);
+      align-items:stretch;
     }
     .mode-settings-card,.mode-settings-note,.item-draft-card,.reroll-card,.item-assign-card{
       padding:16px;
       border-radius:22px;
       border:1px solid var(--line);
       background:rgba(255,255,255,.05);
+    }
+    .mode-settings-summary{
+      display:grid;
+      gap:12px;
+      padding:18px;
+      border-radius:22px;
+      border:1px solid var(--line);
+      background:linear-gradient(180deg,rgba(28,40,31,.94),rgba(19,28,22,.9));
+    }
+    .mode-settings-summary-list div{
+      display:grid;
+      gap:4px;
+      padding:10px 12px;
+      border-radius:16px;
+      background:rgba(255,255,255,.05);
+      border:1px solid rgba(255,255,255,.06);
+    }
+    .mode-settings-summary-list span{
+      color:var(--muted);
+      font-size:.72rem;
+      font-weight:700;
+      letter-spacing:.06em;
+      text-transform:uppercase;
+    }
+    .mode-settings-summary-note{
+      font-size:.82rem;
+      line-height:1.4;
+      color:var(--muted);
     }
     .item-draft-head,.item-info-head,.inspect-held-item-head{
       display:flex;
@@ -4534,6 +4617,28 @@ function injectStyles() {
     .mode-settings-card,.item-draft-card,.mode-settings-note{
       display:grid;
       gap:12px;
+    }
+    .mode-settings-row{
+      display:grid;
+      gap:10px;
+      padding:12px;
+      border-radius:18px;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .mode-settings-row-copy{
+      display:grid;
+      gap:6px;
+    }
+    .mode-settings-row-copy h3{
+      margin:0;
+      font-size:1.05rem;
+    }
+    .mode-settings-row-copy p{
+      margin:0;
+      color:var(--muted);
+      font-size:.8rem;
+      line-height:1.35;
     }
     .mode-settings-card h3,.item-draft-card h3,.mode-settings-note strong{
       margin:0;
@@ -4761,6 +4866,9 @@ function injectStyles() {
       .preview-shell .draft-hero-copy h2{
         font-size:clamp(2rem,3.6vw,3.2rem);
       }
+      .mode-settings-copy h2{
+        font-size:clamp(1.9rem,3.3vw,2.9rem);
+      }
       .inspect-move-column .inspect-move-card{
         min-height:0;
       }
@@ -4942,12 +5050,27 @@ function injectStyles() {
         gap:10px;
         padding:8px 0 4px;
       }
+      .mode-settings-shell{
+        gap:8px;
+        padding:8px 0 4px;
+      }
       .link-setup-shell,.link-preview-shell{
         gap:10px;
         padding:8px 0 4px;
       }
       .draft-hero-panel,.draft-team-panel,.draft-board{
         border-radius:24px;
+      }
+      .mode-settings-summary{
+        padding:10px 12px;
+        border-radius:20px;
+      }
+      .mode-settings-hero .draft-hero-copy{
+        padding:10px 12px;
+      }
+      .mode-settings-hero .draft-hero-copy p{
+        font-size:.82rem;
+        line-height:1.28;
       }
       .draft-hero-panel{
         padding:14px;
@@ -4972,6 +5095,26 @@ function injectStyles() {
       .draft-topbar-meta span,.draft-chip-row span,.draft-status-list span,.draft-role-row span{
         padding:6px 10px;
         font-size:.78rem;
+      }
+      .mode-settings-grid{
+        gap:8px;
+      }
+      .mode-settings-card,.mode-settings-note{
+        padding:10px 12px;
+      }
+      .mode-settings-card h3{
+        font-size:1.12rem;
+      }
+      .mode-settings-notes{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+        gap:8px;
+      }
+      .mode-settings-note{
+        gap:4px;
+      }
+      .mode-settings-note span{
+        font-size:.74rem;
+        line-height:1.22;
       }
       .draft-team-panel,.draft-board{
         padding:14px;
@@ -5090,6 +5233,11 @@ function injectStyles() {
       .draft-view.preview-flow-view .main{
         height:auto;
         overflow:visible;
+      }
+      .mode-settings-shell{
+        gap:8px;
+        padding:4px 0 2px;
+        min-height:calc(100svh - 20px);
       }
       .menu-shell{gap:10px;padding:6px 0 8px}
       .menu-topbar{
@@ -5223,6 +5371,74 @@ function injectStyles() {
       .link-setup-shell .draft-topbar-meta{
         display:none;
       }
+      .mode-settings-hero{
+        grid-template-columns:1fr;
+        gap:8px;
+      }
+      .mode-settings-summary{
+        display:none;
+      }
+      .mode-settings-desktop{
+        display:none;
+      }
+      .mode-settings-mobile{
+        display:block;
+      }
+      .mode-settings-mobile-panel{
+        display:grid;
+        gap:8px;
+        padding:10px;
+        border-radius:20px;
+        border:1px solid var(--line);
+        background:rgba(255,255,255,.04);
+      }
+      .mode-settings-row{
+        padding:10px;
+        gap:8px;
+      }
+      .mode-settings-row-copy{
+        gap:4px;
+      }
+      .mode-settings-row-copy h3{
+        font-size:.98rem;
+      }
+      .mode-settings-row-copy p{
+        font-size:.72rem;
+        line-height:1.25;
+      }
+      .mode-settings-toggle-row{
+        gap:8px;
+      }
+      .mode-settings-toggle{
+        padding:10px 8px;
+        font-size:.9rem;
+      }
+      .mode-settings-counter{
+        justify-content:flex-start;
+      }
+      .mode-settings-notes{
+        grid-template-columns:1fr;
+        gap:8px;
+      }
+      .mode-settings-note{
+        padding:10px 12px;
+        gap:6px;
+      }
+      .mode-settings-note strong{
+        font-size:.92rem;
+      }
+      .mode-settings-note span{
+        font-size:.74rem;
+        line-height:1.25;
+      }
+      .mode-settings-actions{
+        margin-top:auto;
+      }
+      .mode-settings-actions .primary-btn{
+        width:100%;
+        justify-content:center;
+        padding:10px 14px;
+      }
       .link-setup-shell .link-setup-actions{
         display:none;
       }
@@ -5303,6 +5519,9 @@ function injectStyles() {
         font-size:clamp(1.45rem,7vw,2rem);
         line-height:.98;
       }
+      .mode-settings-copy h2{
+        font-size:clamp(1.3rem,6.5vw,1.9rem);
+      }
       .team-size-6 .draft-hero-copy h2{
         font-size:clamp(1.25rem,6.2vw,1.7rem);
       }
@@ -5311,6 +5530,16 @@ function injectStyles() {
         font-size:.68rem;
       }
       .draft-chip-row span:nth-child(n+4){display:none}
+      .mode-settings-copy .draft-chip-row span:nth-child(n+4){
+        display:inline-flex;
+      }
+      .mode-settings-copy .draft-chip-row{
+        gap:6px;
+      }
+      .mode-settings-copy .draft-chip-row span{
+        padding:4px 7px;
+        font-size:.63rem;
+      }
       .draft-mobile-swipe-hint{
         display:flex;
         padding:8px 10px;
