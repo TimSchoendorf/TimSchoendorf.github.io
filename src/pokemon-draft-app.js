@@ -239,6 +239,7 @@ const state = {
   itemDraftRound: 0,
   itemAssignments: {},
   selectedDraftItem: '',
+  itemAssignFocusMember: 0,
   itemDraftSequence: 0,
   runWins: 0,
   bestRun: loadBestRun(),
@@ -1531,7 +1532,7 @@ function renderPreviewCard(member, index, controls) {
   return `<div class="preview-card" style="background:${typeGradient(member.types)}">
     <div class="preview-card-media"><span class="preview-rank">${index + 1}</span>${spriteTag(member, 'front', 'sm')}</div>
     <div class="preview-copy"><strong>${member.name}</strong><div class="tiny">${moveSummaryText(member, currentTeamSize() === 6 ? 2 : 4)}${member.set?.item ? ` | ${itemName(member.set.item)}` : ''}</div></div>
-    <div class="preview-actions"><button class="info-chip" data-inspect="${member.name}">Info</button>${controls ? `<button class="mini-btn" data-move-index="${index}" data-move-dir="-1" ${index === 0 ? 'disabled' : ''}>Up</button><button class="mini-btn" data-move-index="${index}" data-move-dir="1" ${index === state.playerPreview.length - 1 ? 'disabled' : ''}>Down</button>` : ''}</div>
+    <div class="preview-actions"><button class="info-chip" data-inspect="${member.name}">Info</button>${controls ? `<button class="mini-btn" data-lead-index="${index}" ${index === 0 ? 'disabled' : ''}>Lead</button>` : ''}</div>
   </div>`;
 }
 
@@ -1867,7 +1868,7 @@ function renderItemDraftStage() {
     <section class="draft-team-panel">
       <div class="draft-section-head"><div><div class="label">Your lineup</div><h3>${currentTeamSize()} Pokemon waiting for items</h3></div><p>Use Info to check moves and stats while you draft held items.</p></div>
       <div class="draft-team-strip item-draft-team-strip">${state.playerLoadout.map((member) => `<div class="draft-team-slot filled compact" style="background:${typeGradient(member.types)}">
-        <div class="draft-team-slot-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="tiny">${moveSummaryText(member, 2)}</div></div></div>
+        <div class="draft-team-slot-head">${spriteTag(member, 'front', 'sm')}<div class="draft-team-slot-copy"><strong title="${member.name}">${member.name}</strong><div class="tiny">${moveSummaryText(member, 2)}</div></div></div>
         <button class="info-chip" data-inspect="${member.name}">Info</button>
       </div>`).join('')}</div>
       </section>
@@ -1882,11 +1883,22 @@ function renderItemDraftStage() {
   </section>`;
 }
 
+function renderItemAssignMemberCard(member, {compact = false} = {}) {
+  const assignedItem = playerAssignedItemFor(member.name);
+  return `<article class="item-assign-card ${compact ? 'compact' : ''}" style="background:${typeGradient(member.types)}">
+    <div class="item-assign-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="tiny">${moveSummaryText(member, currentTeamSize() === 6 ? 2 : 4)}</div></div><button class="info-chip" data-inspect="${member.name}">Info</button></div>
+    <div class="item-assign-current">${assignedItem ? `<span class="item-pill assigned">${itemName(assignedItem)}</span>` : '<span class="item-pill empty">No held item</span>'}</div>
+    <div class="card-actions"><button class="primary-btn" data-assign-item="${member.name}" ${state.selectedDraftItem ? '' : 'disabled'}>Assign selected</button><button class="ghost-btn compact-btn" data-clear-item="${member.name}" ${assignedItem ? '' : 'disabled'}>Clear</button></div>
+  </article>`;
+}
+
 function renderItemAssignStage() {
   const compactCopy = currentTeamSize() === 6;
   const assignedItems = new Set(Object.values(state.itemAssignments));
   const highlightedItemKey = state.selectedDraftItem || state.draftedItems.find((entry) => assignedItems.has(entry.key))?.key || state.draftedItems[0]?.key || '';
   const highlightedItem = draftedItemEntry(highlightedItemKey);
+  const focusIndex = Math.min(Math.max(0, state.itemAssignFocusMember || 0), Math.max(0, state.playerLoadout.length - 1));
+  const focusedMember = state.playerLoadout[focusIndex] || state.playerLoadout[0];
   return `<section class="preview-shell item-assign-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
       <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
@@ -1903,15 +1915,18 @@ function renderItemAssignStage() {
     <section class="draft-team-panel">
       <div class="draft-section-head"><div><div class="label">Drafted item pool</div><h3>Choose one to assign</h3></div><p>Click an item to arm it, then click a team card to place it.</p></div>
       <div class="item-pool-strip">${state.draftedItems.map((entry) => `<button class="item-pill ${state.selectedDraftItem === entry.key ? 'selected' : ''} ${assignedItems.has(entry.key) ? 'assigned' : ''}" data-select-item="${entry.key}">${itemIconTag(entry.id, 'small')}${itemName(entry.id)}</button>`).join('')}</div>
-      ${highlightedItem ? renderItemInfoCard(highlightedItem.id, {selected: state.selectedDraftItem === highlightedItem.key, assigned: assignedItems.has(highlightedItem.key)}) : ''}
+      ${highlightedItem ? renderItemInfoCard(highlightedItem.id, {selected: state.selectedDraftItem === highlightedItem.key, assigned: assignedItems.has(highlightedItem.key), compact: currentTeamSize() === 6}) : ''}
     </section>
     <section class="draft-board item-assign-board">
       <div class="draft-section-head"><div><div class="label">Your team</div><h3>Place your held items</h3></div><p class="preview-order-note">Click a card while an item is selected to assign it. Use Clear to remove an item from a Pokemon.</p></div>
-      <div class="item-assign-list">${state.playerLoadout.map((member) => `<article class="item-assign-card" style="background:${typeGradient(member.types)}">
-        <div class="item-assign-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="tiny">${moveSummaryText(member, currentTeamSize() === 6 ? 2 : 4)}</div></div><button class="info-chip" data-inspect="${member.name}">Info</button></div>
-        <div class="item-assign-current">${playerAssignedItemFor(member.name) ? `<span class="item-pill assigned">${itemName(playerAssignedItemFor(member.name))}</span>` : '<span class="item-pill empty">No held item</span>'}</div>
-        <div class="card-actions"><button class="primary-btn" data-assign-item="${member.name}" ${state.selectedDraftItem ? '' : 'disabled'}>Assign selected</button><button class="ghost-btn compact-btn" data-clear-item="${member.name}" ${playerAssignedItemFor(member.name) ? '' : 'disabled'}>Clear</button></div>
-      </article>`).join('')}</div>
+      <section class="item-assign-desktop-only"><div class="item-assign-list">${state.playerLoadout.map((member) => renderItemAssignMemberCard(member)).join('')}</div></section>
+      <section class="item-assign-mobile-only">
+        <div class="item-assign-team-tabs">${state.playerLoadout.map((member, index) => `<button class="item-assign-team-tab ${index === focusIndex ? 'active' : ''}" data-item-assign-focus="${index}">
+          <span class="item-assign-team-tab-sprite">${spriteTag(member, 'front', 'sm')}</span>
+          <span class="item-assign-team-tab-copy"><strong title="${member.name}">${member.name}</strong></span>
+        </button>`).join('')}</div>
+        ${focusedMember ? renderItemAssignMemberCard(focusedMember, {compact: true}) : ''}
+      </section>
     </section>
     <div class="actions mode-settings-actions"><button class="primary-btn" data-action="finish-item-assign">Continue</button></div>
   </section>`;
@@ -2209,7 +2224,9 @@ function bindEvents() {
   document.querySelectorAll('[data-select-item]').forEach((button) => button.addEventListener('click', () => selectDraftItem(button.dataset.selectItem)));
   document.querySelectorAll('[data-assign-item]').forEach((button) => button.addEventListener('click', () => assignDraftItem(button.dataset.assignItem)));
   document.querySelectorAll('[data-clear-item]').forEach((button) => button.addEventListener('click', () => clearAssignedItem(button.dataset.clearItem)));
+  document.querySelectorAll('[data-item-assign-focus]').forEach((button) => button.addEventListener('click', () => setItemAssignFocus(Number(button.dataset.itemAssignFocus))));
   document.querySelectorAll('[data-move-index]').forEach((button) => button.addEventListener('click', () => movePreviewMon(Number(button.dataset.moveIndex), Number(button.dataset.moveDir))));
+  document.querySelectorAll('[data-lead-index]').forEach((button) => button.addEventListener('click', () => setPreviewLead(Number(button.dataset.leadIndex))));
   document.querySelectorAll('[data-choice]').forEach((button) => button.addEventListener('click', () => handleChoiceClick(button.dataset.choice, button.dataset.choiceKind || '', button.dataset.moveName || '')));
   document.querySelectorAll('[data-inspect]').forEach((button) => button.addEventListener('click', (event) => {
     event.stopPropagation();
@@ -2253,6 +2270,7 @@ function resetDraftProgress() {
   state.itemDraftRound = 0;
   state.itemAssignments = {};
   state.selectedDraftItem = '';
+  state.itemAssignFocusMember = 0;
   state.itemDraftSequence = 0;
 }
 
@@ -2400,6 +2418,7 @@ function startPostDraftFlow() {
   state.itemDraftRound = 0;
   state.itemAssignments = {};
   state.selectedDraftItem = '';
+  state.itemAssignFocusMember = 0;
   state.itemDraftSequence = 0;
   if (state.rerollsLeft > 0) {
     state.phase = 'reroll';
@@ -2434,6 +2453,7 @@ function pickDraftItem(itemId) {
   if (state.draftedItems.length >= currentTeamSize()) {
     state.phase = 'item-assign';
     state.selectedDraftItem = state.draftedItems[0]?.key || '';
+    state.itemAssignFocusMember = 0;
     return render();
   }
   state.itemPack = buildItemPack(new Set(state.draftedItems.map((entry) => entry.id)), 3, state.playerLoadout);
@@ -2460,10 +2480,22 @@ function clearAssignedItem(memberName) {
   render();
 }
 
+function setPreviewLead(index) {
+  if (index <= 0 || index >= state.playerPreview.length) return;
+  const [member] = state.playerPreview.splice(index, 1);
+  state.playerPreview.unshift(member);
+  render();
+}
+
 function movePreviewMon(index, direction) {
   const swapIndex = index + direction;
   if (swapIndex < 0 || swapIndex >= state.playerPreview.length) return;
   [state.playerPreview[index], state.playerPreview[swapIndex]] = [state.playerPreview[swapIndex], state.playerPreview[index]];
+  render();
+}
+
+function setItemAssignFocus(index) {
+  state.itemAssignFocusMember = Math.min(Math.max(0, index), Math.max(0, state.playerLoadout.length - 1));
   render();
 }
 
@@ -5217,9 +5249,11 @@ function injectStyles() {
     }
     .reroll-team-tab{
       display:grid;
-      justify-items:center;
-      gap:4px;
-      min-width:84px;
+      grid-template-columns:auto minmax(0,1fr);
+      align-items:center;
+      justify-items:start;
+      gap:8px;
+      min-width:104px;
       padding:8px 10px;
       border-radius:18px;
       border:1px solid var(--line);
@@ -5233,16 +5267,25 @@ function injectStyles() {
       border-color:rgba(242,217,123,.72);
     }
     .reroll-team-tab-sprite{
-      width:38px;
-      height:38px;
+      width:34px;
+      height:34px;
       display:grid;
       place-items:center;
     }
+    .reroll-team-tab-sprite .sprite.sm{
+      width:26px;
+      height:26px;
+    }
     .reroll-team-tab-name{
+      display:block;
+      width:100%;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
       font-size:.72rem;
       font-weight:700;
       line-height:1.15;
-      text-align:center;
+      text-align:left;
     }
     .reroll-footer{
       display:flex;
@@ -5303,11 +5346,87 @@ function injectStyles() {
     .item-draft-grid{
       grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
     }
+    .item-draft-card{
+      display:grid;
+      grid-template-rows:auto minmax(0,1fr) auto;
+      align-content:start;
+      min-height:180px;
+    }
+    .item-draft-card > .tiny{
+      display:-webkit-box;
+      overflow:hidden;
+      -webkit-box-orient:vertical;
+      -webkit-line-clamp:4;
+    }
+    .item-draft-card .card-actions{
+      margin-top:auto;
+    }
+    .item-draft-card .card-actions .primary-btn{
+      width:100%;
+      justify-content:center;
+    }
     .item-assign-grid{
       grid-template-columns:minmax(0,1fr);
     }
     .item-assign-list{
       grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    }
+    .item-assign-desktop-only{
+      display:block;
+    }
+    .item-assign-mobile-only{
+      display:none;
+    }
+    .item-assign-team-tabs{
+      display:flex;
+      gap:8px;
+      overflow-x:auto;
+      padding:2px 0 2px;
+      scrollbar-width:none;
+    }
+    .item-assign-team-tabs::-webkit-scrollbar{
+      display:none;
+    }
+    .item-assign-team-tab{
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr);
+      align-items:center;
+      gap:8px;
+      min-width:132px;
+      padding:8px 10px;
+      border-radius:18px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.04);
+      color:var(--text);
+      text-align:left;
+      cursor:pointer;
+    }
+    .item-assign-team-tab.active{
+      background:linear-gradient(180deg,rgba(242,217,123,.96),rgba(198,165,72,.92));
+      color:var(--ink);
+      border-color:rgba(242,217,123,.72);
+    }
+    .item-assign-team-tab-sprite{
+      width:34px;
+      height:34px;
+      display:grid;
+      place-items:center;
+    }
+    .item-assign-team-tab-sprite .sprite.sm{
+      width:26px;
+      height:26px;
+    }
+    .item-assign-team-tab-copy{
+      display:grid;
+      min-width:0;
+    }
+    .item-assign-team-tab-copy strong,
+    .draft-team-slot-copy strong{
+      display:block;
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
     }
     .item-assign-card{
       color:var(--ink);
@@ -5491,8 +5610,16 @@ function injectStyles() {
       }
       .preview-actions{
         display:grid;
-        grid-template-columns:repeat(3,minmax(0,auto));
+        grid-template-columns:repeat(2,minmax(0,auto));
         gap:6px;
+      }
+      .preview-actions .mini-btn{
+        background:rgba(24,33,23,.18);
+        color:var(--ink);
+        box-shadow:inset 0 0 0 1px rgba(24,33,23,.1);
+      }
+      .preview-actions .mini-btn:disabled{
+        opacity:.35;
       }
       .battle-stage{
         --battle-foe-line:11.5%;
@@ -6036,13 +6163,13 @@ function injectStyles() {
         display:grid;
       }
       .reroll-team-tab{
-        min-width:78px;
+        min-width:112px;
         padding:7px 8px;
         border-radius:16px;
       }
       .reroll-team-tab-sprite{
-        width:34px;
-        height:34px;
+        width:28px;
+        height:28px;
       }
       .reroll-team-tab-name{
         font-size:.68rem;
@@ -6181,6 +6308,87 @@ function injectStyles() {
         grid-template-columns:1fr 1fr;
         gap:6px;
       }
+      .item-draft-team-strip .draft-team-slot{
+        grid-template-columns:1fr;
+        justify-items:center;
+        text-align:center;
+        padding:8px 6px;
+        gap:6px;
+        min-height:92px;
+        height:92px;
+        align-content:start;
+      }
+      .item-draft-team-strip .draft-team-slot-head{
+        grid-template-columns:1fr;
+        justify-items:center;
+        gap:4px;
+      }
+      .item-draft-team-strip .draft-team-slot-copy{
+        width:100%;
+        min-width:0;
+      }
+      .item-draft-team-strip .draft-team-slot-copy strong{
+        font-size:.72rem;
+      }
+      .item-draft-team-strip .draft-team-slot-copy .tiny{
+        display:none;
+      }
+      .item-draft-team-strip .draft-team-slot .info-chip{
+        display:inline-flex;
+        min-height:28px;
+        padding:4px 9px;
+        font-size:.64rem;
+      }
+      .item-draft-card{
+        min-height:166px;
+      }
+      .item-draft-card > .tiny{
+        -webkit-line-clamp:3;
+      }
+      .item-assign-desktop-only{
+        display:none;
+      }
+      .item-assign-mobile-only{
+        display:grid;
+        gap:8px;
+      }
+      .item-assign-team-tabs{
+        display:grid;
+        grid-auto-flow:column;
+        grid-auto-columns:52%;
+        gap:6px;
+      }
+      .item-assign-team-tab{
+        min-width:0;
+        padding:7px 8px;
+        border-radius:16px;
+      }
+      .item-assign-team-tab-sprite{
+        width:24px;
+        height:24px;
+      }
+      .item-assign-team-tab-copy strong{
+        font-size:.74rem;
+      }
+      .item-assign-card.compact{
+        padding:10px;
+        gap:8px;
+      }
+      .item-assign-card.compact .item-assign-head{
+        grid-template-columns:auto minmax(0,1fr) auto;
+        gap:8px;
+        align-items:center;
+      }
+      .item-assign-card.compact .item-assign-head .tiny{
+        display:none;
+      }
+      .item-assign-card.compact .item-assign-head .sprite.sm{
+        width:38px;
+        height:38px;
+      }
+      .item-assign-card.compact .card-actions{
+        grid-template-columns:1fr 1fr;
+      }
       .preview-card-list,.preview-status-stack{
         gap:8px;
       }
@@ -6258,7 +6466,7 @@ function injectStyles() {
       .preview-actions{
         width:auto;
         display:grid;
-        grid-template-columns:repeat(3,minmax(0,auto));
+        grid-template-columns:repeat(2,minmax(0,auto));
         justify-content:end;
         gap:4px;
       }
@@ -6279,6 +6487,22 @@ function injectStyles() {
       .item-pill{
         padding:8px 10px;
         font-size:.76rem;
+      }
+      .item-pool-strip{
+        display:flex;
+        flex-wrap:nowrap;
+        gap:8px;
+        overflow-x:auto;
+        overflow-y:hidden;
+        padding-bottom:2px;
+        scrollbar-width:none;
+      }
+      .item-pool-strip::-webkit-scrollbar{
+        display:none;
+      }
+      .item-pool-strip .item-pill{
+        flex:0 0 auto;
+        white-space:nowrap;
       }
       .item-icon.small{
         width:18px;
@@ -7066,7 +7290,9 @@ function injectStyles() {
         gap:5px;
       }
       .team-size-6 .item-draft-team-strip .draft-team-slot{
-        padding:6px 7px;
+        padding:6px 5px;
+        min-height:88px;
+        height:88px;
       }
       .team-size-6 .item-draft-grid{
         display:grid;
@@ -7110,12 +7336,12 @@ function injectStyles() {
         gap:6px;
       }
       .team-size-6 .reroll-team-tab{
-        min-width:68px;
+        min-width:104px;
         padding:6px 7px;
       }
       .team-size-6 .reroll-team-tab-sprite{
-        width:28px;
-        height:28px;
+        width:24px;
+        height:24px;
       }
       .team-size-6 .reroll-team-tab-name{
         font-size:.62rem;
@@ -7158,31 +7384,26 @@ function injectStyles() {
         padding:5px 6px;
         font-size:.7rem;
       }
-      .team-size-6 .item-assign-list{
-        grid-template-columns:1fr;
-        gap:6px;
+      .team-size-6 .item-assign-team-tabs{
+        grid-auto-columns:54%;
       }
-      .team-size-6 .item-assign-card{
+      .team-size-6 .item-assign-team-tab-copy strong{
+        font-size:.7rem;
+      }
+      .team-size-6 .item-assign-card.compact{
         padding:8px;
         gap:6px;
       }
-      .team-size-6 .item-assign-head{
-        grid-template-columns:38px minmax(0,1fr) auto;
-        gap:6px;
+      .team-size-6 .item-assign-card.compact .item-assign-head .sprite.sm{
+        width:34px;
+        height:34px;
       }
-      .team-size-6 .item-assign-head .sprite.sm{
-        width:38px;
-        height:38px;
-      }
-      .team-size-6 .item-assign-current .item-pill{
+      .team-size-6 .item-assign-card.compact .item-assign-current .item-pill{
         padding:5px 7px;
         font-size:.68rem;
       }
-      .team-size-6 .item-assign-card .card-actions{
-        grid-template-columns:1fr 1fr;
-      }
-      .team-size-6 .item-assign-card .card-actions .primary-btn,
-      .team-size-6 .item-assign-card .card-actions .ghost-btn{
+      .team-size-6 .item-assign-card.compact .card-actions .primary-btn,
+      .team-size-6 .item-assign-card.compact .card-actions .ghost-btn{
         padding:6px 8px;
         font-size:.72rem;
       }
@@ -7337,62 +7558,67 @@ function injectStyles() {
         font-size:.66rem;
       }
       .team-size-6 .item-draft-team-strip{
-        grid-template-columns:repeat(6,minmax(0,1fr));
+        grid-template-columns:repeat(3,minmax(0,1fr));
         gap:4px;
       }
       .team-size-6 .item-draft-team-strip .draft-team-slot{
-        padding:4px 2px;
-        min-height:50px;
-        height:50px;
+        padding:5px 4px;
+        min-height:82px;
+        height:82px;
       }
       .team-size-6 .item-draft-team-strip .draft-team-slot .sprite.sm{
-        width:22px;
-        height:22px;
+        width:24px;
+        height:24px;
+      }
+      .team-size-6 .item-draft-team-strip .draft-team-slot .info-chip{
+        min-height:24px;
+        padding:3px 7px;
+        font-size:.58rem;
+      }
+      .team-size-6 .item-draft-grid{
+        grid-auto-columns:76%;
+        gap:6px;
+      }
+      .team-size-6 .item-draft-card{
+        min-height:146px;
+      }
+      .team-size-6 .item-draft-card > .tiny{
+        font-size:.68rem;
+        line-height:1.2;
       }
       .team-size-6.item-assign-shell .preview-hero-panel,
       .team-size-6.preview-shell .preview-hero-panel,
       .team-size-6.link-preview-shell .draft-hero-panel{
         display:none;
       }
-      .team-size-6 .item-assign-list{
-        display:grid;
-        grid-auto-flow:column;
-        grid-auto-columns:72%;
-        gap:5px;
-        overflow-x:auto;
-        overflow-y:hidden;
-        padding-bottom:2px;
+      .team-size-6 .item-assign-team-tabs{
+        grid-auto-columns:62%;
       }
-      .team-size-6 .item-assign-list::-webkit-scrollbar{display:none}
-      .team-size-6 .item-assign-card{
+      .team-size-6 .item-assign-card.compact{
         padding:6px;
         gap:5px;
       }
-      .team-size-6 .item-assign-head{
-        grid-template-columns:1fr;
-        justify-items:start;
-        gap:4px;
+      .team-size-6 .item-assign-card.compact .item-assign-head{
+        grid-template-columns:auto minmax(0,1fr) auto;
+        gap:5px;
       }
-      .team-size-6 .item-assign-head .sprite.sm{
+      .team-size-6 .item-assign-card.compact .item-assign-head .sprite.sm{
         width:32px;
         height:32px;
       }
-      .team-size-6 .item-assign-head .tiny{
-        display:none;
+      .team-size-6 .item-assign-card.compact .item-assign-head .info-chip{
+        justify-self:end;
       }
-      .team-size-6 .item-assign-head .info-chip{
-        justify-self:start;
-      }
-      .team-size-6 .item-assign-current .item-pill{
+      .team-size-6 .item-assign-card.compact .item-assign-current .item-pill{
         padding:4px 6px;
         font-size:.62rem;
       }
-      .team-size-6 .item-assign-card .card-actions{
-        grid-template-columns:1fr;
+      .team-size-6 .item-assign-card.compact .card-actions{
+        grid-template-columns:1fr 1fr;
         gap:4px;
       }
-      .team-size-6 .item-assign-card .card-actions .primary-btn,
-      .team-size-6 .item-assign-card .card-actions .ghost-btn{
+      .team-size-6 .item-assign-card.compact .card-actions .primary-btn,
+      .team-size-6 .item-assign-card.compact .card-actions .ghost-btn{
         min-height:30px;
         padding:5px 6px;
         font-size:.66rem;
