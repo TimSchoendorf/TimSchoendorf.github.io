@@ -1719,7 +1719,7 @@ function renderModeSettingsStage() {
         button('mode-items-on', 'On', settings.itemDraft),
       ], 'Uses a curated pool of later-generation held items with live battle effects.')}
     </section>`;
-  return `<section class="mode-settings-shell">
+  return `<section class="mode-settings-shell team-size-${settings.teamSize}">
     <div class="draft-topbar">
       <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${modeLabel}</span></div>
@@ -1851,7 +1851,7 @@ function renderItemDraftCard(item) {
 
 function renderItemDraftStage() {
   const round = Math.min(state.itemDraftRound || 1, currentTeamSize());
-  return `<section class="draft-shell">
+  return `<section class="draft-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
       <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${state.playMode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
@@ -6835,6 +6835,42 @@ function injectStyles() {
         gap:6px;
         padding:2px 0 0;
       }
+      .mode-settings-shell{
+        gap:6px;
+        padding:2px 0 0;
+        min-height:0;
+        height:100%;
+        grid-template-rows:auto auto 1fr auto;
+        overflow:hidden;
+      }
+      .mode-settings-hero{
+        padding:8px;
+      }
+      .mode-settings-copy{
+        gap:6px;
+      }
+      .mode-settings-copy h2{
+        font-size:clamp(1.35rem,7vw,1.9rem);
+        line-height:.96;
+      }
+      .mode-settings-copy p{
+        display:none;
+      }
+      .mode-settings-mobile-panel{
+        padding:8px;
+        gap:6px;
+      }
+      .mode-settings-row{
+        padding:8px;
+        gap:6px;
+      }
+      .mode-settings-row-copy p{
+        font-size:.74rem;
+        line-height:1.24;
+      }
+      .mode-settings-actions{
+        padding-top:0;
+      }
       .link-setup-shell,.link-preview-shell{
         gap:6px;
       }
@@ -7031,6 +7067,64 @@ function injectStyles() {
       }
       .team-size-6 .item-draft-team-strip .draft-team-slot{
         padding:6px 7px;
+      }
+      .team-size-6 .item-draft-grid{
+        display:grid;
+        grid-auto-flow:column;
+        grid-auto-columns:78%;
+        grid-template-columns:none;
+        gap:8px;
+        overflow-x:auto;
+        overflow-y:hidden;
+        padding-bottom:2px;
+        scroll-snap-type:x proximity;
+      }
+      .team-size-6 .item-draft-grid::-webkit-scrollbar{display:none}
+      .team-size-6 .item-draft-grid .item-draft-card{
+        scroll-snap-align:start;
+        min-width:0;
+      }
+      .team-size-6 .reroll-toolbar{
+        padding:8px;
+        gap:6px;
+      }
+      .team-size-6 .reroll-toolbar-copy{
+        gap:6px;
+      }
+      .team-size-6 .reroll-toolbar-copy h2{
+        font-size:clamp(1.24rem,6.4vw,1.7rem);
+      }
+      .team-size-6 .reroll-toolbar-copy p{
+        display:none;
+      }
+      .team-size-6 .reroll-toolbar-stats{
+        gap:6px;
+      }
+      .team-size-6 .reroll-stat-card{
+        padding:8px;
+      }
+      .team-size-6 .reroll-stat-card:last-child{
+        display:none;
+      }
+      .team-size-6 .reroll-team-tabs{
+        gap:6px;
+      }
+      .team-size-6 .reroll-team-tab{
+        min-width:68px;
+        padding:6px 7px;
+      }
+      .team-size-6 .reroll-team-tab-sprite{
+        width:28px;
+        height:28px;
+      }
+      .team-size-6 .reroll-team-tab-name{
+        font-size:.62rem;
+      }
+      .team-size-6 .reroll-footer{
+        gap:6px;
+      }
+      .team-size-6 .reroll-footer .primary-btn{
+        padding:9px 12px;
       }
       .team-size-6 .reroll-grid{
         grid-template-columns:1fr;
