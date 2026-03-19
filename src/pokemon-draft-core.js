@@ -26,6 +26,11 @@ export function sample(list) {
   return list[rand(list.length)];
 }
 
+function sampleWithout(list, excluded = new Set()) {
+  const pool = list.filter((entry) => !excluded.has(entry));
+  return pool.length ? sample(pool) : '';
+}
+
 export function totalStats(stats) {
   return stats.hp + stats.atk + stats.def + stats.spc + stats.spe;
 }
@@ -100,8 +105,15 @@ export function pickOpponentDraft(pack, existingTeam = [], opposingTeam = [], de
   }).sort((a, b) => b.score - a.score)[0].species;
 }
 
-function legalMoves(species, dex) {
+export function legalMoves(species, dex) {
   return species.moveIds.map((id) => dex.moves.get(id)).filter((move) => move?.exists && move.gen === 1);
+}
+
+export function allGen1MoveIds(dex) {
+  return dex.moves
+    .all()
+    .filter((move) => move?.exists && move.gen === 1 && move.id !== 'struggle')
+    .map((move) => move.id);
 }
 
 function moveAccuracy(move) {
@@ -193,6 +205,62 @@ export function generateSet(species, dex) {
     name: species.name,
     species: species.name,
     moves,
+    level: 100,
+  };
+}
+
+export function randomizeMoves(species, dex, lockedMoves = []) {
+  const legal = shuffle(legalMoves(species, dex).map((move) => move.id));
+  const chosen = [];
+  const seen = new Set(lockedMoves);
+  for (const moveId of lockedMoves) {
+    if (!seen.has(moveId)) seen.add(moveId);
+    if (!chosen.includes(moveId)) chosen.push(moveId);
+  }
+  for (const moveId of legal) {
+    if (chosen.length >= 4) break;
+    if (seen.has(moveId)) continue;
+    chosen.push(moveId);
+    seen.add(moveId);
+  }
+  const anyMoves = allGen1MoveIds(dex);
+  while (chosen.length < 4) {
+    const moveId = sampleWithout(anyMoves, seen);
+    if (!moveId) break;
+    chosen.push(moveId);
+    seen.add(moveId);
+  }
+  return chosen.slice(0, 4);
+}
+
+export function rerollMove(species, currentMoves, index, dex) {
+  const safeMoves = currentMoves.slice(0, 4);
+  const replaced = safeMoves[index];
+  const currentSet = new Set(safeMoves);
+  const legalPool = shuffle(legalMoves(species, dex).map((move) => move.id)).filter((moveId) => moveId !== replaced && !currentSet.has(moveId));
+  let replacement = legalPool[0];
+  if (!replacement) {
+    const globalPool = shuffle(allGen1MoveIds(dex)).filter((moveId) => moveId !== replaced && !currentSet.has(moveId));
+    replacement = globalPool[0];
+  }
+  if (!replacement) return safeMoves;
+  const next = safeMoves.slice();
+  next[index] = replacement;
+  return next;
+}
+
+export function generateConfiguredSet(species, dex, options = {}) {
+  const {attackMode = 'fixed', moves = null, item = ''} = options;
+  const generatedMoves = Array.isArray(moves) && moves.length
+    ? moves.slice(0, 4)
+    : attackMode === 'randomized'
+      ? randomizeMoves(species, dex)
+      : applyOverride(species, dex) || heuristicMoves(species, dex);
+  return {
+    name: species.name,
+    species: species.name,
+    moves: generatedMoves,
+    item,
     level: 100,
   };
 }

@@ -7,8 +7,10 @@ import {
   conditionToPercent,
   draftSynergy,
   drawPack,
+  generateConfiguredSet,
   generateSet,
   pickOpponentDraft,
+  rerollMove,
   setArchetype,
   shuffle,
 } from './pokemon-draft-core.js';
@@ -65,7 +67,7 @@ const GENERATION_CONFIG = {
       bot: {
         eyebrow: 'Solo',
         title: 'Bot Run',
-        points: ['Always 3 Pokemon to choose from', 'Set your own order', 'Then battle the AI'],
+        points: ['Always 3 Pokemon to choose from', 'Set your own order', 'Rule screen before the draft'],
         enabled: true,
         action: 'start-bot',
         cta: 'Start',
@@ -73,7 +75,7 @@ const GENERATION_CONFIG = {
       link: {
         eyebrow: 'Online',
         title: 'Link Battle',
-        points: ['Share a room code or join one', 'Both players draft in secret across 3 rounds', 'Then battle each other right away'],
+        points: ['Share a room code or join one', 'Both players draft in secret', 'Rule screen before the draft'],
         enabled: true,
         action: 'start-link',
         cta: 'Connect',
@@ -103,7 +105,7 @@ const GENERATION_CONFIG = {
       link: {
         eyebrow: 'Online',
         title: 'Link Battle',
-        points: ['Share a room code or join one', 'Both players draft in secret across 3 rounds', 'Gen 5 mode still in development'],
+        points: ['Share a room code or join one', 'Both players draft in secret', 'Gen 5 mode still in development'],
         enabled: false,
         action: 'start-link',
         cta: 'Coming soon',
@@ -118,6 +120,29 @@ const MENU_SHOWCASE = {
 };
 const STARTER_ART_PATH = '../assets/firstgenstarter-cutout.png';
 const ATTACK_PREVIEW_DATA_PATH = './pokemon-attack-preview-data.json';
+const DEFAULT_MODE_SETTINGS = {
+  attackMode: 'fixed',
+  attackReroll: false,
+  rerollCount: 3,
+  teamSize: 3,
+  itemDraft: false,
+};
+const HELD_ITEM_POOL = [
+  'leftovers',
+  'blacksludge',
+  'focussash',
+  'lumberry',
+  'sitrusberry',
+  'lifeorb',
+  'choicescarf',
+  'choiceband',
+  'choicespecs',
+  'expertbelt',
+  'scopelens',
+  'quickclaw',
+  'eviolite',
+  'airballoon',
+];
 const BATTLE_DECOR_ZONES = [
   {leftMin: 1.2, leftMax: 7.4, topMin: 9.5, topMax: 26},
   {leftMin: 1.2, leftMax: 8.2, topMin: 27, topMax: 44},
@@ -187,6 +212,8 @@ const state = {
   phase: 'menu',
   generation: 'gen1',
   playMode: 'bot',
+  pendingMode: 'bot',
+  modeSettings: {...DEFAULT_MODE_SETTINGS},
   draftedIds: new Set(),
   pack: [],
   playerDraft: [],
@@ -195,6 +222,13 @@ const state = {
   opponentLoadout: [],
   playerPreview: [],
   opponentPreview: [],
+  rerollsLeft: 0,
+  draftedItems: [],
+  opponentDraftedItems: [],
+  itemPack: [],
+  itemDraftRound: 0,
+  itemAssignments: {},
+  selectedDraftItem: '',
   runWins: 0,
   bestRun: loadBestRun(),
   enemyNumber: 1,
@@ -220,6 +254,115 @@ const state = {
 
 function currentGenerationConfig() {
   return GENERATION_CONFIG[state.generation] || GENERATION_CONFIG.gen1;
+}
+
+function normalizedModeSettings(settings = state.modeSettings) {
+  return {
+    attackMode: settings.attackMode === 'randomized' ? 'randomized' : 'fixed',
+    attackReroll: Boolean(settings.attackReroll),
+    rerollCount: Math.min(9, Math.max(1, Number(settings.rerollCount || 3))),
+    teamSize: Number(settings.teamSize) === 6 ? 6 : 3,
+    itemDraft: Boolean(settings.itemDraft),
+  };
+}
+
+function currentTeamSize() {
+  return normalizedModeSettings().teamSize;
+}
+
+function currentRerollBudget() {
+  const settings = normalizedModeSettings();
+  return settings.attackReroll ? settings.rerollCount : 0;
+}
+
+function attackModeLabel() {
+  return normalizedModeSettings().attackMode === 'randomized' ? 'Randomized attacks' : 'Fixed attacks';
+}
+
+function itemDraftEnabled() {
+  return normalizedModeSettings().itemDraft;
+}
+
+function rerollEnabled() {
+  return normalizedModeSettings().attackReroll;
+}
+
+function itemName(itemId) {
+  return dex.items.get(itemId)?.name || itemId;
+}
+
+function itemDesc(itemId) {
+  const item = dex.items.get(itemId);
+  return item?.shortDesc || item?.desc || 'Held item effect.';
+}
+
+function memberIsNFE(member) {
+  const species = dex.species.get(member.id || member.name || '');
+  return !!species?.nfe;
+}
+
+function memberMoveSplit(member) {
+  const summary = {physical: 0, special: 0, status: 0};
+  const moves = member?.set?.moves || [];
+  for (const moveId of moves) {
+    const move = dex.moves.get(moveId);
+    if (!move?.exists) continue;
+    if (move.category === 'Physical') summary.physical += 1;
+    else if (move.category === 'Special') summary.special += 1;
+    else summary.status += 1;
+  }
+  return summary;
+}
+
+function itemRelevanceScore(itemId, member) {
+  const split = memberMoveSplit(member);
+  const highestAttack = Math.max(member?.battleStats?.atk || 0, member?.battleStats?.spc || 0);
+  switch (itemId) {
+    case 'choiceband':
+      return split.physical >= 2 ? 6 + split.physical : 0;
+    case 'choicespecs':
+      return split.special >= 2 ? 6 + split.special : 0;
+    case 'choicescarf':
+      return split.physical + split.special >= 2 ? 5 + Math.min(split.physical, split.special) : 2;
+    case 'expertbelt':
+      return split.physical + split.special >= 2 ? 5 : 2;
+    case 'lifeorb':
+      return split.physical + split.special >= 2 ? 7 : 1;
+    case 'scopelens':
+      return highestAttack >= 250 ? 4 : 1;
+    case 'quickclaw':
+      return (member?.battleStats?.spe || 0) < 260 ? 4 : 2;
+    case 'focussash':
+      return (member?.battleStats?.hp || 0) < 320 ? 5 : 3;
+    case 'leftovers':
+      return 6;
+    case 'blacksludge':
+      return member?.types?.includes('Poison') ? 7 : 0;
+    case 'lumberry':
+      return 4;
+    case 'sitrusberry':
+      return 5;
+    case 'eviolite':
+      return memberIsNFE(member) ? 8 : 0;
+    case 'airballoon':
+      return member?.types?.includes('Flying') ? 0 : 4;
+    default:
+      return 0;
+  }
+}
+
+function relevantHeldItemPool(team = state.playerLoadout) {
+  const roster = (team || []).filter(Boolean);
+  if (!roster.length) return HELD_ITEM_POOL.slice();
+  const scored = HELD_ITEM_POOL
+    .map((itemId) => ({
+      itemId,
+      score: Math.max(...roster.map((member) => itemRelevanceScore(itemId, member))),
+    }))
+    .filter((entry) => entry.score > 0)
+    .sort((a, b) => b.score - a.score || a.itemId.localeCompare(b.itemId))
+    .map((entry) => entry.itemId);
+  return scored.length ? scored : HELD_ITEM_POOL.slice();
 }
 
 function freshLinkState() {
@@ -956,9 +1099,16 @@ function moveTypeBadge(type, extraClass = '') {
 }
 
 function draftMovePreview(species) {
-  return generateSet(species, dex).moves
+  const set = species.previewSet || species.set || generateConfiguredSet(species, dex, normalizedModeSettings());
+  return set.moves
     .map((moveId) => dex.moves.get(moveId))
     .filter((move) => move?.exists);
+}
+
+function moveSummaryText(member, limit = 4) {
+  const moves = member?.moveNames || [];
+  if (moves.length <= limit) return moves.join(', ');
+  return `${moves.slice(0, limit).join(', ')} +${moves.length - limit} more`;
 }
 
 function compactMeta(parts) {
@@ -999,9 +1149,30 @@ function menuSpriteTag(member, facing = 'front', slot = 'foe') {
   return `<img class="menu-sprite menu-sprite-${slot} ${facing}" src="${member.sprites[facing]}" alt="${member.name}">`;
 }
 
-function createLoadout(species) {
-  const set = generateSet(species, dex);
-  return {...species, set, archetype: setArchetype(species, set), moveNames: set.moves.map((moveId) => dex.moves.get(moveId).name)};
+function createDraftOption(species) {
+  const previewSet = generateConfiguredSet(species, dex, normalizedModeSettings());
+  return {
+    ...species,
+    previewSet,
+    moveNames: previewSet.moves.map((moveId) => dex.moves.get(moveId)?.name || moveId),
+  };
+}
+
+function drawConfiguredPack(excludedIds = new Set(), count = 3) {
+  return drawPack(excludedIds, count).map((species) => createDraftOption(species));
+}
+
+function createLoadout(species, extra = {}) {
+  const moves = extra.moves || species.previewSet?.moves || species.set?.moves || null;
+  const item = extra.item ?? species.set?.item ?? species.item ?? '';
+  const set = generateConfiguredSet(species, dex, {...normalizedModeSettings(), moves, item});
+  return {
+    ...species,
+    set,
+    item: set.item || '',
+    archetype: setArchetype(species, set),
+    moveNames: set.moves.map((moveId) => dex.moves.get(moveId)?.name || moveId),
+  };
 }
 
 function currentEnemyLabel() {
@@ -1010,6 +1181,52 @@ function currentEnemyLabel() {
 
 function nextEnemyName() {
   return ENEMY_NAMES[(state.enemyNumber - 1) % ENEMY_NAMES.length];
+}
+
+function buildItemPack(used = new Set(), count = 3, team = state.playerLoadout) {
+  const pool = relevantHeldItemPool(team);
+  const available = shuffle(pool.filter((itemId) => !used.has(itemId)));
+  const fallback = shuffle(pool.length ? pool : HELD_ITEM_POOL);
+  const base = (available.length >= count ? available : fallback).slice(0, count);
+  return base.map((itemId) => dex.items.get(itemId)).filter((item) => item?.exists);
+}
+
+function playerAssignedItemFor(name) {
+  return state.itemAssignments[name] || '';
+}
+
+function applyAssignedItems(loadout, assignments) {
+  return loadout.map((member) => createLoadout(member, {moves: member.set?.moves || member.previewSet?.moves, item: assignments[member.name] || ''}));
+}
+
+function autoUseRerolls(loadout) {
+  let next = loadout.slice();
+  for (let count = 0; count < currentRerollBudget(); count += 1) {
+    const targetIndex = Math.floor(Math.random() * next.length);
+    const target = next[targetIndex];
+    const moveIndex = Math.floor(Math.random() * Math.max(1, target.set.moves.length));
+    const moves = rerollMove(target, target.set.moves, moveIndex, dex);
+    next[targetIndex] = createLoadout(target, {moves, item: target.set.item || ''});
+  }
+  return next;
+}
+
+function autoDraftItemsForTeam(team) {
+  if (!itemDraftEnabled()) return {items: [], assignments: {}};
+  const used = new Set();
+  const items = [];
+  for (let index = 0; index < currentTeamSize(); index += 1) {
+    const pack = buildItemPack(used, 3, team);
+    const picked = pack[0];
+    if (!picked) continue;
+    items.push(picked.id);
+    used.add(picked.id);
+  }
+  const assignments = {};
+  team.forEach((member, index) => {
+    if (items[index]) assignments[member.name] = items[index];
+  });
+  return {items, assignments};
 }
 
 function allKnownMembers() {
@@ -1100,7 +1317,7 @@ function renderSidePanel(title, team, reveal) {
 
 function renderOpponentPanel() {
   if (state.playMode === 'link' && state.phase !== 'battle') {
-    return `<div class="panel"><div class="label">Opponent</div><div class="empty"><strong>${state.link.connected ? state.link.remoteName : 'No opponent'}</strong><div>${state.link.remoteDraftCount}/3 picks locked</div><div>${state.link.remoteReady ? 'Ready to battle' : 'Not ready yet'}</div></div></div>`;
+    return `<div class="panel"><div class="label">Opponent</div><div class="empty"><strong>${state.link.connected ? state.link.remoteName : 'No opponent'}</strong><div>${state.link.remoteDraftCount}/${currentTeamSize()} picks locked</div><div>${state.link.remoteReady ? 'Ready to battle' : 'Not ready yet'}</div></div></div>`;
   }
   const team = state.playMode === 'bot' ? (state.phase === 'draft' ? state.opponentDraft : state.opponentLoadout) : state.opponentLoadout;
   return renderSidePanel(state.playMode === 'bot' ? currentEnemyLabel() : 'Opponent', team, state.playMode === 'bot');
@@ -1127,7 +1344,7 @@ function renderDraftCard(species, pickAttr) {
     <div class="draft-choice-body">
       <div class="draft-choice-sprite">${spriteTag(species, 'front', 'lg')}</div>
       <div class="draft-choice-copy">
-        <div class="types">${species.types.map((type) => `<span>${type}</span>`).join('')}</div>
+        <div class="types">${species.types.map((type) => moveTypeBadge(type)).join('')}</div>
         <div class="move-row">${moves.map((move) => `<span class="move-chip" style="--type-bg:${typeColors(move.type).bg};--type-fg:${typeColors(move.type).fg}">${move.name}</span>`).join('')}</div>
       </div>
     </div>
@@ -1137,7 +1354,7 @@ function renderDraftCard(species, pickAttr) {
 }
 
 function renderDraftTeamSlots(team) {
-  return `<div class="draft-team-strip">${Array.from({length: 3}, (_, index) => {
+  return `<div class="draft-team-strip">${Array.from({length: currentTeamSize()}, (_, index) => {
     const member = team[index];
     if (!member) {
       return `<div class="draft-team-slot empty"><span class="draft-team-index">${index + 1}</span><div><strong>Empty slot</strong><div class="tiny">Your pick appears here.</div></div></div>`;
@@ -1145,7 +1362,7 @@ function renderDraftTeamSlots(team) {
     return `<div class="draft-team-slot filled" style="background:${typeGradient(member.types)}">
       <span class="draft-team-index">${index + 1}</span>
       ${spriteTag(member, 'front', 'sm')}
-      <div class="draft-team-copy"><strong>${member.name}</strong><div class="tiny">${member.types.join(' / ')}</div></div>
+      <div class="draft-team-copy"><strong>${member.name}</strong><div class="tiny">${member.types.join(' / ')}${playerAssignedItemFor(member.name) ? ` | ${itemName(playerAssignedItemFor(member.name))}` : ''}</div></div>
       <button class="info-chip" data-inspect="${member.name}">Info</button>
     </div>`;
   }).join('')}</div>`;
@@ -1153,10 +1370,10 @@ function renderDraftTeamSlots(team) {
 
 function renderDraftStatusCard(mode, roundLabel) {
   const filled = state.playerDraft.length;
-  const progress = `<div class="draft-status-progress">${Array.from({length: 3}, (_, index) => `<span class="${index < filled ? 'filled' : ''}">${index + 1}</span>`).join('')}</div>`;
+  const progress = `<div class="draft-status-progress">${Array.from({length: currentTeamSize()}, (_, index) => `<span class="${index < filled ? 'filled' : ''}">${index + 1}</span>`).join('')}</div>`;
   return `<div class="draft-status-card">
     <div class="label">${mode === 'link' ? 'Opponent status' : 'Draft progress'}</div>
-    <strong>${filled}/3 picked</strong>
+    <strong>${filled}/${currentTeamSize()} picked</strong>
     ${progress}
     <div class="draft-status-list">
       <span>${state.link.connected ? 'Connection ready' : 'Waiting for connection'}</span>
@@ -1182,19 +1399,19 @@ function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, c
     </section>
     ${showStatusCard ? `<section class="draft-link-status">${renderDraftStatusCard(mode, roundLabel)}</section>` : ''}
     <section class="draft-team-panel">
-      <div class="draft-section-head"><div><div class="label">Your Team</div><h3>3 draft slots</h3></div><p>Your picks appear here right away. Use Info to check stats and moves before you lock one in.</p></div>
+      <div class="draft-section-head"><div><div class="label">Your Team</div><h3>${currentTeamSize()} draft slots</h3></div><p>Your picks appear here right away. Use Info to check stats and moves before you lock one in.</p></div>
       ${renderDraftTeamSlots(state.playerDraft)}
     </section>
     <section class="draft-board">
       <div class="draft-section-head"><div><div class="label">Selection</div><h3>Pick 1 of 3 Pokemon</h3></div><p>${action}</p></div>
-      <div class="draft-mobile-swipe-hint"><span>←</span><strong>Swipe for the next card</strong><em>● ● ●</em></div>
+      <div class="draft-mobile-swipe-hint"><span>&larr;</span><strong>Swipe for the next card</strong><em>&bull; &bull; &bull;</em></div>
       <section class="draft-choice-grid">${cards}</section>
     </section>
   </section>`;
 }
 
 function renderPreviewHeroGuide(mode) {
-  const slots = Array.from({length: 3}, (_, index) => {
+  const slots = Array.from({length: currentTeamSize()}, (_, index) => {
     const member = state.playerPreview[index];
     if (!member) {
       return `<div class="preview-hero-slot empty"><span>${index + 1}</span><strong>Open</strong><div>Filled after the draft.</div></div>`;
@@ -1206,7 +1423,7 @@ function renderPreviewHeroGuide(mode) {
     </div>`;
   }).join('');
   const note = mode === 'bot'
-    ? 'Only check your lead and your two switch options. The opposing team stays hidden until battle.'
+    ? 'Only check your lead and your switch options. The opposing team stays hidden until battle.'
     : 'Your order stays hidden until both sides are ready and the battle begins.';
   return `<aside class="preview-hero-guide">
     <div class="label">${mode === 'bot' ? 'Battle plan' : 'Hidden plan'}</div>
@@ -1216,7 +1433,7 @@ function renderPreviewHeroGuide(mode) {
 }
 
 function renderPreviewShell({mode, title, statusCopy, chips, actionLabel, playerPanelTitle, playerCards, asidePanel}) {
-  return `<section class="preview-shell">
+  return `<section class="preview-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
       <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
@@ -1243,7 +1460,7 @@ function renderPreviewShell({mode, title, statusCopy, chips, actionLabel, player
 function renderPreviewCard(member, index, controls) {
   return `<div class="preview-card" style="background:${typeGradient(member.types)}">
     <div class="preview-card-media"><span class="preview-rank">${index + 1}</span>${spriteTag(member, 'front', 'sm')}</div>
-    <div class="preview-copy"><strong>${member.name}</strong><div class="tiny">${member.moveNames.join(', ')}</div></div>
+    <div class="preview-copy"><strong>${member.name}</strong><div class="tiny">${member.moveNames.join(', ')}${member.set?.item ? ` | ${itemName(member.set.item)}` : ''}</div></div>
     <div class="preview-actions"><button class="info-chip" data-inspect="${member.name}">Info</button>${controls ? `<button class="mini-btn" data-move-index="${index}" data-move-dir="-1" ${index === 0 ? 'disabled' : ''}>Up</button><button class="mini-btn" data-move-index="${index}" data-move-dir="1" ${index === state.playerPreview.length - 1 ? 'disabled' : ''}>Down</button>` : ''}</div>
   </div>`;
 }
@@ -1262,6 +1479,7 @@ function renderInspectModal() {
             <div class="inspect-summary-meta">
               <div class="inspect-summary-head"><span>#${member.num}</span><strong>${member.name}</strong></div>
               <div class="types">${member.types.map((type) => moveTypeBadge(type)).join('')}</div>
+              ${member.set?.item ? `<div class="inspect-held-item"><span class="label">Held item</span><strong>${itemName(member.set.item)}</strong><div class="tiny">${itemDesc(member.set.item)}</div></div>` : ''}
             </div>
           </div>
           <div class="modal-stats inspect-stat-panel">
@@ -1356,17 +1574,194 @@ function renderMenuStage() {
   </section>`;
 }
 
+function renderSettingCard(label, title, options) {
+  return `<article class="mode-settings-card">
+    <div class="label">${label}</div>
+    <h3>${title}</h3>
+    <div class="mode-settings-toggle-row">${options.join('')}</div>
+  </article>`;
+}
+
+function renderModeSettingsStage() {
+  const settings = normalizedModeSettings();
+  const modeLabel = state.pendingMode === 'bot' ? 'Bot Run' : 'Link Battle';
+  const button = (action, text, active, extra = '') => `<button class="mode-settings-toggle ${active ? 'active' : ''} ${extra}" data-action="${action}">${text}</button>`;
+  const rerollControls = settings.attackReroll
+    ? `<div class="mode-settings-counter">
+        <button class="mini-btn" data-action="mode-reroll-minus" ${settings.rerollCount <= 1 ? 'disabled' : ''}>-</button>
+        <span>${settings.rerollCount}X</span>
+        <button class="mini-btn" data-action="mode-reroll-plus" ${settings.rerollCount >= 9 ? 'disabled' : ''}>+</button>
+      </div>`
+    : '';
+  return `<section class="mode-settings-shell">
+    <div class="draft-topbar">
+      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${modeLabel}</span></div>
+    </div>
+    <section class="draft-hero-panel mode-settings-hero">
+      <div class="draft-hero-copy">
+        <div class="draft-kicker-row"><span class="label">Mode setup</span><span class="draft-status-pill">${modeLabel}</span></div>
+        <h2>Set the draft rules before the run starts.</h2>
+        <p>Pick how moves are generated, how many Pokemon the run uses, whether rerolls are available, and whether held items are drafted after the team is locked.</p>
+        <div class="draft-chip-row">
+          <span>${attackModeLabel()}</span>
+          <span>${settings.teamSize} Pokemon</span>
+          <span>${settings.attackReroll ? `${settings.rerollCount} attack rerolls` : 'No attack rerolls'}</span>
+          <span>${settings.itemDraft ? 'Gen 5 held item draft on' : 'Held item draft off'}</span>
+        </div>
+      </div>
+    </section>
+    <section class="mode-settings-grid">
+      ${renderSettingCard('Attacks', 'Move generation', [
+        button('mode-attack-fixed', 'Fixed attacks', settings.attackMode === 'fixed'),
+        button('mode-attack-randomized', 'Randomized attacks', settings.attackMode === 'randomized'),
+      ])}
+      ${renderSettingCard('Rerolls', 'Attack reroll budget', [
+        button('mode-reroll-off', 'Off', !settings.attackReroll),
+        button('mode-reroll-on', `Attack reroll ${settings.rerollCount}X`, settings.attackReroll),
+        rerollControls,
+      ])}
+      ${renderSettingCard('Roster', 'Team size', [
+        button('mode-team-3', '3 Pokemon', settings.teamSize === 3),
+        button('mode-team-6', '6 Pokemon', settings.teamSize === 6),
+      ])}
+      ${renderSettingCard('Items', 'Held item draft', [
+        button('mode-items-off', 'Off', !settings.itemDraft),
+        button('mode-items-on', 'On', settings.itemDraft),
+      ])}
+    </section>
+    <section class="mode-settings-notes">
+      <div class="mode-settings-note"><strong>Randomized attacks</strong><span>Each Pokemon gets four random moves from its own legal learnset. If it runs out of legal moves, the remaining slots pull from the full Gen 1 move pool.</span></div>
+      <div class="mode-settings-note"><strong>Attack rerolls</strong><span>After the Pokemon draft, you can reroll one move at a time across your team. The default budget is 3 whenever rerolls are enabled.</span></div>
+      <div class="mode-settings-note"><strong>Held item draft</strong><span>Gen 1 had no held items, so this mode uses a compact pool of Gen 5 era held items with real battle effects. After the Pokemon draft, you draft from three choices at a time and assign the items you want before battle.</span></div>
+    </section>
+    <div class="actions mode-settings-actions">
+      <button class="primary-btn" data-action="confirm-mode-settings">Continue</button>
+    </div>
+  </section>`;
+}
+
 function renderDraftStage() {
-  const round = Math.min(state.playerDraft.length + 1, 3);
+  const round = Math.min(state.playerDraft.length + 1, currentTeamSize());
   return renderDraftShell({
     mode: 'bot',
-    roundLabel: `Round ${round} of 3`,
+    roundLabel: `Round ${round} of ${currentTeamSize()}`,
     title: 'Pick your next Pokemon',
     statusCopy: state.message,
-    chips: [currentGenerationConfig().label, '3-card draft', `${state.playerDraft.length}/3 picked`],
+    chips: [currentGenerationConfig().label, '3-card packs', `${state.playerDraft.length}/${currentTeamSize()} picked`, attackModeLabel()],
     action: 'These three cards are your full selection for this round.',
     cards: state.pack.map((species) => renderDraftCard(species, `data-draft-id="${species.id}"`)).join(''),
   });
+}
+
+function renderRerollMoveCard(member, memberIndex) {
+  const rows = member.set.moves.map((moveId, moveIndex) => {
+    const move = dex.moves.get(moveId);
+    if (!move?.exists) return '';
+    const tone = typeColors(move.type);
+    return `<div class="reroll-move-row">
+      <span class="move-chip" style="--type-bg:${tone.bg};--type-fg:${tone.fg}">${move.name}</span>
+      <button class="ghost-btn compact-btn" data-reroll-member="${memberIndex}" data-reroll-move="${moveIndex}" ${state.rerollsLeft <= 0 ? 'disabled' : ''}>Reroll</button>
+    </div>`;
+  }).join('');
+  return `<article class="reroll-card" style="background:${typeGradient(member.types)}">
+    <div class="draft-choice-head">
+      <div><div class="label">#${member.num}</div><h3>${member.name}</h3></div>
+      <button class="info-chip" data-inspect="${member.name}">Info</button>
+    </div>
+    <div class="reroll-card-body">
+      <div class="reroll-card-sprite">${spriteTag(member, 'front', 'sm')}</div>
+      <div class="reroll-move-list">${rows}</div>
+    </div>
+  </article>`;
+}
+
+function renderRerollStage() {
+  const modeLabel = state.playMode === 'bot' ? 'Bot Run' : 'Link Battle';
+  const nextLabel = itemDraftEnabled() ? 'Continue to items' : 'Continue';
+  const compactCopy = currentTeamSize() === 6;
+  return `<section class="draft-shell team-size-${currentTeamSize()}">
+    <div class="draft-topbar">
+      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${modeLabel}</span></div>
+    </div>
+    <section class="draft-hero-panel">
+      <div class="draft-hero-copy">
+        <div class="draft-kicker-row"><span class="label">Move lab</span><span class="draft-status-pill">${state.rerollsLeft} rerolls left</span></div>
+        <h2>Tune your moves before the battle order is locked.</h2>
+        ${compactCopy ? '' : '<p>Spend your rerolls across the whole team. Each reroll swaps one move for another legal move for that Pokemon, or from the full pool if it has no unused legal move left.</p>'}
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${currentTeamSize()} Pokemon</span><span>${attackModeLabel()}</span></div>
+      </div>
+    </section>
+    <section class="reroll-grid">${state.playerLoadout.map((member, index) => renderRerollMoveCard(member, index)).join('')}</section>
+    <div class="actions mode-settings-actions"><button class="primary-btn" data-action="finish-rerolls">${state.rerollsLeft > 0 ? 'Continue' : nextLabel}</button></div>
+  </section>`;
+}
+
+function renderItemDraftCard(item) {
+  return `<article class="item-draft-card">
+    <div class="label">${item.name}</div>
+    <h3>${item.shortDesc || item.desc || 'Held item effect'}</h3>
+    <div class="tiny">Held item</div>
+    <div class="card-actions"><button class="primary-btn" data-item-pick="${item.id}">Pick item</button></div>
+  </article>`;
+}
+
+function renderItemDraftStage() {
+  const round = Math.min(state.itemDraftRound || 1, currentTeamSize());
+  return `<section class="draft-shell">
+    <div class="draft-topbar">
+      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${state.playMode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
+    </div>
+    <section class="draft-hero-panel">
+      <div class="draft-hero-copy">
+        <div class="draft-kicker-row"><span class="label">Held item draft</span><span class="draft-status-pill">Round ${round} of ${currentTeamSize()}</span></div>
+        <h2>Pick one held item from this item pack.</h2>
+        <p>Each round adds one item to your drafted item pool. After the item draft, you can assign any of your drafted items to your team.</p>
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${state.draftedItems.length}/${currentTeamSize()} items drafted</span><span>Gen 5 item pool</span></div>
+      </div>
+    </section>
+    <section class="draft-team-panel">
+      <div class="draft-section-head"><div><div class="label">Drafted items</div><h3>${state.draftedItems.length ? 'Your current pool' : 'No items drafted yet'}</h3></div><p>Every pick stays available for the assignment step.</p></div>
+      <div class="item-pool-strip">${state.draftedItems.length ? state.draftedItems.map((itemId) => `<span class="item-pill">${itemName(itemId)}</span>`).join('') : '<div class="empty">Your drafted items appear here.</div>'}</div>
+    </section>
+    <section class="draft-board">
+      <div class="draft-section-head"><div><div class="label">Selection</div><h3>Pick 1 of 3 held items</h3></div><p>Choose the item that gives your team the best edge.</p></div>
+      <section class="draft-choice-grid item-draft-grid">${state.itemPack.map((item) => renderItemDraftCard(item)).join('')}</section>
+    </section>
+  </section>`;
+}
+
+function renderItemAssignStage() {
+  const compactCopy = currentTeamSize() === 6;
+  return `<section class="preview-shell item-assign-shell team-size-${currentTeamSize()}">
+    <div class="draft-topbar">
+      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${state.playMode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
+    </div>
+    <section class="draft-hero-panel preview-hero-panel">
+      <div class="draft-hero-copy">
+        <div class="draft-kicker-row"><span class="label">Item assign</span><span class="draft-status-pill">${state.draftedItems.length} drafted</span></div>
+        <h2>Assign your held items to the team.</h2>
+        ${compactCopy ? '' : '<p>Select an item from the pool, then click the Pokemon that should carry it. Each Pokemon can hold one item, and unassigned items can stay unused.</p>'}
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${currentTeamSize()} Pokemon</span><span>${state.selectedDraftItem ? `Selected: ${itemName(state.selectedDraftItem)}` : 'Choose an item below'}</span></div>
+      </div>
+    </section>
+    <section class="draft-team-panel">
+      <div class="draft-section-head"><div><div class="label">Drafted item pool</div><h3>Choose one to assign</h3></div><p>Click an item to arm it, then click a team card to place it.</p></div>
+      <div class="item-pool-strip">${state.draftedItems.map((itemId) => `<button class="item-pill ${state.selectedDraftItem === itemId ? 'selected' : ''}" data-select-item="${itemId}">${itemName(itemId)}</button>`).join('')}</div>
+    </section>
+    <section class="draft-board item-assign-board">
+      <div class="draft-section-head"><div><div class="label">Your team</div><h3>Place your held items</h3></div><p class="preview-order-note">Click a card while an item is selected to assign it. Use Clear to remove an item from a Pokemon.</p></div>
+      <div class="item-assign-list">${state.playerLoadout.map((member) => `<article class="item-assign-card" style="background:${typeGradient(member.types)}">
+        <div class="item-assign-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="tiny">${moveSummaryText(member, currentTeamSize() === 6 ? 2 : 4)}</div></div><button class="info-chip" data-inspect="${member.name}">Info</button></div>
+        <div class="item-assign-current">${playerAssignedItemFor(member.name) ? `<span class="item-pill assigned">${itemName(playerAssignedItemFor(member.name))}</span>` : '<span class="item-pill empty">No held item</span>'}</div>
+        <div class="card-actions"><button class="primary-btn" data-assign-item="${member.name}" ${state.selectedDraftItem ? '' : 'disabled'}>Assign selected</button><button class="ghost-btn compact-btn" data-clear-item="${member.name}" ${playerAssignedItemFor(member.name) ? '' : 'disabled'}>Clear</button></div>
+      </article>`).join('')}</div>
+    </section>
+    <div class="actions mode-settings-actions"><button class="primary-btn" data-action="finish-item-assign">Continue</button></div>
+  </section>`;
 }
 
 function renderBotPreviewStage() {
@@ -1374,14 +1769,14 @@ function renderBotPreviewStage() {
     mode: 'bot',
     title: `Arrange your team for ${currentEnemyLabel()}`,
     statusCopy: state.message,
-    chips: [currentGenerationConfig().label, '3 Pokemon picked', 'Set your lead order'],
+    chips: [currentGenerationConfig().label, `${currentTeamSize()} Pokemon picked`, 'Set your lead order', attackModeLabel(), itemDraftEnabled() ? 'Held items active' : 'No held items'],
     actionLabel: 'Your order decides your lead and your switch options.',
     playerPanelTitle: 'Your order',
     playerCards: state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join(''),
     asidePanel: `<div class="preview-panel preview-opponent-panel">
-        <div class="draft-section-head"><div><div class="label">Arena ready</div><h3>${currentEnemyLabel()}</h3></div><p>Only set your lead and your two switch options now.</p></div>
+        <div class="draft-section-head"><div><div class="label">Arena ready</div><h3>${currentEnemyLabel()}</h3></div><p>Only set your lead and your remaining switch options now.</p></div>
         <div class="preview-status-stack">
-          <div class="empty"><strong>Set your order</strong><div>Slot 1 starts the battle. Slots 2 and 3 are your switch options.</div></div>
+          <div class="empty"><strong>Set your order</strong><div>Slot 1 starts the battle. Every later slot becomes a switch option.</div></div>
         </div>
         <div class="actions"><button class="primary-btn" data-action="start-battle">Start Battle</button><button class="ghost-btn" data-action="go-menu">Mode Select</button></div>
       </div>`,
@@ -1420,7 +1815,7 @@ function renderLinkSetupStage() {
         <div class="draft-kicker-row"><span class="label">Link Terminal</span><span class="draft-status-pill">${state.link.connected ? 'Connected' : 'Setup'}</span></div>
         <h2>Connect, draft in secret, then battle.</h2>
         <p>${state.link.status}</p>
-        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>Private room code</span><span>3 hidden draft rounds</span><span>Order stays hidden until battle</span></div>
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>Private room code</span><span>${currentTeamSize()} hidden draft rounds</span><span>${attackModeLabel()}</span><span>${itemDraftEnabled() ? 'Held item draft on' : 'Held item draft off'}</span></div>
       </div>
       <div class="link-setup-stage-card">
         <div class="label">How it works</div>
@@ -1442,10 +1837,10 @@ function renderLinkSetupStage() {
 function renderLinkDraftStage() {
   return renderDraftShell({
     mode: 'link',
-    roundLabel: `Round ${state.link.draftRound || 1} of 3`,
+    roundLabel: `Round ${state.link.draftRound || 1} of ${currentTeamSize()}`,
     title: 'Secretly pick your next Pokemon',
     statusCopy: state.link.localPickLocked ? 'Your pick is locked. The next round appears after the other side locks in as well.' : 'You only see your own three cards. The other player never sees this selection screen.',
-    chips: [currentGenerationConfig().label, 'Hidden draft', `${state.playerDraft.length}/3 picked`, state.link.connected ? 'Room connected' : 'Waiting for connection'],
+    chips: [currentGenerationConfig().label, 'Hidden draft', `${state.playerDraft.length}/${currentTeamSize()} picked`, state.link.connected ? 'Room connected' : 'Waiting for connection', attackModeLabel()],
     action: state.link.localPickLocked ? 'Waiting for the next hidden round.' : 'Pick 1 of 3. Your selection stays private until battle begins.',
     cards: state.link.localPack.map((species) => renderDraftCard(species, `data-link-draft-id="${species.id}" ${state.link.localPickLocked ? 'disabled' : ''}`)).join(''),
     showStatusCard: false,
@@ -1458,7 +1853,7 @@ function renderLinkPreviewStage() {
       <strong>${member.name}</strong>
       <div>${index === 0 ? 'Leads first' : 'Ready to switch in'}</div>
     </div>`).join('');
-  return `<section class="link-preview-shell">
+  return `<section class="link-preview-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
       <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>Link Battle</span></div>
@@ -1468,7 +1863,7 @@ function renderLinkPreviewStage() {
         <div class="draft-kicker-row"><span class="label">Hidden Order</span><span class="draft-status-pill">Arrange team</span></div>
         <h2>Arrange your team in secret.</h2>
         <p>Your opponent cannot see your changes live. Only the finished lead order is revealed when the battle starts.</p>
-        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>Hidden draft complete</span><span>${state.playerPreview.length}/3 ready</span><span>${state.link.connected ? 'Room connected' : 'Connection open'}</span></div>
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>Hidden draft complete</span><span>${state.playerPreview.length}/${currentTeamSize()} ready</span><span>${state.link.connected ? 'Room connected' : 'Connection open'}</span><span>${itemDraftEnabled() ? 'Held items active' : 'No held items'}</span></div>
       </div>
       <aside class="preview-hero-guide link-preview-plan">
         <div class="label">Hidden plan</div>
@@ -1477,7 +1872,7 @@ function renderLinkPreviewStage() {
     </section>
     <section class="link-preview-main">
       <section class="preview-panel preview-order-panel link-preview-order-panel">
-        <div class="draft-section-head"><div><div class="label">Your order</div><h3>Move your team into lead order</h3></div><p class="preview-order-note">Slot 1 leads the battle. Slots 2 and 3 become your switch options.</p></div>
+        <div class="draft-section-head"><div><div class="label">Your order</div><h3>Move your team into lead order</h3></div><p class="preview-order-note">Slot 1 leads the battle. The remaining slots become your switch options.</p></div>
         <div class="preview-card-list">${state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join('')}</div>
       </section>
       <section class="preview-panel link-preview-ready-panel">
@@ -1509,7 +1904,7 @@ function renderCombatant(mon, label, facing, sideKey, side) {
       </div>
       <div class="battle-status-meta"><span>Lv100</span><span>${mon.status || 'OK'}</span></div>
       <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill ${hpTone(percent)}" style="width:${percent}%"></div></div></div>
-      <div class="tiny">${mon.condition}</div>
+      <div class="tiny">${mon.condition}${mon.set?.item ? ` | ${itemName(mon.set.item)}` : ''}</div>
     </div>
     <div class="battle-sprite-wrap battle-sprite-${side}">
       <div class="battle-shadow"></div>
@@ -1523,7 +1918,7 @@ function renderBench(team, own) {
   if (!bench.length) return '<div class="empty">No reserve available.</div>';
   return `<div class="bench-grid">${bench.map((member) => `<div class="bench-card bench-card-switch" style="background:${typeGradient(member.types || ['Normal'])}">
       <div class="bench-card-sprite">${spriteTag(member, 'front', 'sm')}</div>
-      <div class="bench-card-copy"><strong>${member.name}</strong><div class="tiny">${member.condition}</div></div>
+      <div class="bench-card-copy"><strong>${member.name}</strong><div class="tiny">${member.condition}${member.set?.item ? ` | ${itemName(member.set.item)}` : ''}</div></div>
       <button class="info-chip" data-inspect="${member.name}">Info</button>
     </div>`).join('')}</div>`;
 }
@@ -1576,7 +1971,11 @@ function renderBattleStage() {
 
 function renderStage() {
   if (state.phase === 'menu') return renderMenuStage();
+  if (state.phase === 'mode-setup') return renderModeSettingsStage();
   if (state.phase === 'draft') return renderDraftStage();
+  if (state.phase === 'reroll') return renderRerollStage();
+  if (state.phase === 'item-draft') return renderItemDraftStage();
+  if (state.phase === 'item-assign') return renderItemAssignStage();
   if (state.phase === 'preview') return renderBotPreviewStage();
   if (state.phase === 'link-setup') return renderLinkSetupStage();
   if (state.phase === 'link-draft') return renderLinkDraftStage();
@@ -1590,7 +1989,7 @@ function render() {
     : (state.phase === 'draft' ? state.playerDraft : state.playerPreview.length ? state.playerPreview : state.playerLoadout);
   const battleView = state.phase === 'battle';
   const menuView = state.phase === 'menu';
-  const draftView = state.phase === 'draft' || state.phase === 'link-setup' || state.phase === 'link-draft' || state.phase === 'preview' || state.phase === 'link-preview';
+  const draftView = ['mode-setup', 'draft', 'reroll', 'item-draft', 'item-assign', 'link-setup', 'link-draft', 'preview', 'link-preview'].includes(state.phase);
   const previewFlowView = state.phase === 'preview' || state.phase === 'link-preview';
   if (menuView) {
     app.innerHTML = `<div class="app-shell menu-view theme-${state.generation}">
@@ -1618,6 +2017,11 @@ function bindEvents() {
   document.querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', () => handleAction(button.dataset.action)));
   document.querySelectorAll('[data-draft-id]').forEach((button) => button.addEventListener('click', () => draftSpecies(button.dataset.draftId)));
   document.querySelectorAll('[data-link-draft-id]').forEach((button) => button.addEventListener('click', () => pickLinkDraft(button.dataset.linkDraftId)));
+  document.querySelectorAll('[data-reroll-member]').forEach((button) => button.addEventListener('click', () => rerollLoadoutMove(Number(button.dataset.rerollMember), Number(button.dataset.rerollMove))));
+  document.querySelectorAll('[data-item-pick]').forEach((button) => button.addEventListener('click', () => pickDraftItem(button.dataset.itemPick)));
+  document.querySelectorAll('[data-select-item]').forEach((button) => button.addEventListener('click', () => selectDraftItem(button.dataset.selectItem)));
+  document.querySelectorAll('[data-assign-item]').forEach((button) => button.addEventListener('click', () => assignDraftItem(button.dataset.assignItem)));
+  document.querySelectorAll('[data-clear-item]').forEach((button) => button.addEventListener('click', () => clearAssignedItem(button.dataset.clearItem)));
   document.querySelectorAll('[data-move-index]').forEach((button) => button.addEventListener('click', () => movePreviewMon(Number(button.dataset.moveIndex), Number(button.dataset.moveDir))));
   document.querySelectorAll('[data-choice]').forEach((button) => button.addEventListener('click', () => handleChoiceClick(button.dataset.choice, button.dataset.choiceKind || '', button.dataset.moveName || '')));
   document.querySelectorAll('[data-inspect]').forEach((button) => button.addEventListener('click', () => openInspect(button.dataset.inspect)));
@@ -1638,6 +2042,26 @@ function resetBattleState() {
   state.lastMove = {p1: '', p2: ''};
   state.flash = {p1: '', p2: ''};
   state.battleFeed = [];
+}
+
+function resetDraftProgress() {
+  resetBattleState();
+  state.logs = [];
+  state.draftedIds = new Set();
+  state.pack = [];
+  state.playerDraft = [];
+  state.opponentDraft = [];
+  state.playerLoadout = [];
+  state.opponentLoadout = [];
+  state.playerPreview = [];
+  state.opponentPreview = [];
+  state.rerollsLeft = 0;
+  state.draftedItems = [];
+  state.opponentDraftedItems = [];
+  state.itemPack = [];
+  state.itemDraftRound = 0;
+  state.itemAssignments = {};
+  state.selectedDraftItem = '';
 }
 
 function selectedMoveChoice(request = state.playerRequest) {
@@ -1690,22 +2114,15 @@ function handleChoiceClick(choice, kind, moveName) {
 }
 
 function resetDraft() {
-  resetBattleState();
+  resetDraftProgress();
   state.playMode = 'bot';
   state.phase = 'draft';
-  state.draftedIds = new Set();
-  state.playerDraft = [];
-  state.opponentDraft = [];
-  state.playerLoadout = [];
-  state.opponentLoadout = [];
-  state.playerPreview = [];
-  state.opponentPreview = [];
   state.logs = [];
   state.message = 'Pick your first Pokemon for the Bot Run.';
   state.runWins = 0;
   state.enemyNumber = 1;
   state.enemyName = '';
-  state.pack = drawPack(state.draftedIds, 3);
+  state.pack = drawConfiguredPack(state.draftedIds, 3);
   render();
 }
 
@@ -1719,12 +2136,12 @@ function draftSpecies(id) {
     state.opponentDraft.push(opponentPick);
     state.draftedIds.add(opponentPick.id);
   }
-  if (state.playerDraft.length === 3) {
-    state.playerLoadout = state.playerDraft.map(createLoadout);
-    prepareNextEnemy('Your team is ready. Arrange your lead now.');
+  if (state.playerDraft.length === currentTeamSize()) {
+    state.playerLoadout = state.playerDraft.map((member) => createLoadout(member, {moves: member.previewSet?.moves}));
+    startPostDraftFlow();
     return;
   }
-  state.pack = drawPack(state.draftedIds, 3);
+  state.pack = drawConfiguredPack(state.draftedIds, 3);
   render();
 }
 
@@ -1733,13 +2150,17 @@ function buildOpponentLoadout() {
   const source = shuffle(POKEMON_POOL.filter((member) => !excluded.has(member.id)));
   const team = [];
   let index = 0;
-  while (team.length < 3 && index < source.length) {
+  while (team.length < currentTeamSize() && index < source.length) {
     const slice = source.slice(index, index + 6);
     const choice = pickOpponentDraft(slice, team, state.playerLoadout, dex);
     if (choice && !team.some((entry) => entry.id === choice.id)) team.push(choice);
     index += 6;
   }
-  return team.map(createLoadout);
+  let loadout = team.map(createLoadout);
+  loadout = autoUseRerolls(loadout);
+  const itemPlan = autoDraftItemsForTeam(loadout);
+  state.opponentDraftedItems = itemPlan.items;
+  return applyAssignedItems(loadout, itemPlan.assignments);
 }
 
 function prepareNextEnemy(message) {
@@ -1750,6 +2171,89 @@ function prepareNextEnemy(message) {
   state.playerPreview = chooseTeamOrder(state.playerLoadout);
   state.opponentPreview = chooseTeamOrder(state.opponentLoadout);
   state.message = message;
+  render();
+}
+
+function prepareLinkPreview(message = 'Your hidden team is ready. Set the order you want to reveal at battle start.') {
+  resetBattleState();
+  state.phase = 'link-preview';
+  state.playerLoadout = applyAssignedItems(state.playerLoadout, state.itemAssignments);
+  state.playerPreview = chooseTeamOrder(state.playerLoadout);
+  state.message = message;
+  render();
+}
+
+function beginItemDraftPhase() {
+  state.phase = 'item-draft';
+  state.itemDraftRound = Math.max(1, state.draftedItems.length + 1);
+  state.itemPack = buildItemPack(new Set(state.draftedItems), 3, state.playerLoadout);
+  state.message = 'Draft one held item from this round.';
+  render();
+}
+
+function finishPostDraftFlow() {
+  state.playerLoadout = applyAssignedItems(state.playerLoadout, state.itemAssignments);
+  if (state.playMode === 'bot') return prepareNextEnemy('Your team is ready. Arrange your lead now.');
+  return prepareLinkPreview();
+}
+
+function startPostDraftFlow() {
+  state.rerollsLeft = currentRerollBudget();
+  state.draftedItems = [];
+  state.itemPack = [];
+  state.itemDraftRound = 0;
+  state.itemAssignments = {};
+  state.selectedDraftItem = '';
+  if (state.rerollsLeft > 0) {
+    state.phase = 'reroll';
+    state.message = 'Spend your attack rerolls across the drafted team.';
+    return render();
+  }
+  if (itemDraftEnabled()) return beginItemDraftPhase();
+  return finishPostDraftFlow();
+}
+
+function rerollLoadoutMove(memberIndex, moveIndex) {
+  if (state.rerollsLeft <= 0) return;
+  const member = state.playerLoadout[memberIndex];
+  if (!member) return;
+  const moves = rerollMove(member, member.set.moves, moveIndex, dex);
+  state.playerLoadout[memberIndex] = createLoadout(member, {moves, item: member.set.item || ''});
+  state.rerollsLeft -= 1;
+  if (state.rerollsLeft <= 0) state.message = 'Rerolls spent. Continue to the next step.';
+  render();
+}
+
+function pickDraftItem(itemId) {
+  if (!state.itemPack.some((item) => item.id === itemId)) return;
+  state.draftedItems.push(itemId);
+  state.itemDraftRound += 1;
+  if (state.draftedItems.length >= currentTeamSize()) {
+    state.phase = 'item-assign';
+    state.selectedDraftItem = state.draftedItems[0] || '';
+    return render();
+  }
+  state.itemPack = buildItemPack(new Set(state.draftedItems), 3, state.playerLoadout);
+  render();
+}
+
+function selectDraftItem(itemId) {
+  state.selectedDraftItem = state.selectedDraftItem === itemId ? '' : itemId;
+  render();
+}
+
+function assignDraftItem(memberName) {
+  if (!state.selectedDraftItem) return;
+  for (const [name, itemId] of Object.entries(state.itemAssignments)) {
+    if (itemId === state.selectedDraftItem) delete state.itemAssignments[name];
+  }
+  state.itemAssignments[memberName] = state.selectedDraftItem;
+  state.selectedDraftItem = '';
+  render();
+}
+
+function clearAssignedItem(memberName) {
+  delete state.itemAssignments[memberName];
   render();
 }
 
@@ -1775,15 +2279,60 @@ function handleAction(action) {
     state.message = 'The playable Gen 5 mode arrives in the next expansion.';
     return render();
   }
-  if (action === 'start-bot') return resetDraft();
-  if (action === 'start-link') {
-    state.playMode = 'link';
-    state.phase = 'link-setup';
-    state.message = 'Open a room or join one.';
+  if (action === 'start-bot' || action === 'start-link') {
+    state.pendingMode = action === 'start-link' ? 'link' : 'bot';
+    state.phase = 'mode-setup';
+    state.message = 'Set the draft rules before the run starts.';
     return render();
+  }
+  if (action === 'mode-attack-fixed') {
+    state.modeSettings = normalizedModeSettings({...state.modeSettings, attackMode: 'fixed'});
+    return render();
+  }
+  if (action === 'mode-attack-randomized') {
+    state.modeSettings = normalizedModeSettings({...state.modeSettings, attackMode: 'randomized'});
+    return render();
+  }
+  if (action === 'mode-reroll-off') {
+    state.modeSettings = normalizedModeSettings({...state.modeSettings, attackReroll: false});
+    return render();
+  }
+  if (action === 'mode-reroll-on') {
+    state.modeSettings = normalizedModeSettings({...state.modeSettings, attackReroll: true, rerollCount: 3});
+    return render();
+  }
+  if (action === 'mode-reroll-minus') {
+    state.modeSettings = normalizedModeSettings({...state.modeSettings, attackReroll: true, rerollCount: normalizedModeSettings().rerollCount - 1});
+    return render();
+  }
+  if (action === 'mode-reroll-plus') {
+    state.modeSettings = normalizedModeSettings({...state.modeSettings, attackReroll: true, rerollCount: normalizedModeSettings().rerollCount + 1});
+    return render();
+  }
+  if (action === 'mode-team-3' || action === 'mode-team-6') {
+    state.modeSettings = normalizedModeSettings({...state.modeSettings, teamSize: action === 'mode-team-6' ? 6 : 3});
+    return render();
+  }
+  if (action === 'mode-items-off' || action === 'mode-items-on') {
+    state.modeSettings = normalizedModeSettings({...state.modeSettings, itemDraft: action === 'mode-items-on'});
+    return render();
+  }
+  if (action === 'confirm-mode-settings') {
+    if (state.pendingMode === 'link') {
+      state.playMode = 'link';
+      state.phase = 'link-setup';
+      state.message = 'Open a room or join one.';
+      return render();
+    }
+    return resetDraft();
   }
   if (action === 'start-battle') return startBotBattle();
   if (action === 'retry-bot') return resetDraft();
+  if (action === 'finish-rerolls') {
+    if (itemDraftEnabled()) return beginItemDraftPhase();
+    return finishPostDraftFlow();
+  }
+  if (action === 'finish-item-assign') return finishPostDraftFlow();
   if (action === 'host-link') return startHosting();
   if (action === 'join-link') return joinHost();
   if (action === 'ready-link-battle') return readyLinkBattle();
@@ -1809,15 +2358,8 @@ function sendLinkMessage(message) {
 }
 
 function setupLinkDraft() {
-  resetBattleState();
+  resetDraftProgress();
   state.phase = 'link-draft';
-  state.draftedIds = new Set();
-  state.playerDraft = [];
-  state.opponentDraft = [];
-  state.playerLoadout = [];
-  state.opponentLoadout = [];
-  state.playerPreview = [];
-  state.opponentPreview = [];
   state.link.draftRound = 1;
   state.link.localPickLocked = false;
   state.link.remotePickLocked = false;
@@ -1831,8 +2373,8 @@ function setupLinkDraft() {
 
 function prepareLinkRound() {
   const excluded = new Set(state.draftedIds);
-  const localPack = drawPack(excluded, 3);
-  const remotePack = drawPack(new Set([...excluded, ...localPack.map((member) => member.id)]), 3);
+  const localPack = drawConfiguredPack(excluded, 3);
+  const remotePack = drawConfiguredPack(new Set([...excluded, ...localPack.map((member) => member.id)]), 3);
   state.link.localPack = localPack;
   state.link.remotePack = remotePack;
   state.link.localPickLocked = false;
@@ -1855,18 +2397,16 @@ function pickLinkDraft(id) {
 
 function maybeFinishLinkRound() {
   if (!state.link.localPickLocked || !state.link.remotePickLocked) return;
-  if (state.playerDraft.length >= 3 && state.opponentDraft.length >= 3) return finishLinkDraft();
+  if (state.playerDraft.length >= currentTeamSize() && state.opponentDraft.length >= currentTeamSize()) return finishLinkDraft();
   state.link.draftRound += 1;
   prepareLinkRound();
 }
 
 function finishLinkDraft() {
-  state.playerLoadout = state.playerDraft.map(createLoadout);
-  state.opponentLoadout = state.opponentDraft.map(createLoadout);
-  state.playerPreview = chooseTeamOrder(state.playerLoadout);
-  state.phase = 'link-preview';
+  state.playerLoadout = state.playerDraft.map((member) => createLoadout(member, {moves: member.previewSet?.moves}));
+  state.opponentLoadout = state.opponentDraft.map((member) => createLoadout(member, {moves: member.previewSet?.moves}));
   sendLinkMessage({type: 'link-draft-done', remoteDraftCount: state.playerDraft.length});
-  render();
+  startPostDraftFlow();
 }
 
 function beginLinkRematch(broadcast) {
@@ -1903,9 +2443,13 @@ function attachConnection(conn, role) {
   state.link.role = role;
   conn.on('open', () => {
     state.link.connected = true;
-    state.link.status = 'Connection ready.';
+    state.link.status = role === 'host' ? 'Connection ready. Sharing host rules now.' : 'Connected. Waiting for the host rules.';
     sendLinkMessage({type: 'hello', name: 'Opponent'});
-    setupLinkDraft();
+    if (role === 'host') {
+      sendLinkMessage({type: 'link-settings', settings: normalizedModeSettings()});
+      setupLinkDraft();
+    }
+    render();
   });
   conn.on('data', handleLinkMessage);
   conn.on('close', () => {
@@ -1919,6 +2463,11 @@ function handleLinkMessage(message) {
   if (message.type === 'hello') {
     state.link.status = 'Connection ready.';
     state.link.remoteName = message.name || 'Opponent';
+  }
+  if (message.type === 'link-settings') {
+    state.modeSettings = normalizedModeSettings(message.settings || DEFAULT_MODE_SETTINGS);
+    state.link.status = 'Connection ready. Host rules synced.';
+    if (state.link.role === 'guest') setupLinkDraft();
   }
   if (message.type === 'link-pack') {
     state.phase = 'link-draft';
@@ -1939,10 +2488,9 @@ function handleLinkMessage(message) {
   }
   if (message.type === 'link-draft-done') {
     state.link.remoteDraftCount = message.remoteDraftCount;
-    if (state.playerDraft.length === 3) {
-      state.playerLoadout = state.playerDraft.map(createLoadout);
-      state.playerPreview = chooseTeamOrder(state.playerLoadout);
-      state.phase = 'link-preview';
+    if (state.playerDraft.length === currentTeamSize()) {
+      state.playerLoadout = state.playerDraft.map((member) => createLoadout(member, {moves: member.previewSet?.moves}));
+      startPostDraftFlow();
     }
   }
   if (message.type === 'battle-ready') {
@@ -2126,6 +2674,8 @@ function battleText(parts) {
     if (parts[3]?.startsWith('move: Bide')) return `${name} is storing energy.`;
     return `${name} activates ${parts[3]}.`;
   }
+  if (type === '-item') return `${parts[2].split(': ').pop()} uses ${parts[3]}.`;
+  if (type === '-enditem') return `${parts[2].split(': ').pop()} consumed ${parts[3]}.`;
   if (type === '-sidestart') return `${parts[2].startsWith('p1') ? 'One side' : 'The other side'} gained ${parts[3]}.`;
   if (type === '-sideend') return `${parts[3]} wore off.`;
   if (type === '-fieldstart') return `${parts[2]} began.`;
@@ -2750,6 +3300,12 @@ function injectStyles() {
     .preview-card-list,.preview-status-stack{
       display:grid;
       gap:10px;
+    }
+    .preview-card-list{
+      grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    }
+    .preview-status-stack{
+      grid-template-columns:1fr;
     }
     .preview-order-note{
       max-width:340px;
@@ -3867,6 +4423,158 @@ function injectStyles() {
       flex-wrap:wrap;
       gap:10px;
     }
+    .mode-settings-shell,.mode-settings-grid,.mode-settings-notes,.reroll-grid,.item-pool-strip,.item-assign-list{
+      display:grid;
+      gap:14px;
+    }
+    .mode-settings-grid{
+      grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    }
+    .mode-settings-card,.mode-settings-note,.item-draft-card,.reroll-card,.item-assign-card{
+      padding:16px;
+      border-radius:22px;
+      border:1px solid var(--line);
+      background:rgba(255,255,255,.05);
+    }
+    .mode-settings-card,.item-draft-card,.mode-settings-note{
+      display:grid;
+      gap:12px;
+    }
+    .mode-settings-card h3,.item-draft-card h3,.mode-settings-note strong{
+      margin:0;
+    }
+    .mode-settings-toggle-row{
+      display:grid;
+      grid-template-columns:repeat(2,minmax(0,1fr));
+      gap:10px;
+    }
+    .mode-settings-counter{
+      grid-column:1 / -1;
+      display:flex;
+      align-items:center;
+      justify-content:flex-end;
+      gap:8px;
+    }
+    .mode-settings-counter span{
+      min-width:42px;
+      text-align:center;
+      padding:6px 8px;
+      border-radius:12px;
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:800;
+    }
+    .mode-settings-toggle{
+      padding:12px;
+      border:none;
+      border-radius:16px;
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:700;
+      cursor:pointer;
+    }
+    .mode-settings-toggle.active{
+      background:linear-gradient(180deg,#f2d97b,#c6a548);
+      color:var(--ink);
+    }
+    .mode-settings-actions{
+      justify-content:flex-end;
+    }
+    .reroll-grid{
+      grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+    }
+    .reroll-card{
+      color:var(--ink);
+      box-shadow:inset 0 0 0 999px rgba(255,255,255,.14);
+      display:grid;
+      gap:12px;
+    }
+    .reroll-card-body{
+      display:grid;
+      grid-template-columns:auto 1fr;
+      gap:12px;
+      align-items:start;
+    }
+    .item-assign-head{
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr) auto;
+      gap:12px;
+      align-items:start;
+    }
+    .reroll-move-list,.item-assign-list{
+      display:grid;
+      gap:10px;
+    }
+    .item-assign-list{
+      grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    }
+    .reroll-move-row{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      justify-content:space-between;
+    }
+    .compact-btn{
+      padding:8px 10px;
+      border-radius:14px;
+    }
+    .item-pool-strip{
+      grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    }
+    .item-pill{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:10px 12px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.08);
+      color:var(--text);
+      font-weight:700;
+      text-align:center;
+    }
+    button.item-pill{
+      cursor:pointer;
+    }
+    .item-pill.selected,.item-pill.assigned{
+      background:linear-gradient(180deg,#f2d97b,#c6a548);
+      color:var(--ink);
+    }
+    .item-pill.empty{
+      background:rgba(255,255,255,.05);
+      color:var(--muted);
+    }
+    .item-draft-grid{
+      grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    }
+    .item-assign-grid{
+      grid-template-columns:minmax(0,1fr);
+    }
+    .item-assign-list{
+      grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+    }
+    .item-assign-card{
+      color:var(--ink);
+      box-shadow:inset 0 0 0 999px rgba(255,255,255,.14);
+      display:grid;
+      gap:12px;
+    }
+    .item-assign-current{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+    }
+    .inspect-held-item{
+      display:grid;
+      gap:6px;
+      padding:10px 12px;
+      border-radius:16px;
+      background:rgba(255,255,255,.16);
+      color:var(--ink);
+    }
+    .inspect-held-item strong{
+      font-size:1rem;
+    }
     @media (min-width:721px){
       .battle-view{
         width:min(90vw,1520px);
@@ -3910,8 +4618,73 @@ function injectStyles() {
         display:block;
         filter:drop-shadow(0 18px 24px rgba(0,0,0,.18));
       }
+      .item-assign-shell .preview-hero-panel{
+        grid-template-columns:minmax(0,1fr);
+      }
       .preview-shell .draft-hero-copy h2{
         font-size:clamp(2rem,3.6vw,3.2rem);
+      }
+      .team-size-6 .preview-hero-slot{
+        padding:10px;
+      }
+      .team-size-6 .preview-hero-slot strong{
+        font-size:.88rem;
+      }
+      .team-size-6 .preview-card{
+        min-height:86px;
+        padding:10px 12px;
+      }
+      .team-size-6 .preview-card .sprite.sm{
+        width:46px;
+        height:46px;
+      }
+      .team-size-6 .preview-copy strong{
+        font-size:1rem;
+      }
+      .team-size-6 .preview-copy .tiny{
+        font-size:.74rem;
+      }
+      .team-size-6 .reroll-grid{
+        grid-template-columns:repeat(3,minmax(0,1fr));
+      }
+      .team-size-6 .reroll-card{
+        padding:10px;
+        gap:8px;
+      }
+      .team-size-6 .reroll-card-body{
+        grid-template-columns:56px minmax(0,1fr);
+        gap:8px;
+      }
+      .team-size-6 .reroll-card-sprite .sprite.sm{
+        width:42px;
+        height:42px;
+      }
+      .team-size-6 .reroll-move-row{
+        gap:6px;
+      }
+      .item-assign-card{
+        padding:12px;
+        gap:10px;
+      }
+      .item-assign-head .sprite.sm{
+        width:42px;
+        height:42px;
+      }
+      .team-size-6 .item-assign-card{
+        padding:10px;
+        gap:8px;
+      }
+      .team-size-6 .item-assign-head .tiny{
+        display:none;
+      }
+      .team-size-6 .item-assign-current .item-pill{
+        padding:7px 10px;
+        font-size:.78rem;
+      }
+      .team-size-6 .item-assign-card .card-actions .primary-btn,
+      .team-size-6 .item-assign-card .card-actions .ghost-btn{
+        padding:8px 10px;
+        font-size:.78rem;
       }
       .preview-card{
         grid-template-columns:auto minmax(0,1fr) auto;
@@ -4042,6 +4815,9 @@ function injectStyles() {
         font-size:.92rem;
         line-height:1.4;
       }
+      .team-size-6 .draft-hero-copy p{
+        display:none;
+      }
       .draft-section-head p{
         display:none;
       }
@@ -4052,6 +4828,17 @@ function injectStyles() {
       .draft-team-panel,.draft-board{
         padding:14px;
         gap:10px;
+      }
+      .team-size-6 .draft-shell{
+        gap:8px;
+      }
+      .team-size-6 .draft-hero-panel,
+      .team-size-6 .draft-team-panel,
+      .team-size-6 .draft-board{
+        padding:12px;
+      }
+      .team-size-6 .mode-settings-actions .primary-btn{
+        padding:8px 14px;
       }
       .draft-team-strip,.draft-choice-grid{
         gap:10px;
@@ -4285,6 +5072,9 @@ function injectStyles() {
         padding:8px;
         gap:6px;
       }
+      .team-size-6 .preview-hero-guide{
+        display:none;
+      }
       .preview-hero-slot-grid{
         gap:5px;
       }
@@ -4292,8 +5082,14 @@ function injectStyles() {
         padding:6px;
         border-radius:14px;
       }
+      .team-size-6 .preview-hero-slot{
+        padding:5px;
+      }
       .preview-hero-slot strong{
         font-size:.78rem;
+      }
+      .team-size-6 .preview-hero-slot strong{
+        font-size:.72rem;
       }
       .preview-hero-slot div,.preview-hero-note{
         font-size:.68rem;
@@ -4305,6 +5101,10 @@ function injectStyles() {
       .preview-panel{
         min-height:0;
         overflow:visible;
+      }
+      .team-size-6 .preview-panel,.team-size-6 .preview-side-panel{
+        padding:8px;
+        gap:6px;
       }
       .link-preview-main{
         grid-template-columns:1fr;
@@ -4329,6 +5129,9 @@ function injectStyles() {
       .draft-hero-copy h2{
         font-size:clamp(1.45rem,7vw,2rem);
         line-height:.98;
+      }
+      .team-size-6 .draft-hero-copy h2{
+        font-size:clamp(1.25rem,6.2vw,1.7rem);
       }
       .draft-topbar-meta span,.draft-chip-row span,.draft-status-list span,.draft-role-row span{
         padding:5px 8px;
@@ -4355,6 +5158,9 @@ function injectStyles() {
       .preview-card-list,.preview-status-stack{
         gap:8px;
       }
+      .team-size-6 .preview-card-list{
+        gap:5px;
+      }
       .preview-card{
         grid-template-columns:46px 1fr auto;
         justify-items:stretch;
@@ -4376,6 +5182,14 @@ function injectStyles() {
         width:38px;
         height:38px;
       }
+      .team-size-6 .preview-card{
+        min-height:60px;
+        padding:6px 7px;
+      }
+      .team-size-6 .preview-card .sprite.sm{
+        width:34px;
+        height:34px;
+      }
       .preview-copy{
         display:grid;
         gap:4px;
@@ -4388,6 +5202,13 @@ function injectStyles() {
         font-size:.86rem;
         line-height:1.15;
       }
+      .team-size-6 .preview-copy strong{
+        font-size:.79rem;
+      }
+      .team-size-6 .preview-panel .draft-section-head p,
+      .team-size-6 .preview-opponent-panel .preview-status-stack{
+        display:none;
+      }
       .preview-actions{
         width:auto;
         display:grid;
@@ -4399,6 +5220,15 @@ function injectStyles() {
         justify-content:center;
         padding:5px 7px;
         font-size:.62rem;
+      }
+      .team-size-6 .preview-actions .info-chip,.team-size-6 .preview-actions .mini-btn{
+        padding:4px 6px;
+        font-size:.58rem;
+      }
+      .team-size-6 .preview-side-panel .actions .primary-btn,
+      .team-size-6 .preview-side-panel .actions .ghost-btn{
+        padding:7px 8px;
+        font-size:.72rem;
       }
       .preview-side-panel .actions{
         display:grid;
