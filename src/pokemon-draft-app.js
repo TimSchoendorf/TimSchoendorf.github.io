@@ -4217,13 +4217,13 @@ function injectStyles() {
     .battle-status-shell-foe{
       top:var(--battle-pad-top);
       left:var(--battle-pad-x);
-      width:23%;
+      width:25%;
       max-width:none;
     }
     .battle-status-shell-player{
       right:var(--battle-pad-x);
       bottom:calc(var(--battle-player-line) + 1.5%);
-      width:30%;
+      width:27%;
       max-width:none;
     }
     .battle-status-foe,
@@ -6595,7 +6595,7 @@ function injectStyles() {
         gap:5px;
       }
       .battle-status-shell-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:36%;max-width:none}
-      .battle-status-shell-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:42%;max-width:none}
+      .battle-status-shell-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:40%;max-width:none}
       .battle-status .info-chip{
         min-width:42px;
         min-height:28px;
