@@ -3102,6 +3102,7 @@ async function handleBattleLine(line, shouldAnimate = false) {
   if (!line.startsWith('|')) return 0;
   const parts = line.split('|');
   const type = parts[1];
+  const fromItem = battleTagValue(parts, '[from] item: ');
   const text = battleText(parts);
   if (text) {
     pushBattleFeed(text);
@@ -3133,12 +3134,12 @@ async function handleBattleLine(line, shouldAnimate = false) {
       target.status = statusFromCondition(parts[3]) || target.status || '';
     });
     flashSide(sideKey, type === '-damage' ? 'flash-hit' : 'flash-heal');
-    return 550;
+    return fromItem ? 180 : 360;
   }
   if (type === '-status' || type === '-curestatus' || type === '-clearstatus') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
     updateRosterState(sideKey, parts[2].split(': ').pop(), (target) => { target.status = type === '-status' ? parts[3] : ''; });
-    return 650;
+    return 280;
   }
   if (type === 'faint') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
@@ -3158,7 +3159,12 @@ async function handleBattleLine(line, shouldAnimate = false) {
     void finishBattle(parts[2]);
     return 900;
   }
-  return text ? 650 : 0;
+  if (text) {
+    if (type === '-boost' || type === '-unboost' || type === '-setboost') return 220;
+    if (type === '-item' || type === '-enditem') return 220;
+    return 300;
+  }
+  return 0;
 }
 
 async function animateBattleChunk(chunk) {
@@ -3168,7 +3174,11 @@ async function animateBattleChunk(chunk) {
   for (let index = 0; index < lines.length; index += 1) {
     const delay = await handleBattleLine(lines[index], animationPlan[index]);
     render();
-    if (delay) await sleep(delay);
+    const endsAtNextTurnWithQueuedRequest = index === lines.length - 1 && lines[index].startsWith('|turn|') && state.pendingPlayerRequest;
+    if (delay && !endsAtNextTurnWithQueuedRequest) {
+      const acceleratedDelay = state.pendingPlayerRequest ? Math.max(90, Math.round(delay * 0.3)) : delay;
+      await sleep(acceleratedDelay);
+    }
   }
   state.battleAnimating = false;
   scheduleBattleFeedClear();
