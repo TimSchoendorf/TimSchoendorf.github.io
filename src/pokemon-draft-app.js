@@ -1458,7 +1458,7 @@ function renderDraftStatusCard(mode, roundLabel) {
 }
 
 function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, cards, showStatusCard = mode === 'link'}) {
-  return `<section class="draft-shell">
+  return `<section class="draft-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
       <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
@@ -1937,6 +1937,14 @@ function renderItemAssignCarouselSlide(member, index) {
   </div>`;
 }
 
+function renderItemAssignProgressChip(member, index) {
+  const assignedItem = playerAssignedItemFor(member.name);
+  return `<button class="item-assign-progress-chip ${index === state.itemAssignFocusMember ? 'active' : ''} ${assignedItem ? 'assigned' : ''}" data-item-assign-focus="${index}">
+    ${spriteTag(member, 'front', 'sm')}
+    <span>${member.name}</span>
+  </button>`;
+}
+
 function renderItemAssignStage() {
   const compactCopy = currentTeamSize() === 6;
   const assignedItems = new Set(Object.values(state.itemAssignments));
@@ -1977,6 +1985,7 @@ function renderItemAssignStage() {
       <section class="item-assign-desktop-only"><div class="item-assign-list">${state.playerLoadout.map((member) => renderItemAssignMemberCard(member)).join('')}</div></section>
       <section class="item-assign-mobile-only">
         <div class="item-assign-member-carousel" data-preserve-scroll="item-assign-team" data-carousel-select="member" aria-label="Swipe team members">${state.playerLoadout.map((member, index) => renderItemAssignCarouselSlide(member, index)).join('')}</div>
+        <div class="item-assign-progress-strip">${state.playerLoadout.map((member, index) => renderItemAssignProgressChip(member, index)).join('')}</div>
       </section>
     </section>
     <div class="actions mode-settings-actions"><button class="primary-btn" data-action="finish-item-assign">Continue</button></div>
@@ -5688,6 +5697,53 @@ function injectStyles() {
     .item-assign-member-slide .item-assign-card.compact{
       min-height:0;
     }
+    .item-assign-progress-strip{
+      display:flex;
+      gap:8px;
+      overflow-x:auto;
+      overflow-y:hidden;
+      padding:2px 0 2px;
+      scrollbar-width:none;
+    }
+    .item-assign-progress-strip::-webkit-scrollbar{
+      display:none;
+    }
+    .item-assign-progress-chip{
+      flex:0 0 auto;
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr);
+      align-items:center;
+      gap:6px;
+      min-width:94px;
+      padding:6px 8px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      color:var(--text);
+      text-align:left;
+      cursor:pointer;
+    }
+    .item-assign-progress-chip.assigned{
+      border-color:rgba(111,197,145,.28);
+      background:linear-gradient(180deg,rgba(111,197,145,.18),rgba(54,112,86,.2));
+    }
+    .item-assign-progress-chip.active{
+      border-color:rgba(242,217,123,.42);
+      background:linear-gradient(180deg,rgba(242,217,123,.18),rgba(198,165,72,.14));
+    }
+    .item-assign-progress-chip .sprite.sm{
+      width:24px;
+      height:24px;
+    }
+    .item-assign-progress-chip span{
+      display:block;
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      font-size:.66rem;
+      font-weight:700;
+    }
     .item-assign-item-detail-carousel{
       display:flex;
       gap:10px;
@@ -6277,6 +6333,36 @@ function injectStyles() {
         grid-template-rows:auto auto auto 1fr;
         overflow:hidden;
       }
+      .draft-shell.team-size-6:not(.item-draft-shell){
+        height:auto;
+        min-height:calc(100svh - 20px);
+        grid-template-rows:auto auto auto auto;
+        overflow:visible;
+      }
+      .draft-shell.team-size-6:not(.item-draft-shell) .draft-hero-panel,
+      .draft-shell.team-size-6:not(.item-draft-shell) .draft-team-panel,
+      .draft-shell.team-size-6:not(.item-draft-shell) .draft-board{
+        padding:9px;
+      }
+      .draft-shell.team-size-6:not(.item-draft-shell) .draft-section-head p{
+        display:none;
+      }
+      .draft-shell.team-size-6:not(.item-draft-shell) .draft-team-strip{
+        display:flex;
+        grid-template-columns:none;
+        gap:6px;
+        min-height:0;
+        overflow-x:auto;
+        overflow-y:hidden;
+        padding-bottom:2px;
+        scrollbar-width:none;
+      }
+      .draft-shell.team-size-6:not(.item-draft-shell) .draft-team-strip::-webkit-scrollbar{
+        display:none;
+      }
+      .draft-shell.team-size-6:not(.item-draft-shell) .draft-team-slot{
+        flex:0 0 18%;
+      }
       .link-setup-shell{
         gap:8px;
         padding:4px 0 2px;
@@ -6294,8 +6380,12 @@ function injectStyles() {
       }
       .item-assign-shell{
         height:auto;
-        min-height:0;
+        min-height:calc(100svh - 20px);
+        grid-template-rows:auto auto auto 1fr auto;
         align-content:start;
+      }
+      .team-size-6.item-assign-shell{
+        grid-template-rows:auto auto auto auto auto;
       }
       .link-preview-shell{
         gap:8px;
@@ -6328,6 +6418,23 @@ function injectStyles() {
         gap:8px;
         min-height:0;
         overflow:visible;
+      }
+      .item-assign-board{
+        min-height:0;
+        align-content:stretch;
+      }
+      .team-size-6 .item-assign-board{
+        align-content:start;
+      }
+      .item-assign-member-carousel{
+        height:100%;
+        align-items:stretch;
+      }
+      .item-assign-member-slide{
+        display:flex;
+      }
+      .item-assign-member-slide .item-assign-card.compact{
+        height:100%;
       }
       .link-setup-hero{
         grid-template-columns:1fr;
@@ -6734,6 +6841,26 @@ function injectStyles() {
       .item-draft-card > .tiny{
         -webkit-line-clamp:3;
       }
+      .team-size-6.item-draft-shell .draft-board{
+        align-content:start;
+      }
+      .team-size-6.item-draft-shell .item-draft-grid{
+        align-items:start;
+        grid-auto-columns:78%;
+      }
+      .team-size-6.item-draft-shell .item-draft-grid .item-draft-card{
+        min-height:112px;
+        height:auto;
+        align-self:start;
+      }
+      .team-size-6.item-draft-shell .item-draft-grid .item-draft-card > .tiny{
+        -webkit-line-clamp:2;
+        min-height:2.2em;
+      }
+      .team-size-6.item-draft-shell .item-draft-grid .item-draft-card .card-actions .primary-btn{
+        min-height:32px;
+        padding:5px 8px;
+      }
       .item-assign-desktop-only{
         display:none;
       }
@@ -6777,15 +6904,24 @@ function injectStyles() {
         gap:8px;
         padding-right:12%;
       }
+      .team-size-6.item-assign-shell .item-assign-member-carousel{
+        height:auto;
+      }
       .item-assign-member-slide{
         flex-basis:88%;
         min-height:148px;
+      }
+      .team-size-6.item-assign-shell .item-assign-member-slide{
+        min-height:130px;
       }
       .item-assign-card.compact{
         padding:10px;
         gap:8px;
         min-height:148px;
         align-content:start;
+      }
+      .team-size-6.item-assign-shell .item-assign-card.compact{
+        min-height:130px;
       }
       .item-assign-card.compact .item-assign-head{
         grid-template-columns:auto minmax(0,1fr) auto;
@@ -6804,6 +6940,9 @@ function injectStyles() {
       }
       .item-draft-summary{
         padding:8px 10px;
+      }
+      .team-size-6.item-assign-shell .item-assign-progress-strip{
+        margin-top:4px;
       }
       .item-draft-summary-head strong{
         font-size:.82rem;
@@ -7082,6 +7221,9 @@ function injectStyles() {
       .item-draft-shell .draft-hero-copy h2{
         font-size:clamp(1.82rem,8.6vw,2.38rem);
         line-height:.94;
+      }
+      .team-size-6.item-draft-shell .draft-hero-copy h2{
+        font-size:clamp(1.34rem,6.6vw,1.72rem);
       }
       .team-size-6.item-draft-shell .draft-hero-copy h2{
         font-size:clamp(1.54rem,7.6vw,2rem);
@@ -7724,10 +7866,16 @@ function injectStyles() {
         min-height:64px;
       }
       .team-size-6 .draft-team-strip{
-        grid-template-columns:repeat(6,minmax(0,1fr));
-        gap:4px;
-        min-height:56px;
+        display:flex;
+        grid-template-columns:none;
+        gap:5px;
+        min-height:0;
+        overflow-x:auto;
+        overflow-y:hidden;
+        padding-bottom:2px;
+        scrollbar-width:none;
       }
+      .team-size-6 .draft-team-strip::-webkit-scrollbar{display:none}
       .draft-team-slot{
         padding:6px 4px;
         gap:4px;
@@ -7735,10 +7883,11 @@ function injectStyles() {
         height:64px;
       }
       .team-size-6 .draft-team-slot{
-        padding:4px 2px;
+        flex:0 0 16.5%;
+        padding:4px 3px;
         gap:3px;
-        min-height:56px;
-        height:56px;
+        min-height:52px;
+        height:52px;
       }
       .draft-team-index{
         width:28px;
@@ -7847,6 +7996,9 @@ function injectStyles() {
       .item-draft-shell{
         min-height:calc(100svh - 16px);
       }
+      .team-size-6.item-draft-shell{
+        grid-template-rows:auto auto auto;
+      }
       .item-draft-shell .draft-team-panel{
         gap:5px;
       }
@@ -7864,7 +8016,11 @@ function injectStyles() {
         font-size:.68rem;
       }
       .item-assign-shell{
-        min-height:0;
+        min-height:calc(100svh - 16px);
+        grid-template-rows:auto auto auto 1fr auto;
+      }
+      .team-size-6.item-assign-shell{
+        grid-template-rows:auto auto auto auto auto;
       }
       .item-assign-status-card{
         padding:8px 10px;
@@ -7878,11 +8034,33 @@ function injectStyles() {
       .item-assign-item-slide .item-info-card{
         min-height:118px;
       }
+      .item-assign-board{
+        min-height:0;
+        align-content:stretch;
+      }
+      .team-size-6 .item-assign-board{
+        align-content:start;
+      }
+      .item-assign-member-carousel{
+        height:100%;
+        align-items:stretch;
+      }
+      .team-size-6 .item-assign-member-carousel{
+        height:auto;
+      }
       .item-assign-member-slide{
         min-height:138px;
+        display:flex;
+      }
+      .team-size-6 .item-assign-member-slide{
+        min-height:126px;
       }
       .item-assign-member-slide .item-assign-card.compact{
         min-height:138px;
+        height:100%;
+      }
+      .team-size-6 .item-assign-member-slide .item-assign-card.compact{
+        min-height:126px;
       }
       .link-preview-order-panel .preview-card{
         min-height:52px;
@@ -7902,18 +8080,23 @@ function injectStyles() {
         padding:8px;
       }
       .team-size-6 .item-draft-team-strip{
-        grid-template-columns:repeat(3,minmax(0,1fr));
+        grid-template-columns:none;
         gap:5px;
       }
       .team-size-6 .item-draft-team-strip .draft-team-slot{
-        padding:6px 5px;
-        min-height:80px;
-        height:80px;
+        display:grid;
+        grid-template-columns:minmax(0,1fr) auto;
+        align-items:center;
+        justify-items:stretch;
+        text-align:left;
+        padding:6px 8px;
+        min-height:56px;
+        height:56px;
       }
       .team-size-6 .item-draft-grid{
         display:grid;
         grid-auto-flow:column;
-        grid-auto-columns:74%;
+        grid-auto-columns:76%;
         grid-template-columns:none;
         gap:6px;
         overflow-x:auto;
@@ -7926,10 +8109,35 @@ function injectStyles() {
       .team-size-6 .item-draft-grid .item-draft-card{
         scroll-snap-align:start;
         min-width:0;
-        min-height:118px;
+        min-height:106px;
+        height:auto;
+        align-self:start;
         padding:8px;
         gap:5px;
         grid-template-rows:auto auto auto;
+      }
+      .team-size-6 .item-draft-grid .item-draft-card > .tiny{
+        -webkit-line-clamp:2;
+        min-height:2.2em;
+      }
+      .team-size-6 .item-draft-grid .item-draft-card .card-actions .primary-btn{
+        min-height:32px;
+        padding:5px 8px;
+      }
+      .team-size-6.item-draft-shell .draft-team-slot-head{
+        grid-template-columns:auto minmax(0,1fr);
+        justify-items:start;
+        gap:6px;
+      }
+      .team-size-6.item-draft-shell .draft-team-slot-copy{
+        width:100%;
+      }
+      .team-size-6.item-draft-shell .draft-team-slot-copy strong{
+        display:block;
+        font-size:.68rem;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:ellipsis;
       }
       .team-size-6 .reroll-toolbar{
         padding:8px;
@@ -8211,47 +8419,49 @@ function injectStyles() {
         font-size:.66rem;
       }
       .team-size-6 .item-draft-team-strip{
-        grid-template-columns:repeat(3,minmax(0,1fr));
+        grid-template-columns:none;
         gap:4px;
       }
       .team-size-6 .item-draft-team-strip .draft-team-slot{
-        padding:5px 4px;
-        min-height:76px;
-        height:76px;
+        padding:5px 7px;
+        min-height:52px;
+        height:52px;
       }
       .team-size-6 .item-draft-team-strip .draft-team-slot .sprite.sm{
-        width:24px;
-        height:24px;
+        width:22px;
+        height:22px;
       }
       .team-size-6 .item-draft-team-strip .draft-team-slot .info-chip{
         min-height:24px;
         padding:3px 7px;
-        font-size:.58rem;
+        font-size:.56rem;
       }
       .team-size-6 .draft-team-panel .item-pool-strip .item-pill{
         padding:4px 7px;
         font-size:.62rem;
       }
       .team-size-6 .item-draft-grid{
-        grid-auto-columns:72%;
+        grid-auto-columns:74%;
         gap:5px;
       }
       .team-size-6 .item-draft-card{
-        min-height:116px;
+        min-height:98px;
+        height:auto;
+        align-self:start;
       }
       .team-size-6 .item-draft-card > .tiny{
         font-size:.64rem;
         line-height:1.16;
-        min-height:2.45em;
+        min-height:2.1em;
       }
       .team-size-6 .draft-team-panel .item-pool-strip .item-pill{
         padding:5px 8px;
         font-size:.66rem;
       }
       .team-size-6.item-draft-shell .item-draft-team-strip .draft-team-slot{
-        flex-basis:38%;
-        min-height:62px;
-        height:62px;
+        flex-basis:48%;
+        min-height:58px;
+        height:58px;
       }
       .team-size-6.item-assign-shell .preview-hero-panel,
       .team-size-6.preview-shell .preview-hero-panel,
@@ -8296,13 +8506,16 @@ function injectStyles() {
       .team-size-6 .item-assign-item-detail-carousel .item-info-card{
         padding:8px;
         gap:6px;
-        min-height:108px;
+        min-height:98px;
       }
       .team-size-6 .item-assign-item-detail-carousel .item-info-head strong{
         font-size:.76rem;
       }
       .team-size-6 .item-assign-item-detail-carousel .item-info-desc{
         font-size:.64rem;
+      }
+      .team-size-6 .item-assign-progress-strip{
+        margin-top:2px;
       }
       .team-size-6 .preview-card-list{
         grid-template-columns:repeat(2,minmax(0,1fr));
