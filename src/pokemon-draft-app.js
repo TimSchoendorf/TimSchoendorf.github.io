@@ -621,12 +621,22 @@ class BattleAttackViewport {
   }
 
   battleAnchors(metrics) {
+    const mobileStage = this.stage.getBoundingClientRect().width <= 500;
+    const profiles = mobileStage
+      ? {
+        player: {attack: {x: 0.58, y: 0.40}, target: {x: 0.34, y: 0.58}},
+        foe: {attack: {x: 0.24, y: 0.54}, target: {x: 0.40, y: 0.56}},
+      }
+      : {
+        player: {attack: {x: 0.62, y: 0.42}, target: {x: 0.44, y: 0.66}},
+        foe: {attack: {x: 0.26, y: 0.56}, target: {x: 0.30, y: 0.58}},
+      };
     const originalPlayer = {x: metrics.x + (40 * metrics.scale), y: metrics.y + (84 * metrics.scale)};
     const originalFoe = {x: metrics.x + (112 * metrics.scale), y: metrics.y + (40 * metrics.scale)};
-    const actualPlayerAttack = this.spriteImpactPoint(this.playerSprite, {x: 0.62, y: 0.42});
-    const actualPlayerTarget = this.spriteImpactPoint(this.playerSprite, {x: 0.44, y: 0.66});
-    const actualFoeAttack = this.spriteImpactPoint(this.foeSprite, {x: 0.26, y: 0.56});
-    const actualFoeTarget = this.spriteImpactPoint(this.foeSprite, {x: 0.3, y: 0.58});
+    const actualPlayerAttack = this.spriteImpactPoint(this.playerSprite, profiles.player.attack);
+    const actualPlayerTarget = this.spriteImpactPoint(this.playerSprite, profiles.player.target);
+    const actualFoeAttack = this.spriteImpactPoint(this.foeSprite, profiles.foe.attack);
+    const actualFoeTarget = this.spriteImpactPoint(this.foeSprite, profiles.foe.target);
     return {
       player: {
         original: originalPlayer,
@@ -983,6 +993,10 @@ class BattleAttackViewport {
   }
 }
 
+function nextPaint() {
+  return new Promise((resolve) => requestAnimationFrame(() => resolve()));
+}
+
 function currentBattleViewport(assets) {
   const stage = document.querySelector('.battle-stage');
   const field = document.querySelector('[data-battle-attack-field]');
@@ -1026,7 +1040,11 @@ async function playBattleMoveAnimation(moveName, sideKey) {
       window.__pokemonBattlerDebug.lastAnimationInfo = {moveName, sideKey, stage: 'missing-move'};
       return;
     }
-    const viewport = currentBattleViewport(assets);
+    let viewport = null;
+    for (let attempt = 0; attempt < 6 && !viewport; attempt += 1) {
+      if (attempt) await nextPaint();
+      viewport = currentBattleViewport(assets);
+    }
     if (!viewport) {
       window.__pokemonBattlerDebug.lastAnimationInfo = {moveName, sideKey, stage: 'missing-viewport'};
       return;
@@ -1039,7 +1057,7 @@ async function playBattleMoveAnimation(moveName, sideKey) {
       const startedAt = performance.now();
       const tick = (time) => {
         try {
-          const localTime = time - startedAt;
+          const localTime = Math.max(0, time - startedAt);
           const activeFrame = timeline.segments.find((segment) => segment.kind === 'subframe' && localTime >= segment.start && localTime < segment.end)?.frame || null;
           const activeEffects = [];
           let darkPalette = false;
@@ -1364,7 +1382,7 @@ function pushBattleFeed(text) {
   state.battleFeed = [text];
 }
 
-function scheduleBattleFeedClear(delay = 900) {
+function scheduleBattleFeedClear(delay = 1600) {
   if (!state.battleFeed.length) return;
   if (battleFeedClearHandle) clearTimeout(battleFeedClearHandle);
   battleFeedClearHandle = setTimeout(() => {
@@ -2440,7 +2458,7 @@ function applyPendingPlayerRequest() {
   updateTeamStateFromRequest(ownSide(), state.playerRequest);
   state.actionLocked = false;
   if (!maybeSubmitHeldMove(state.playerRequest)) render();
-  scheduleBattleFeedClear(700);
+    scheduleBattleFeedClear(1500);
   return true;
 }
 
@@ -3116,8 +3134,9 @@ async function handleBattleLine(line, shouldAnimate = false) {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
     state.lastMove[sideKey] = parts[3];
     render();
+    await nextPaint();
     if (shouldAnimate) await playBattleMoveAnimation(parts[3], sideKey);
-    return 120;
+    return 220;
   }
   if (type === 'switch') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
@@ -3129,7 +3148,7 @@ async function handleBattleLine(line, shouldAnimate = false) {
       target.active = true;
     });
     flashSide(sideKey, 'flash-switch');
-    return 650;
+    return 800;
   }
   if (type === '-damage' || type === '-heal') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
@@ -3138,12 +3157,12 @@ async function handleBattleLine(line, shouldAnimate = false) {
       target.status = statusFromCondition(parts[3]) || target.status || '';
     });
     flashSide(sideKey, type === '-damage' ? 'flash-hit' : 'flash-heal');
-    return fromItem ? 180 : 360;
+    return fromItem ? 360 : 560;
   }
   if (type === '-status' || type === '-curestatus' || type === '-clearstatus') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
     updateRosterState(sideKey, parts[2].split(': ').pop(), (target) => { target.status = type === '-status' ? parts[3] : ''; });
-    return 280;
+    return 480;
   }
   if (type === 'faint') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
@@ -3153,20 +3172,21 @@ async function handleBattleLine(line, shouldAnimate = false) {
       target.active = false;
     });
     flashSide(sideKey, 'flash-faint');
-    return 800;
+    return 900;
   }
   if (type === 'turn') {
     state.message = `Turn ${parts[2]}.`;
-    return 350;
+    return 420;
   }
   if (type === 'win') {
     void finishBattle(parts[2]);
     return 900;
   }
   if (text) {
-    if (type === '-boost' || type === '-unboost' || type === '-setboost') return 220;
-    if (type === '-item' || type === '-enditem') return 220;
-    return 300;
+    if (type === '-boost' || type === '-unboost' || type === '-setboost') return 420;
+    if (type === '-item' || type === '-enditem') return 380;
+    if (type === '-immune' || type === '-fail' || type === '-mustrecharge') return 440;
+    return 520;
   }
   return 0;
 }
@@ -3180,7 +3200,7 @@ async function animateBattleChunk(chunk) {
     render();
     const endsAtNextTurnWithQueuedRequest = index === lines.length - 1 && lines[index].startsWith('|turn|') && state.pendingPlayerRequest;
     if (delay && !endsAtNextTurnWithQueuedRequest) {
-      const acceleratedDelay = state.pendingPlayerRequest ? Math.max(90, Math.round(delay * 0.3)) : delay;
+      const acceleratedDelay = state.pendingPlayerRequest ? Math.max(220, Math.round(delay * 0.6)) : delay;
       await sleep(acceleratedDelay);
     }
   }
@@ -6697,18 +6717,36 @@ function injectStyles() {
         font-size:.68rem;
       }
       .reroll-footer{
+        display:grid;
+        grid-template-columns:1fr auto 1fr;
+        align-items:center;
         padding:0;
         gap:8px;
+      }
+      .reroll-footer-copy{
+        grid-column:2;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        gap:6px;
+        text-align:center;
+        white-space:nowrap;
+      }
+      .reroll-footer .primary-btn{
+        grid-column:3;
+        justify-self:end;
       }
       .reroll-footer .primary-btn{
         min-width:0;
         padding:10px 14px;
       }
       .reroll-footer-copy strong{
-        font-size:1.08rem;
+        font-size:1.02rem;
+        line-height:1;
       }
       .reroll-footer-copy span{
-        font-size:.7rem;
+        font-size:.74rem;
+        line-height:1;
       }
       .link-setup-shell .link-setup-actions{
         display:none;
