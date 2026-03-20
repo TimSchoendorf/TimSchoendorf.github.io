@@ -1627,6 +1627,7 @@ function renderMenuStage() {
         <h2>${generation.title}</h2>
         <p>${generation.subtitle}</p>
         <div class="menu-feature-row">${generation.features.map((feature) => `<span>${feature}</span>`).join('')}</div>
+        <div class="menu-project-note">Private non-commercial fan project. Pokemon rights remain with their respective owners.</div>
       </div>
       ${showcase}
     </section>
@@ -1644,6 +1645,10 @@ function renderMenuStage() {
           <div class="menu-meta-card"><span class="label">Status</span><strong>${generation.availability}</strong></div>
         </div>
       </div>
+    </section>
+    <section class="menu-legal-note" aria-label="Project disclaimer">
+      <div class="label">Private fan project</div>
+      <p>This is a private, non-commercial Pokemon fan project. No ownership is claimed. Pokemon and all related names, characters, images, and trademarks belong to Nintendo, Game Freak, Creatures, The Pokemon Company, and their respective rights holders.</p>
     </section>
   </section>`;
 }
@@ -1855,6 +1860,10 @@ function renderItemDraftCard(item) {
 
 function renderItemDraftStage() {
   const round = Math.min(state.itemDraftRound || 1, currentTeamSize());
+  const draftedCount = state.draftedItems.length;
+  const draftedPool = draftedCount
+    ? `<div class="item-pool-strip">${state.draftedItems.map((entry) => `<span class="item-pill">${itemIconTag(entry.id, 'small')}${itemName(entry.id)}</span>`).join('')}</div>`
+    : '<div class="item-draft-summary-empty">Each pick stays available for the assignment step.</div>';
   return `<section class="draft-shell item-draft-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
       <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
@@ -1876,10 +1885,10 @@ function renderItemDraftStage() {
       </div>`).join('')}</div>
       <div class="item-draft-summary">
         <div class="item-draft-summary-head">
-          <strong>${state.draftedItems.length ? `${state.draftedItems.length} items in your pool` : 'No items drafted yet'}</strong>
-          <span>Every pick stays available for the assignment step.</span>
+          <strong>${draftedCount ? `${draftedCount} item${draftedCount === 1 ? '' : 's'} saved for later` : 'Drafted item pool'}</strong>
+          <span>${draftedCount} of ${currentTeamSize()} item slots filled.</span>
         </div>
-        <div class="item-pool-strip">${state.draftedItems.length ? state.draftedItems.map((entry) => `<span class="item-pill">${itemIconTag(entry.id, 'small')}${itemName(entry.id)}</span>`).join('') : '<div class="empty">Your drafted items appear here.</div>'}</div>
+        ${draftedPool}
       </div>
     </section>
     <section class="draft-board">
@@ -1933,6 +1942,7 @@ function renderItemAssignStage() {
   const assignedItems = new Set(Object.values(state.itemAssignments));
   const highlightedItemKey = state.selectedDraftItem || state.draftedItems.find((entry) => assignedItems.has(entry.key))?.key || state.draftedItems[0]?.key || '';
   const highlightedItem = draftedItemEntry(highlightedItemKey);
+  const assignedCount = Object.values(state.itemAssignments).filter(Boolean).length;
   const focusIndex = Math.min(Math.max(0, state.itemAssignFocusMember || 0), Math.max(0, state.playerLoadout.length - 1));
   const focusedMember = state.playerLoadout[focusIndex] || state.playerLoadout[0];
   return `<section class="preview-shell item-assign-shell team-size-${currentTeamSize()}">
@@ -1947,6 +1957,10 @@ function renderItemAssignStage() {
         ${compactCopy ? '' : '<p>Select an item from the pool, then click the Pokemon that should carry it. Each Pokemon can hold one item, and unassigned items can stay unused.</p>'}
         <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${currentTeamSize()} Pokemon</span><span>${highlightedItem ? `Selected: ${itemName(highlightedItem.id)}` : 'Select an item to inspect or assign'}</span></div>
       </div>
+    </section>
+    <section class="item-assign-mobile-status item-assign-mobile-only">
+      <div class="item-assign-status-card"><span>Selected item</span><strong>${highlightedItem ? itemName(highlightedItem.id) : 'Choose an item'}</strong></div>
+      <div class="item-assign-status-card"><span>Assigned</span><strong>${assignedCount}/${currentTeamSize()} ready</strong></div>
     </section>
     <section class="draft-team-panel item-assign-pool-panel">
       <div class="draft-section-head"><div><div class="label">Drafted item pool</div><h3>Choose one to assign</h3></div><p>Click an item to arm it, then click a team card to place it.</p></div>
@@ -4125,6 +4139,30 @@ function injectStyles() {
       gap:16px;
       align-items:start;
     }
+    .menu-legal-note{
+      display:grid;
+      gap:8px;
+      padding:14px 18px;
+      border-radius:22px;
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(180deg,rgba(255,255,255,.05),rgba(255,255,255,.025));
+      box-shadow:0 18px 36px rgba(0,0,0,.14);
+    }
+    .menu-legal-note p{
+      margin:0;
+      color:var(--muted);
+      font-size:.82rem;
+      line-height:1.5;
+    }
+    .menu-project-note{
+      padding:8px 10px;
+      border-radius:16px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+      color:var(--muted);
+      font-size:.74rem;
+      line-height:1.4;
+    }
     .menu-modes,.menu-info-panel{
       padding:20px;
       display:grid;
@@ -4285,7 +4323,7 @@ function injectStyles() {
     }
     .battle-brand-logo{
       position:absolute;
-      top:-12px;
+      top:-2px;
       left:50%;
       transform:translateX(-50%);
       z-index:2;
@@ -5741,6 +5779,36 @@ function injectStyles() {
       font-size:.72rem;
       line-height:1.25;
     }
+    .item-draft-summary-empty{
+      padding:9px 10px;
+      border-radius:14px;
+      border:1px dashed rgba(255,255,255,.08);
+      background:rgba(255,255,255,.03);
+      color:var(--muted);
+      font-size:.72rem;
+      line-height:1.28;
+    }
+    .item-assign-mobile-status{
+      display:none;
+    }
+    .item-assign-status-card{
+      display:grid;
+      gap:4px;
+      padding:10px 12px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.08);
+      background:linear-gradient(180deg,rgba(255,255,255,.06),rgba(255,255,255,.03));
+    }
+    .item-assign-status-card span{
+      color:var(--muted);
+      font-size:.66rem;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+    }
+    .item-assign-status-card strong{
+      font-size:.92rem;
+      line-height:1.18;
+    }
     .item-draft-shell .draft-board{
       grid-template-rows:auto 1fr;
     }
@@ -5780,6 +5848,9 @@ function injectStyles() {
       .battle-center{
         width:min(72vw,1080px);
         margin:0 auto;
+      }
+      .battle-brand-logo{
+        top:6px;
       }
       .battle-brand-logo img{
         width:min(22vw,258px);
@@ -6189,9 +6260,14 @@ function injectStyles() {
       .menu-copy,.menu-showcase,.menu-info-panel,.menu-modes{
         border-radius:24px;
       }
-      .menu-copy,.menu-modes,.menu-info-panel{
+      .menu-copy,.menu-modes,.menu-info-panel,.menu-legal-note{
         padding:14px;
         gap:12px;
+      }
+      .menu-project-note{
+        padding:7px 9px;
+        font-size:.68rem;
+        line-height:1.32;
       }
       .draft-shell{
         gap:8px;
@@ -6215,6 +6291,11 @@ function injectStyles() {
         min-height:calc(100svh - 20px);
         grid-template-rows:auto auto auto;
         overflow:visible;
+      }
+      .item-assign-shell{
+        height:auto;
+        min-height:0;
+        align-content:start;
       }
       .link-preview-shell{
         gap:8px;
@@ -6656,6 +6737,11 @@ function injectStyles() {
       .item-assign-desktop-only{
         display:none;
       }
+      .item-assign-mobile-status{
+        display:grid;
+        grid-template-columns:repeat(2,minmax(0,1fr));
+        gap:8px;
+      }
       .item-assign-mobile-only{
         display:grid;
         gap:8px;
@@ -6669,6 +6755,7 @@ function injectStyles() {
       }
       .item-assign-item-slide{
         flex-basis:88%;
+        min-height:128px;
       }
       .item-picker-card{
         flex-basis:78%;
@@ -6692,10 +6779,13 @@ function injectStyles() {
       }
       .item-assign-member-slide{
         flex-basis:88%;
+        min-height:148px;
       }
       .item-assign-card.compact{
         padding:10px;
         gap:8px;
+        min-height:148px;
+        align-content:start;
       }
       .item-assign-card.compact .item-assign-head{
         grid-template-columns:auto minmax(0,1fr) auto;
@@ -6868,6 +6958,8 @@ function injectStyles() {
       }
       .item-assign-item-detail-carousel .item-info-card{
         padding:12px;
+        min-height:128px;
+        align-content:start;
       }
       .item-assign-item-detail-carousel .item-info-head strong{
         font-size:.94rem;
@@ -6991,6 +7083,9 @@ function injectStyles() {
         font-size:clamp(1.82rem,8.6vw,2.38rem);
         line-height:.94;
       }
+      .team-size-6.item-draft-shell .draft-hero-copy h2{
+        font-size:clamp(1.54rem,7.6vw,2rem);
+      }
       .item-draft-shell .draft-chip-row span:last-child{
         display:none;
       }
@@ -7002,8 +7097,32 @@ function injectStyles() {
       .item-draft-shell .item-draft-team-strip{
         gap:5px;
       }
+      .team-size-6.item-draft-shell .draft-section-head{
+        gap:4px;
+      }
+      .team-size-6.item-draft-shell .draft-section-head h3{
+        font-size:.88rem;
+      }
       .item-draft-shell .draft-board{
         grid-template-rows:auto 1fr;
+      }
+      .item-draft-summary{
+        padding:8px 10px;
+        gap:6px;
+      }
+      .item-draft-summary .item-pool-strip{
+        display:flex;
+        gap:6px;
+        overflow-x:auto;
+        overflow-y:hidden;
+        padding-bottom:2px;
+        scrollbar-width:none;
+      }
+      .item-draft-summary .item-pool-strip::-webkit-scrollbar{
+        display:none;
+      }
+      .item-draft-summary .item-pill{
+        flex:0 0 auto;
       }
       .item-draft-shell .item-draft-card{
         min-height:132px;
@@ -7484,9 +7603,20 @@ function injectStyles() {
     }
     @media (max-width:720px) and (max-height:780px){
       body{padding:8px}
+      .draft-view{
+        height:auto;
+        min-height:calc(100svh - 16px);
+      }
+      .draft-view .main{
+        height:auto;
+        overflow:visible;
+      }
       .draft-shell{
         gap:6px;
         padding:2px 0 0;
+        height:auto;
+        min-height:calc(100svh - 16px);
+        overflow:visible;
       }
       .mode-settings-shell{
         gap:6px;
@@ -7565,12 +7695,22 @@ function injectStyles() {
         padding:8px;
         border-radius:18px;
       }
+      .team-size-6 .draft-hero-panel{
+        padding:7px;
+      }
       .draft-hero-copy{
         padding:8px;
         gap:6px;
       }
       .draft-hero-copy h2{
         font-size:clamp(1.18rem,6vw,1.55rem);
+      }
+      .team-size-6 .draft-hero-copy{
+        padding:7px;
+        gap:5px;
+      }
+      .team-size-6 .draft-hero-copy h2{
+        font-size:clamp(1.08rem,5.6vw,1.4rem);
       }
       .draft-team-strip{
         gap:5px;
@@ -7620,14 +7760,14 @@ function injectStyles() {
         font-size:.68rem;
       }
       .draft-choice-grid{
-        grid-auto-columns:82%;
+        grid-auto-columns:80%;
         gap:8px;
         padding-right:20%;
         align-items:start;
       }
       .draft-choice-card{
-        padding:8px;
-        gap:6px;
+        padding:7px;
+        gap:5px;
       }
       .draft-choice-card h3{
         margin:0;
@@ -7639,15 +7779,15 @@ function injectStyles() {
       }
       .draft-choice-body{
         display:grid;
-        grid-template-columns:64px 1fr;
-        gap:6px;
+        grid-template-columns:60px 1fr;
+        gap:5px;
       }
       .draft-choice-sprite{
-        min-width:64px;
+        min-width:60px;
       }
       .draft-choice-sprite .sprite.lg{
-        width:64px;
-        height:64px;
+        width:60px;
+        height:60px;
       }
       .draft-choice-copy{
         gap:6px;
@@ -7697,6 +7837,46 @@ function injectStyles() {
         padding:7px 10px;
         font-size:.92rem;
       }
+      .item-draft-shell{
+        min-height:calc(100svh - 16px);
+      }
+      .item-draft-shell .draft-team-panel{
+        gap:5px;
+      }
+      .item-draft-shell .draft-section-head{
+        gap:4px;
+      }
+      .item-draft-shell .draft-section-head h3{
+        font-size:.88rem;
+      }
+      .item-draft-summary{
+        padding:7px 8px;
+      }
+      .item-draft-summary-empty{
+        padding:7px 8px;
+        font-size:.68rem;
+      }
+      .item-assign-shell{
+        min-height:0;
+      }
+      .item-assign-status-card{
+        padding:8px 10px;
+      }
+      .item-assign-status-card strong{
+        font-size:.82rem;
+      }
+      .item-assign-item-slide{
+        min-height:118px;
+      }
+      .item-assign-item-slide .item-info-card{
+        min-height:118px;
+      }
+      .item-assign-member-slide{
+        min-height:138px;
+      }
+      .item-assign-member-slide .item-assign-card.compact{
+        min-height:138px;
+      }
       .link-preview-order-panel .preview-card{
         min-height:52px;
         padding:5px 7px;
@@ -7720,15 +7900,15 @@ function injectStyles() {
       }
       .team-size-6 .item-draft-team-strip .draft-team-slot{
         padding:6px 5px;
-        min-height:88px;
-        height:88px;
+        min-height:80px;
+        height:80px;
       }
       .team-size-6 .item-draft-grid{
         display:grid;
         grid-auto-flow:column;
-        grid-auto-columns:78%;
+        grid-auto-columns:74%;
         grid-template-columns:none;
-        gap:8px;
+        gap:6px;
         overflow-x:auto;
         overflow-y:hidden;
         padding-bottom:2px;
@@ -7738,6 +7918,9 @@ function injectStyles() {
       .team-size-6 .item-draft-grid .item-draft-card{
         scroll-snap-align:start;
         min-width:0;
+        min-height:118px;
+        padding:8px;
+        gap:5px;
       }
       .team-size-6 .reroll-toolbar{
         padding:8px;
@@ -7859,6 +8042,7 @@ function injectStyles() {
       .team-size-6 .item-assign-item-detail-carousel .item-info-card{
         padding:9px 10px;
         gap:7px;
+        min-height:116px;
       }
       .team-size-6 .item-assign-item-detail-carousel .item-info-head strong{
         font-size:.82rem;
@@ -8023,8 +8207,8 @@ function injectStyles() {
       }
       .team-size-6 .item-draft-team-strip .draft-team-slot{
         padding:5px 4px;
-        min-height:82px;
-        height:82px;
+        min-height:76px;
+        height:76px;
       }
       .team-size-6 .item-draft-team-strip .draft-team-slot .sprite.sm{
         width:24px;
@@ -8040,11 +8224,11 @@ function injectStyles() {
         font-size:.62rem;
       }
       .team-size-6 .item-draft-grid{
-        grid-auto-columns:76%;
-        gap:6px;
+        grid-auto-columns:72%;
+        gap:5px;
       }
       .team-size-6 .item-draft-card{
-        min-height:126px;
+        min-height:116px;
       }
       .team-size-6 .item-draft-card > .tiny{
         font-size:.64rem;
@@ -8102,6 +8286,7 @@ function injectStyles() {
       .team-size-6 .item-assign-item-detail-carousel .item-info-card{
         padding:8px;
         gap:6px;
+        min-height:108px;
       }
       .team-size-6 .item-assign-item-detail-carousel .item-info-head strong{
         font-size:.76rem;
