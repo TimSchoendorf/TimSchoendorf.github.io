@@ -1940,7 +1940,7 @@ function renderItemAssignCarouselSlide(member, index) {
 function renderItemAssignProgressSlot(member, index) {
   const assignedItem = playerAssignedItemFor(member.name);
   return `<button class="item-assign-progress-slot ${index === state.itemAssignFocusMember ? 'active' : ''} ${assignedItem ? 'assigned' : ''}" data-item-assign-focus="${index}">
-    <span class="item-assign-progress-index">${index + 1}</span>
+    <span class="item-assign-progress-sprite">${spriteTag(member, 'front', 'sm')}</span>
     <span class="item-assign-progress-state">${assignedItem ? itemIconTag(assignedItem, 'small') : '<span class="item-assign-progress-empty-dot"></span>'}</span>
   </button>`;
 }
@@ -2151,9 +2151,9 @@ function renderCombatant(mon, facing, sideKey, side, team = []) {
       ${side === 'player' ? renderBattleBallRow(team, side) : ''}
       <div class="battle-status battle-status-${side}">
         <div class="battle-status-top">
-          <div class="battle-status-name"><div class="battle-status-name-row"><strong>${mon.name}</strong>${infoButton}</div></div>
+          <div class="battle-status-name"><div class="battle-status-name-row"><strong>${mon.name}</strong></div></div>
         </div>
-        <div class="battle-status-meta"><span>Lv100</span><span>${mon.status || 'OK'}</span></div>
+        <div class="battle-status-meta"><span>Lv100</span>${infoButton}<span>${mon.status || 'OK'}</span></div>
         <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill ${hpTone(percent)}" style="width:${percent}%"></div></div></div>
         <div class="tiny">${mon.condition}</div>
       </div>
@@ -4499,7 +4499,7 @@ function injectStyles() {
       width:100%;
       max-width:none;
     }
-    .battle-status-top,.battle-status-meta,.battle-hp-row{
+    .battle-status-top,.battle-hp-row{
       display:flex;
       align-items:center;
       justify-content:space-between;
@@ -4524,10 +4524,10 @@ function injectStyles() {
     .battle-status .info-chip{
       position:relative;
       z-index:2;
-      min-width:42px;
-      min-height:28px;
-      padding:6px 10px;
-      font-size:.65rem;
+      min-width:36px;
+      min-height:22px;
+      padding:4px 7px;
+      font-size:.56rem;
       letter-spacing:.04em;
       box-shadow:inset 0 0 0 1px rgba(255,255,255,.1), 0 8px 18px rgba(0,0,0,.16);
     }
@@ -4542,6 +4542,11 @@ function injectStyles() {
       white-space:nowrap;
     }
     .battle-status-meta{
+      display:grid;
+      grid-auto-flow:column;
+      justify-content:start;
+      align-items:center;
+      gap:6px;
       margin-top:3px;
       color:#4d5b41;
       font-size:.77rem;
@@ -4564,9 +4569,9 @@ function injectStyles() {
       margin-top:0;
     }
     .battle-status-info{
-      position:absolute !important;
-      top:-2px;
-      right:4px;
+      position:relative !important;
+      top:auto;
+      right:auto;
       flex:0 0 auto;
       border-radius:999px;
     }
@@ -5695,15 +5700,14 @@ function injectStyles() {
       overflow-x:auto;
       overflow-y:hidden;
       padding:2px 0 4px;
-      scroll-snap-type:x mandatory;
       scrollbar-width:none;
+      scroll-behavior:auto;
     }
     .item-assign-member-carousel::-webkit-scrollbar{
       display:none;
     }
     .item-assign-member-slide{
-      flex:0 0 100%;
-      scroll-snap-align:center;
+      flex:0 0 84%;
     }
     .item-assign-member-slide .item-assign-card.compact{
       min-height:0;
@@ -5752,15 +5756,9 @@ function injectStyles() {
       background:linear-gradient(180deg,rgba(242,217,123,.18),rgba(198,165,72,.14));
       color:var(--text);
     }
-    .item-assign-progress-index{
-      width:20px;
-      height:20px;
-      display:grid;
-      place-items:center;
-      border-radius:50%;
-      background:rgba(255,255,255,.08);
-      font-size:.62rem;
-      font-weight:800;
+    .item-assign-progress-sprite .sprite.sm{
+      width:24px;
+      height:24px;
     }
     .item-assign-progress-state{
       min-height:18px;
@@ -5784,20 +5782,19 @@ function injectStyles() {
       overflow-x:auto;
       overflow-y:hidden;
       padding:2px 0 4px;
-      scroll-snap-type:x mandatory;
       scrollbar-width:none;
+      scroll-behavior:auto;
     }
     .item-assign-item-detail-carousel::-webkit-scrollbar{
       display:none;
     }
     .item-assign-item-slide{
-      flex:0 0 100%;
+      flex:0 0 84%;
       padding:0;
       border:none;
       background:none;
       color:inherit;
       text-align:left;
-      scroll-snap-align:center;
       cursor:pointer;
     }
     .item-assign-item-slide .item-info-card{
@@ -7618,23 +7615,23 @@ function injectStyles() {
       .battle-status-shell-foe{top:var(--battle-pad-top);left:var(--battle-pad-x);width:clamp(120px,36%,154px);max-width:none}
       .battle-status-shell-player{right:var(--battle-pad-x);bottom:var(--battle-player-line);width:clamp(136px,40%,176px);max-width:none}
       .battle-status .info-chip{
-        min-width:42px;
-        min-height:28px;
-        padding:6px 9px;
-        font-size:.6rem;
+        min-width:34px;
+        min-height:20px;
+        padding:4px 6px;
+        font-size:.54rem;
       }
       .battle-status-name-row{
         gap:6px;
       }
       .battle-status-player .info-chip{
-        min-width:40px;
-        min-height:26px;
-        padding:5px 8px;
-        font-size:.62rem;
+        min-width:32px;
+        min-height:20px;
+        padding:4px 6px;
+        font-size:.54rem;
       }
       .battle-status-info{
-        top:-3px;
-        right:-3px;
+        top:auto;
+        right:auto;
       }
       .battle-status-meta{
         font-size:.68rem;
@@ -8288,6 +8285,9 @@ function injectStyles() {
       .team-size-6 .item-assign-member-carousel{
         gap:6px;
       }
+      .team-size-6 .item-assign-member-slide{
+        flex-basis:80%;
+      }
       .team-size-6 .item-assign-card.compact{
         padding:8px;
         gap:6px;
@@ -8309,6 +8309,9 @@ function injectStyles() {
         padding:9px 10px;
         gap:7px;
         min-height:116px;
+      }
+      .team-size-6 .item-assign-item-slide{
+        flex-basis:80%;
       }
       .team-size-6 .item-assign-item-detail-carousel .item-info-head strong{
         font-size:.82rem;
