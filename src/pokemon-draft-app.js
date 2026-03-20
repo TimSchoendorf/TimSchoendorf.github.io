@@ -252,6 +252,7 @@ const state = {
   logs: [],
   battleFeed: [],
   message: 'Choose Bot Run or Link Battle.',
+  leaveConfirmAction: '',
   actionLocked: false,
   selectedChoice: '',
   battleAnimating: false,
@@ -396,6 +397,7 @@ function freshLinkState() {
     peerId: '',
     remoteName: 'Opponent',
     status: 'No connection yet.',
+    alert: '',
     localSide: 'p1',
     draftRound: 0,
     localPack: [],
@@ -1611,6 +1613,22 @@ function renderInspectModal() {
   </div>`;
 }
 
+function renderLeaveConfirmModal() {
+  if (!state.leaveConfirmAction) return '';
+  return `<div class="modal-backdrop" data-close-leave="1">
+    <div class="modal leave-confirm-modal" onclick="event.stopPropagation()">
+      <div class="modal-head"><div><div class="label">Leave room</div><h3>Leave the Link Battle room?</h3></div><button class="ghost-btn" data-close-leave="1">Close</button></div>
+      <div class="modal-body leave-confirm-body">
+        <p>You are about to leave the room, are you sure?</p>
+        <div class="actions leave-confirm-actions">
+          <button class="primary-btn" data-action="confirm-leave-room">Yes</button>
+          <button class="ghost-btn" data-action="cancel-leave-room">No</button>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
 function renderMenuStage() {
   const generation = currentGenerationConfig();
   const botCard = generation.modeCards.bot;
@@ -2064,7 +2082,7 @@ function renderLinkConnectionCard(kind) {
       <p>${hostReady ? 'The room is ready. Share the 5-letter code and the draft begins as soon as the other player connects.' : 'Choose the draft rules first. After Continue, this card returns with the live 5-letter host code.'}</p>
       <button class="primary-btn" data-action="host-link">${hostReady ? 'Host with new rules' : 'Set rules & host'}</button>
       <div class="code-box link-code-box">${state.link.peerId || '-----'}</div>
-      <div class="link-card-note">${hostReady ? `${attackModeLabel()} · ${currentTeamSize()} Pokemon · ${itemDraftEnabled() ? 'Held item draft on' : 'Held item draft off'}` : 'The code appears here after the rules are confirmed.'}</div>
+      ${hostReady ? `<div class="link-card-note">${attackModeLabel()} · ${currentTeamSize()} Pokemon · ${itemDraftEnabled() ? 'Held item draft on' : 'Held item draft off'}</div>` : ''}
     </article>`;
   }
   return `<article class="link-setup-card">
@@ -2073,7 +2091,7 @@ function renderLinkConnectionCard(kind) {
     <p>Join the hosted room. The host rules sync automatically, then both players move straight into the draft.</p>
     <input id="joinCodeInput" class="text-input" maxlength="5" placeholder="Enter room code" value="${state.hostJoinCode}">
     <button class="primary-btn" data-action="join-link">Connect</button>
-    <div class="link-card-note">${state.link.connected ? `Connected to ${state.link.remoteName}.` : 'You only ever see your own draft and order screens.'}</div>
+    ${state.link.connected ? `<div class="link-card-note">Connected to ${state.link.remoteName}.</div>` : ''}
   </article>`;
 }
 
@@ -2103,6 +2121,7 @@ function renderLinkSetupStage() {
         </div>
       </div>
     </section>
+    ${state.link.alert ? `<div class="link-setup-alert" role="alert">${state.link.alert}</div>` : ''}
     <section class="link-setup-grid">
       ${renderLinkConnectionCard('host')}
       ${renderLinkConnectionCard('guest')}
@@ -2290,11 +2309,13 @@ function render() {
     app.innerHTML = `<div class="app-shell menu-view theme-${state.generation}">
       <main class="main menu-main">${renderStage()}</main>
       ${renderInspectModal()}
+      ${renderLeaveConfirmModal()}
     </div>`;
   } else if (draftView) {
     app.innerHTML = `<div class="app-shell draft-view ${previewFlowView ? 'preview-flow-view' : ''} theme-${state.generation}">
       <main class="main draft-main">${renderStage()}</main>
       ${renderInspectModal()}
+      ${renderLeaveConfirmModal()}
     </div>`;
   } else {
     app.innerHTML = `<div class="app-shell ${battleView ? 'battle-view' : ''} theme-${state.generation}">
@@ -2302,6 +2323,7 @@ function render() {
       <main class="main">${renderStage()}</main>
       <aside class="side"><div class="panel"><div class="label">Notes</div><div class="empty">Rules follow the active generation.</div></div><div class="panel"><div class="label">Log</div>${state.logs.map((line) => `<div class="log-line">${line}</div>`).join('')}</div></aside>
       ${renderInspectModal()}
+      ${renderLeaveConfirmModal()}
     </div>`;
   }
   bindEvents();
@@ -2379,6 +2401,10 @@ function bindEvents() {
     openInspect(button.dataset.inspect);
   }));
   document.querySelectorAll('[data-close-inspect]').forEach((button) => button.addEventListener('click', closeInspect));
+  document.querySelectorAll('[data-close-leave]').forEach((button) => button.addEventListener('click', () => {
+    state.leaveConfirmAction = '';
+    render();
+  }));
   document.getElementById('joinCodeInput')?.addEventListener('input', (event) => {
     const value = String(event.target.value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5);
     state.hostJoinCode = value;
@@ -2660,7 +2686,57 @@ function setItemAssignFocus(index) {
   render();
 }
 
+function leaveRoomPhases() {
+  return new Set(['link-draft', 'reroll', 'item-draft', 'item-assign', 'link-preview', 'battle']);
+}
+
+function shouldConfirmLeaveRoom(action) {
+  if (action !== 'go-menu') return false;
+  if (state.playMode !== 'link') return false;
+  if (!leaveRoomPhases().has(state.phase)) return false;
+  return Boolean(state.link.connected || state.link.peerId || state.link.conn || state.link.peer);
+}
+
+function openLeaveConfirm(action) {
+  state.leaveConfirmAction = action;
+  render();
+}
+
+function returnToLinkSetupAfterDisconnect(alert, status = 'Connection closed.') {
+  resetDraftProgress();
+  resetBattleState();
+  state.playMode = 'link';
+  state.pendingMode = 'link';
+  state.phase = 'link-setup';
+  state.hostJoinCode = '';
+  state.message = 'Choose whether to host a room or join one.';
+  state.link = freshLinkState();
+  state.link.status = status;
+  state.link.alert = alert;
+  render();
+}
+
+function leaveToMenu() {
+  teardownLink(true);
+  state.playMode = 'bot';
+  state.phase = 'menu';
+  state.message = 'Choose Bot Run or Link Battle.';
+  resetBattleState();
+  render();
+}
+
 function handleAction(action) {
+  if (action === 'cancel-leave-room') {
+    state.leaveConfirmAction = '';
+    return render();
+  }
+  if (action === 'confirm-leave-room') {
+    const nextAction = state.leaveConfirmAction;
+    state.leaveConfirmAction = '';
+    if (nextAction === 'go-menu') return leaveToMenu();
+    if (nextAction) return handleAction(nextAction);
+    return render();
+  }
   if (action === 'set-generation-gen1') {
     state.generation = 'gen1';
     state.message = 'Choose Bot Run or Link Battle.';
@@ -2757,16 +2833,13 @@ function handleAction(action) {
   if (action === 'ready-link-battle') return readyLinkBattle();
   if (action === 'link-rematch') return beginLinkRematch(true);
   if (action === 'go-menu') {
-    teardownLink();
-    state.playMode = 'bot';
-    state.phase = 'menu';
-    state.message = 'Choose Bot Run or Link Battle.';
-    resetBattleState();
-    return render();
+    if (shouldConfirmLeaveRoom(action)) return openLeaveConfirm(action);
+    return leaveToMenu();
   }
 }
 
-function teardownLink() {
+function teardownLink(suppressNotice = false) {
+  if (state.link.conn) state.link.conn.__suppressCloseNotice = suppressNotice;
   state.link.conn?.close?.();
   state.link.peer?.destroy?.();
   state.link = freshLinkState();
@@ -2884,9 +2957,9 @@ function attachConnection(conn, role) {
   });
   conn.on('data', handleLinkMessage);
   conn.on('close', () => {
+    if (conn.__suppressCloseNotice) return;
     state.link.connected = false;
-    state.link.status = 'Connection closed.';
-    render();
+    returnToLinkSetupAfterDisconnect('Enemy left.');
   });
 }
 
@@ -4988,6 +5061,10 @@ function injectStyles() {
       padding:20px;
       background:#16211a;
     }
+    .leave-confirm-modal{
+      width:min(460px,100%);
+      max-height:none;
+    }
     .modal-head,.modal-body{
       display:flex;
       gap:16px;
@@ -5001,6 +5078,31 @@ function injectStyles() {
       min-height:0;
       overflow:auto;
       padding-right:4px;
+    }
+    .leave-confirm-body{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:18px;
+      overflow:visible;
+      padding-right:0;
+    }
+    .leave-confirm-body p{
+      margin:0;
+      color:var(--text);
+      line-height:1.5;
+    }
+    .leave-confirm-actions{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+    }
+    .link-setup-alert{
+      text-align:center;
+      color:#ff8b8b;
+      font-weight:700;
+      font-size:clamp(1rem,2vw,1.3rem);
+      letter-spacing:.02em;
+      padding:6px 12px 2px;
     }
     .inspect-sidebar{
       display:grid;
