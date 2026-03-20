@@ -297,6 +297,53 @@ async function testFocusEnergyBuggedCritRate() {
   assert(focusCrits < baseCrits / 2, `Focus Energy test: expected a much lower crit count after Focus Energy, got base=${baseCrits}, focus=${focusCrits}`);
 }
 
+async function testFlyAndDigSemiInvulnerability() {
+  const flyResult = await runScenario({
+    name: 'fly-semi-invulnerable',
+    p1Team: makeTeam('Pidgeot', ['fly']),
+    p2Team: makeTeam('Mew', ['tackle']),
+    doneWhen: ({transcript}) => transcript.includes('|move|p1a: Pidgeot|Fly|p2a: Mew|[from] Fly'),
+  });
+  assert(flyResult.transcript.includes('|move|p1a: Pidgeot|Fly||[still]'), 'Fly test: charge turn did not occur');
+  assert(flyResult.transcript.includes("|-prepare|p1a: Pidgeot|Fly"), 'Fly test: prepare marker missing');
+  assert(flyResult.transcript.includes("|move|p2a: Mew|Tackle|p1a: Pidgeot|[miss]"), 'Fly test: target was not missed during invulnerability');
+  assert(flyResult.transcript.includes("|-message|The foe Pidgeot can't be hit while invulnerable!"), 'Fly test: semi-invulnerable message missing');
+
+  const digResult = await runScenario({
+    name: 'dig-semi-invulnerable',
+    p1Team: makeTeam('Sandslash', ['dig']),
+    p2Team: makeTeam('Mew', ['tackle']),
+    doneWhen: ({transcript}) => transcript.includes('|move|p1a: Sandslash|Dig|p2a: Mew|[from] Dig'),
+  });
+  assert(digResult.transcript.includes('|move|p1a: Sandslash|Dig||[still]'), 'Dig test: charge turn did not occur');
+  assert(digResult.transcript.includes('|-prepare|p1a: Sandslash|Dig'), 'Dig test: prepare marker missing');
+  assert(digResult.transcript.includes('|move|p2a: Mew|Tackle|p1a: Sandslash|[miss]'), 'Dig test: target was not missed during invulnerability');
+}
+
+async function testTwoTurnChargeMoves() {
+  const solarResult = await runScenario({
+    name: 'solarbeam-charge',
+    p1Team: makeTeam('Venusaur', ['solarbeam']),
+    p2Team: makeTeam('Mew', ['splash']),
+    doneWhen: ({transcript}) => transcript.includes('|move|p1a: Venusaur|Solar Beam|p2a: Mew'),
+  });
+  const solarChargeIndex = solarResult.transcript.indexOf('|move|p1a: Venusaur|Solar Beam||[still]');
+  const solarHitIndex = solarResult.transcript.indexOf('|move|p1a: Venusaur|Solar Beam|p2a: Mew');
+  const solarDamageIndex = solarResult.transcript.indexOf('|-damage|p2a: Mew|', solarChargeIndex);
+  assert(solarChargeIndex >= 0 && solarHitIndex > solarChargeIndex, 'Solar Beam test: expected a charge turn followed by a hit turn');
+  assert(!(solarDamageIndex > solarChargeIndex && solarDamageIndex < solarHitIndex), 'Solar Beam test: damage happened on the charge turn');
+
+  const razorResult = await runScenario({
+    name: 'razorwind-charge',
+    p1Team: makeTeam('Venusaur', ['razorwind']),
+    p2Team: makeTeam('Mew', ['splash']),
+    doneWhen: ({transcript}) => transcript.includes('|move|p1a: Venusaur|Razor Wind|p2a: Mew'),
+  });
+  const razorChargeIndex = razorResult.transcript.indexOf('|move|p1a: Venusaur|Razor Wind||[still]');
+  const razorHitIndex = razorResult.transcript.indexOf('|move|p1a: Venusaur|Razor Wind|p2a: Mew');
+  assert(razorChargeIndex >= 0 && razorHitIndex > razorChargeIndex, 'Razor Wind test: expected a charge turn followed by a hit turn');
+}
+
 async function main() {
   await testCounter();
   await testBide();
@@ -308,6 +355,8 @@ async function main() {
   await testHyperBeamRechargeRules();
   await testSleepWakeConsumesTurn();
   await testFocusEnergyBuggedCritRate();
+  await testFlyAndDigSemiInvulnerability();
+  await testTwoTurnChargeMoves();
   console.log('Gen 1 mechanics regression tests passed.');
 }
 

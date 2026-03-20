@@ -624,7 +624,7 @@ class BattleAttackViewport {
     const originalPlayer = {x: metrics.x + (40 * metrics.scale), y: metrics.y + (84 * metrics.scale)};
     const originalFoe = {x: metrics.x + (112 * metrics.scale), y: metrics.y + (40 * metrics.scale)};
     const actualPlayerAttack = this.spriteImpactPoint(this.playerSprite, {x: 0.62, y: 0.42});
-    const actualPlayerTarget = this.spriteImpactPoint(this.playerSprite, {x: 0.44, y: 0.72});
+    const actualPlayerTarget = this.spriteImpactPoint(this.playerSprite, {x: 0.44, y: 0.66});
     const actualFoeAttack = this.spriteImpactPoint(this.foeSprite, {x: 0.26, y: 0.56});
     const actualFoeTarget = this.spriteImpactPoint(this.foeSprite, {x: 0.3, y: 0.58});
     return {
@@ -997,6 +997,8 @@ function currentBattleViewport(assets) {
 }
 
 function shouldAnimateMove(lines, moveIndex) {
+  const moveParts = lines[moveIndex].split('|');
+  if (moveParts.includes('[still]')) return false;
   let sawFailure = false;
   let sawSuccess = false;
   for (let index = moveIndex + 1; index < lines.length; index += 1) {
@@ -1533,7 +1535,7 @@ function renderPreviewCard(member, index, controls) {
   return `<div class="preview-card" style="background:${typeGradient(member.types)}">
     <div class="preview-card-media"><span class="preview-rank">${index + 1}</span>${spriteTag(member, 'front', 'sm')}</div>
     <div class="preview-copy"><strong>${member.name}</strong><div class="tiny">${moveSummaryText(member, currentTeamSize() === 6 ? 2 : 4)}${member.set?.item ? ` | ${itemName(member.set.item)}` : ''}</div></div>
-    <div class="preview-actions"><button class="info-chip" data-inspect="${member.name}">Info</button>${controls ? `<button class="mini-btn" data-lead-index="${index}" ${index === 0 ? 'disabled' : ''}>Lead</button>` : ''}</div>
+    <div class="preview-actions"><button class="info-chip" data-inspect="${member.name}">Info</button>${controls ? `<button class="lead-chip" data-lead-index="${index}" ${index === 0 ? 'disabled' : ''}>Lead</button>` : ''}</div>
   </div>`;
 }
 
@@ -1853,7 +1855,7 @@ function renderItemDraftCard(item) {
 
 function renderItemDraftStage() {
   const round = Math.min(state.itemDraftRound || 1, currentTeamSize());
-  return `<section class="draft-shell team-size-${currentTeamSize()}">
+  return `<section class="draft-shell item-draft-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
       <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${state.playMode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
@@ -1890,7 +1892,7 @@ function renderItemDraftStage() {
 function renderItemAssignMemberCard(member, {compact = false} = {}) {
   const assignedItem = playerAssignedItemFor(member.name);
   return `<article class="item-assign-card ${compact ? 'compact' : ''}" style="background:${typeGradient(member.types)}">
-    <div class="item-assign-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="tiny">${moveSummaryText(member, currentTeamSize() === 6 ? 2 : 4)}</div></div><button class="info-chip" data-inspect="${member.name}">Info</button></div>
+    <div class="item-assign-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="item-assign-type-row">${member.types.map((type) => moveTypeBadge(type, 'compact')).join('')}</div><div class="tiny">${moveSummaryText(member, currentTeamSize() === 6 ? 2 : 4)}</div></div><button class="info-chip" data-inspect="${member.name}">Info</button></div>
     <div class="item-assign-current">${assignedItem ? `<span class="item-pill assigned">${itemName(assignedItem)}</span>` : '<span class="item-pill empty">No held item</span>'}</div>
     <div class="card-actions"><button class="primary-btn" data-assign-item="${member.name}" ${state.selectedDraftItem ? '' : 'disabled'}>Assign selected</button><button class="ghost-btn compact-btn" data-clear-item="${member.name}" ${assignedItem ? '' : 'disabled'}>Clear</button></div>
   </article>`;
@@ -3269,6 +3271,33 @@ function injectStyles() {
     .ghost-btn,.mini-btn{
       background:rgba(255,255,255,.14);
       color:var(--text);
+    }
+    .lead-chip{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      min-width:46px;
+      min-height:32px;
+      padding:8px 12px;
+      border:none;
+      border-radius:999px;
+      background:linear-gradient(180deg,rgba(242,217,123,.96),rgba(198,165,72,.92));
+      color:var(--ink);
+      cursor:pointer;
+      font-size:.78rem;
+      font-weight:700;
+      letter-spacing:.02em;
+      transition:transform .14s ease, background .14s ease, color .14s ease;
+      box-shadow:inset 0 0 0 1px rgba(116,92,32,.14),0 6px 16px rgba(0,0,0,.12);
+    }
+    .lead-chip:hover:not(:disabled){
+      transform:translateY(-1px);
+      background:linear-gradient(180deg,#f6e28d,#d2ae52);
+    }
+    .lead-chip:disabled{
+      opacity:.42;
+      cursor:default;
+      transform:none;
     }
     .info-chip{
       display:inline-flex;
@@ -5300,6 +5329,17 @@ function injectStyles() {
     .item-info-desc{
       line-height:1.35;
     }
+    .item-assign-type-row{
+      display:flex;
+      flex-wrap:wrap;
+      gap:6px;
+      margin-top:4px;
+    }
+    .type-badge.compact{
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:.62rem;
+    }
     .reroll-move-row{
       display:flex;
       gap:10px;
@@ -5701,6 +5741,9 @@ function injectStyles() {
       font-size:.72rem;
       line-height:1.25;
     }
+    .item-draft-shell .draft-board{
+      grid-template-rows:auto 1fr;
+    }
     .draft-team-slot.compact{
       grid-template-columns:minmax(0,1fr) auto;
       align-items:center;
@@ -5861,12 +5904,10 @@ function injectStyles() {
         grid-template-columns:repeat(2,minmax(0,auto));
         gap:6px;
       }
-      .preview-actions .mini-btn{
-        background:rgba(24,33,23,.18);
-        color:var(--ink);
-        box-shadow:inset 0 0 0 1px rgba(24,33,23,.1);
+      .preview-actions .lead-chip{
+        box-shadow:inset 0 0 0 1px rgba(116,92,32,.14),0 6px 16px rgba(0,0,0,.12);
       }
-      .preview-actions .mini-btn:disabled{
+      .preview-actions .lead-chip:disabled{
         opacity:.35;
       }
       .battle-stage{
@@ -6556,6 +6597,25 @@ function injectStyles() {
         grid-template-columns:1fr 1fr;
         gap:6px;
       }
+      .team-size-6.item-draft-shell .item-draft-team-strip{
+        display:flex;
+        grid-template-columns:none;
+        overflow-x:auto;
+        overflow-y:hidden;
+        gap:6px;
+        min-height:0;
+        padding-bottom:2px;
+        scrollbar-width:none;
+      }
+      .team-size-6.item-draft-shell .item-draft-team-strip::-webkit-scrollbar{
+        display:none;
+      }
+      .team-size-6.item-draft-shell .item-draft-team-strip .draft-team-slot{
+        flex:0 0 31%;
+        min-width:0;
+        min-height:68px;
+        height:68px;
+      }
       .item-draft-team-strip .draft-team-slot{
         grid-template-columns:1fr;
         justify-items:center;
@@ -6724,7 +6784,7 @@ function injectStyles() {
         gap:3px;
       }
       .team-size-6 .preview-actions .info-chip,
-      .team-size-6 .preview-actions .mini-btn{
+      .team-size-6 .preview-actions .lead-chip{
         padding:4px 5px;
         font-size:.56rem;
       }
@@ -6742,12 +6802,12 @@ function injectStyles() {
         justify-content:end;
         gap:4px;
       }
-      .preview-actions .info-chip,.preview-actions .mini-btn{
+      .preview-actions .info-chip,.preview-actions .lead-chip{
         justify-content:center;
         padding:5px 7px;
         font-size:.62rem;
       }
-      .team-size-6 .preview-actions .info-chip,.team-size-6 .preview-actions .mini-btn{
+      .team-size-6 .preview-actions .info-chip,.team-size-6 .preview-actions .lead-chip{
         padding:4px 6px;
         font-size:.58rem;
       }
@@ -6923,6 +6983,54 @@ function injectStyles() {
       }
       .draft-board{
         grid-template-rows:auto auto 1fr;
+      }
+      .item-draft-shell .draft-hero-panel{
+        padding:8px 10px;
+      }
+      .item-draft-shell .draft-hero-copy h2{
+        font-size:clamp(1.82rem,8.6vw,2.38rem);
+        line-height:.94;
+      }
+      .item-draft-shell .draft-chip-row span:last-child{
+        display:none;
+      }
+      .item-draft-shell .draft-team-panel,
+      .item-draft-shell .draft-board{
+        padding:8px;
+        gap:6px;
+      }
+      .item-draft-shell .item-draft-team-strip{
+        gap:5px;
+      }
+      .item-draft-shell .draft-board{
+        grid-template-rows:auto 1fr;
+      }
+      .item-draft-shell .item-draft-card{
+        min-height:132px;
+        padding:9px;
+        gap:6px;
+      }
+      .item-draft-shell .item-draft-card > .tiny{
+        -webkit-line-clamp:2;
+        font-size:.68rem;
+        line-height:1.22;
+      }
+      .item-draft-shell .item-draft-card .card-actions .primary-btn{
+        min-height:34px;
+        padding:6px 10px;
+      }
+      .item-assign-shell .draft-team-panel,
+      .item-assign-shell .draft-board{
+        grid-template-rows:auto auto;
+        align-content:start;
+        padding:8px;
+        gap:6px;
+      }
+      .item-assign-shell .draft-section-head{
+        gap:4px;
+      }
+      .item-assign-shell .draft-section-head h3{
+        font-size:.92rem;
       }
       .draft-choice-grid{
         display:grid;
@@ -7231,7 +7339,7 @@ function injectStyles() {
       }
       .battle-sprite-player{
         left:7%;
-        bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 4%);
+        bottom:calc(var(--battle-feed-bottom) + var(--battle-feed-height) - 1.2%);
         width:26%;
         height:30%;
       }
@@ -7241,7 +7349,7 @@ function injectStyles() {
         transform:translateX(4%) translateY(0);
       }
       .battle-sprite-player .sprite.battle.back{
-        transform:translateX(-4%) translateY(14%);
+        transform:translateX(-4%) translateY(6%);
       }
       .battle-feed{
         left:3%;
@@ -7865,7 +7973,7 @@ function injectStyles() {
         gap:3px;
       }
       .link-preview-order-panel .preview-actions .info-chip,
-      .link-preview-order-panel .preview-actions .mini-btn{
+      .link-preview-order-panel .preview-actions .lead-chip{
         padding:4px 5px;
         font-size:.58rem;
       }
@@ -7936,15 +8044,20 @@ function injectStyles() {
         gap:6px;
       }
       .team-size-6 .item-draft-card{
-        min-height:146px;
+        min-height:126px;
       }
       .team-size-6 .item-draft-card > .tiny{
-        font-size:.68rem;
-        line-height:1.2;
+        font-size:.64rem;
+        line-height:1.16;
       }
       .team-size-6 .draft-team-panel .item-pool-strip .item-pill{
         padding:5px 8px;
         font-size:.66rem;
+      }
+      .team-size-6.item-draft-shell .item-draft-team-strip .draft-team-slot{
+        flex-basis:38%;
+        min-height:62px;
+        height:62px;
       }
       .team-size-6.item-assign-shell .preview-hero-panel,
       .team-size-6.preview-shell .preview-hero-panel,
