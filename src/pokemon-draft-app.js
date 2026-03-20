@@ -390,6 +390,7 @@ function freshLinkState() {
     peer: null,
     conn: null,
     role: 'host',
+    setupIntent: '',
     connected: false,
     peerId: '',
     remoteName: 'Opponent',
@@ -405,6 +406,19 @@ function freshLinkState() {
     remoteReady: false,
     remoteRoster: null,
   };
+}
+
+const LOBBY_CONSONANTS = 'BCDFGHJKLMNPRSTVWXYZ';
+const LOBBY_VOWELS = 'AEIOU';
+
+function randomFrom(pool) {
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function generateLobbyCode() {
+  let code = '';
+  for (let index = 0; index < 5; index += 1) code += randomFrom(index % 2 === 0 ? LOBBY_CONSONANTS : LOBBY_VOWELS);
+  return code;
 }
 
 function loadBestRun() {
@@ -2042,26 +2056,31 @@ function renderBotPreviewStage() {
 
 function renderLinkConnectionCard(kind) {
   if (kind === 'host') {
+    const hostReady = state.link.role === 'host' && Boolean(state.link.peerId);
     return `<article class="link-setup-card">
       <div class="label">Host room</div>
-      <h3>Open a room and share the code</h3>
-      <p>Create a private room code. The other player enters it and joins your hidden draft.</p>
-      <button class="primary-btn" data-action="host-link">Open room</button>
-      <div class="code-box link-code-box">${state.link.peerId || 'No code yet'}</div>
-      <div class="link-card-note">${state.link.peerId ? 'Share this code with your opponent.' : 'The code appears here after opening the room.'}</div>
+      <h3>${hostReady ? 'Share the host code' : 'Set the rules and open a room'}</h3>
+      <p>${hostReady ? 'The room is ready. Share the 5-letter code and the draft begins as soon as the other player connects.' : 'Choose the draft rules first. After Continue, this card returns with the live 5-letter host code.'}</p>
+      <button class="primary-btn" data-action="host-link">${hostReady ? 'Host with new rules' : 'Set rules & host'}</button>
+      <div class="code-box link-code-box">${state.link.peerId || '-----'}</div>
+      <div class="link-card-note">${hostReady ? `${attackModeLabel()} · ${currentTeamSize()} Pokemon · ${itemDraftEnabled() ? 'Held item draft on' : 'Held item draft off'}` : 'The code appears here after the rules are confirmed.'}</div>
     </article>`;
   }
   return `<article class="link-setup-card">
     <div class="label">Join room</div>
-    <h3>Enter a code and connect</h3>
-    <p>Use the room code from the host. Once connected, both players draft from separate 3-card packs.</p>
-    <input id="joinCodeInput" class="text-input" placeholder="Enter room code" value="${state.hostJoinCode}">
+    <h3>Enter a 5-letter code</h3>
+    <p>Join the hosted room. The host rules sync automatically, then both players move straight into the draft.</p>
+    <input id="joinCodeInput" class="text-input" maxlength="5" placeholder="Enter room code" value="${state.hostJoinCode}">
     <button class="primary-btn" data-action="join-link">Connect</button>
-    <div class="link-card-note">${state.link.connected ? `Connected to ${state.link.remoteName}.` : 'You can only see your own draft choices during the draft.'}</div>
+    <div class="link-card-note">${state.link.connected ? `Connected to ${state.link.remoteName}.` : 'You only ever see your own draft and order screens.'}</div>
   </article>`;
 }
 
 function renderLinkSetupStage() {
+  const roomPrepared = state.link.role === 'host' && Boolean(state.link.peerId);
+  const chips = roomPrepared
+    ? [currentGenerationConfig().label, '5-letter host code ready', attackModeLabel(), `${currentTeamSize()} Pokemon`, itemDraftEnabled() ? 'Held item draft on' : 'Held item draft off']
+    : [currentGenerationConfig().label, 'Choose host or join', 'Rules chosen by the host'];
   return `<section class="link-setup-shell">
     <div class="draft-topbar">
       <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
@@ -2070,16 +2089,16 @@ function renderLinkSetupStage() {
     <section class="link-setup-hero">
       <div class="link-setup-copy">
         <div class="draft-kicker-row"><span class="label">Link Terminal</span><span class="draft-status-pill">${state.link.connected ? 'Connected' : 'Setup'}</span></div>
-        <h2>Connect, draft in secret, then battle.</h2>
+        <h2>${roomPrepared ? 'Room open. Share the code, then jump into the draft.' : 'Choose whether to host or join a Link Battle room.'}</h2>
         <p>${state.link.status}</p>
-        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>Private room code</span><span>${currentTeamSize()} hidden draft rounds</span><span>${attackModeLabel()}</span><span>${itemDraftEnabled() ? 'Held item draft on' : 'Held item draft off'}</span></div>
+        <div class="draft-chip-row">${chips.map((chip) => `<span>${chip}</span>`).join('')}</div>
       </div>
       <div class="link-setup-stage-card">
         <div class="label">How it works</div>
         <div class="link-setup-step-grid">
-          <div class="link-setup-step"><span>1</span><strong>Open or join a room</strong><div>One player hosts, one enters the code.</div></div>
-          <div class="link-setup-step"><span>2</span><strong>Draft in secret</strong><div>Each round shows only your own three options.</div></div>
-          <div class="link-setup-step"><span>3</span><strong>Lock your order</strong><div>Both teams are revealed only when battle begins.</div></div>
+          <div class="link-setup-step"><span>1</span><strong>Host or join</strong><div>The host sets the rules, opens the room, and shares the 5-letter code.</div></div>
+          <div class="link-setup-step"><span>2</span><strong>Draft like Bot Run</strong><div>Both players draft through the full flow without waiting between steps.</div></div>
+          <div class="link-setup-step"><span>3</span><strong>Start together</strong><div>Only the final Start battle step waits for the other player.</div></div>
         </div>
       </div>
     </section>
@@ -2095,53 +2114,34 @@ function renderLinkDraftStage() {
   return renderDraftShell({
     mode: 'link',
     roundLabel: `Round ${state.link.draftRound || 1} of ${currentTeamSize()}`,
-    title: 'Secretly pick your next Pokemon',
-    statusCopy: state.link.localPickLocked ? 'Your pick is locked. The next round appears after the other side locks in as well.' : 'You only see your own three cards. The other player never sees this selection screen.',
-    chips: [currentGenerationConfig().label, 'Hidden draft', `${state.playerDraft.length}/${currentTeamSize()} picked`, state.link.connected ? 'Room connected' : 'Waiting for connection', attackModeLabel()],
-    action: state.link.localPickLocked ? 'Waiting for the next hidden round.' : 'Pick 1 of 3. Your selection stays private until battle begins.',
-    cards: state.link.localPack.map((species) => renderDraftCard(species, `data-link-draft-id="${species.id}" ${state.link.localPickLocked ? 'disabled' : ''}`)).join(''),
+    title: 'Pick your next Pokemon',
+    statusCopy: 'Draft your link battle team with the same flow as Bot Run. The other player handles their own draft on their side.',
+    chips: [currentGenerationConfig().label, 'Link Battle draft', `${state.playerDraft.length}/${currentTeamSize()} picked`, state.link.connected ? 'Room connected' : 'Waiting for connection', attackModeLabel()],
+    action: 'Pick 1 of 3. After the draft, the reroll, item, and order steps continue without waiting.',
+    cards: state.link.localPack.map((species) => renderDraftCard(species, `data-link-draft-id="${species.id}"`)).join(''),
     showStatusCard: false,
   });
 }
 
 function renderLinkPreviewStage() {
-  const hiddenPlan = state.playerPreview.map((member, index) => `<div class="preview-hero-slot" style="background:${typeGradient(member.types)}">
-      <span>${index + 1}</span>
-      <strong>${member.name}</strong>
-      <div>${index === 0 ? 'Leads first' : 'Ready to switch in'}</div>
-    </div>`).join('');
-  return `<section class="link-preview-shell team-size-${currentTeamSize()}">
-    <div class="draft-topbar">
-      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
-      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>Link Battle</span></div>
-    </div>
-    <section class="draft-hero-panel link-preview-hero">
-      <div class="draft-hero-copy">
-        <div class="draft-kicker-row"><span class="label">Hidden Order</span><span class="draft-status-pill">Arrange team</span></div>
-        <h2>Arrange your team in secret.</h2>
-        <p>Your opponent cannot see your changes live. Only the finished lead order is revealed when the battle starts.</p>
-        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>Hidden draft complete</span><span>${state.playerPreview.length}/${currentTeamSize()} ready</span><span>${state.link.connected ? 'Room connected' : 'Connection open'}</span><span>${itemDraftEnabled() ? 'Held items active' : 'No held items'}</span></div>
-      </div>
-      <aside class="preview-hero-guide link-preview-plan">
-        <div class="label">Hidden plan</div>
-        <div class="preview-hero-slot-grid">${hiddenPlan}</div>
-      </aside>
-    </section>
-    <section class="link-preview-main">
-      <section class="preview-panel preview-order-panel link-preview-order-panel">
-        <div class="draft-section-head"><div><div class="label">Your order</div><h3>Move your team into lead order</h3></div><p class="preview-order-note">Slot 1 leads the battle. The remaining slots become your switch options.</p></div>
-        <div class="preview-card-list">${state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join('')}</div>
-      </section>
-      <section class="preview-panel link-preview-ready-panel">
-        <div class="draft-section-head"><div><div class="label">Ready check</div><h3>Lock your hidden order</h3></div><p>Once both players confirm, the battle begins and both lead orders are revealed.</p></div>
-        <div class="link-preview-ready-notes">
-          <div class="empty"><strong>Your order stays private</strong><div>No live updates from the other side are shown here.</div></div>
-          <div class="empty"><strong>${state.link.connected ? 'Connection stable' : 'Connection needed'}</strong><div>${state.link.connected ? 'You can lock in as soon as the order looks right.' : 'Reconnect before trying to start the battle.'}</div></div>
+  const waiting = state.link.localReady && !state.link.remoteReady;
+  const opponentReady = !state.link.localReady && state.link.remoteReady;
+  return renderPreviewShell({
+    mode: 'link',
+    title: 'Arrange your team for Link Battle',
+    statusCopy: 'Set your lead order now. The other player only sees the final battle once both of you hit Start battle.',
+    chips: [currentGenerationConfig().label, 'Link Battle ready', `${state.playerPreview.length}/${currentTeamSize()} ready`, state.link.connected ? 'Room connected' : 'Connection needed', itemDraftEnabled() ? 'Held items active' : 'No held items'],
+    actionLabel: 'Slot 1 starts the battle. Every later slot becomes a switch option.',
+    playerPanelTitle: 'Your order',
+    playerCards: state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join(''),
+    asidePanel: `<div class="preview-panel preview-opponent-panel">
+        <div class="draft-section-head"><div><div class="label">Battle start</div><h3>Player versus player</h3></div><p>Only the final Start battle step waits for the other player.</p></div>
+        <div class="preview-status-stack">
+          <div class="empty"><strong>${waiting ? 'Waiting for player...' : opponentReady ? 'Player ready' : state.link.connected ? 'Set your order' : 'Connection needed'}</strong><div>${waiting ? 'Your order is locked in. The battle begins as soon as the other player starts too.' : opponentReady ? 'The other player is ready. You can start the battle now.' : state.link.connected ? 'Pick your lead and click Start battle when the order looks right.' : 'Reconnect before trying to start the battle.'}</div></div>
         </div>
-        <div class="actions"><button class="primary-btn" data-action="ready-link-battle" ${!state.link.connected ? 'disabled' : ''}>Ready to battle</button><button class="ghost-btn" data-action="link-rematch">Draft again</button></div>
-      </section>
-    </section>
-  </section>`;
+        <div class="actions"><button class="primary-btn ${state.link.localReady ? 'link-ready-armed' : ''}" data-action="ready-link-battle" ${!state.link.connected || state.link.localReady ? 'disabled' : ''}>Start battle</button><button class="ghost-btn" data-action="link-rematch">Draft again</button></div>
+      </div>`,
+  });
 }
 
 function hpTone(percent) {
@@ -2378,7 +2378,11 @@ function bindEvents() {
     openInspect(button.dataset.inspect);
   }));
   document.querySelectorAll('[data-close-inspect]').forEach((button) => button.addEventListener('click', closeInspect));
-  document.getElementById('joinCodeInput')?.addEventListener('input', (event) => { state.hostJoinCode = event.target.value.trim(); });
+  document.getElementById('joinCodeInput')?.addEventListener('input', (event) => {
+    const value = String(event.target.value || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5);
+    state.hostJoinCode = value;
+    event.target.value = value;
+  });
   document.querySelectorAll('[data-preserve-scroll]').forEach((container) => {
     const key = container.dataset.preserveScroll;
     let scrollTimer = 0;
@@ -2543,7 +2547,7 @@ function prepareNextEnemy(message) {
   render();
 }
 
-function prepareLinkPreview(message = 'Your hidden team is ready. Set the order you want to reveal at battle start.') {
+function prepareLinkPreview(message = 'Your team is ready. Set the order you want to reveal when the Link Battle starts.') {
   resetBattleState();
   state.phase = 'link-preview';
   state.playerLoadout = applyAssignedItems(state.playerLoadout, state.itemAssignments);
@@ -2670,8 +2674,18 @@ function handleAction(action) {
     state.message = 'The playable Gen 5 mode arrives in the next expansion.';
     return render();
   }
-  if (action === 'start-bot' || action === 'start-link') {
-    state.pendingMode = action === 'start-link' ? 'link' : 'bot';
+  if (action === 'start-link') {
+    teardownLink();
+    state.playMode = 'link';
+    state.pendingMode = 'link';
+    state.hostJoinCode = '';
+    state.link = freshLinkState();
+    state.phase = 'link-setup';
+    state.message = 'Choose whether to host a room or join one.';
+    return render();
+  }
+  if (action === 'start-bot') {
+    state.pendingMode = 'bot';
     state.phase = 'mode-setup';
     state.message = 'Set the draft rules before the run starts.';
     return render();
@@ -2711,7 +2725,13 @@ function handleAction(action) {
   if (action === 'confirm-mode-settings') {
     if (state.pendingMode === 'link') {
       state.playMode = 'link';
+      state.pendingMode = '';
       state.phase = 'link-setup';
+      state.message = 'Opening the private room.';
+      if (state.link.setupIntent === 'host') {
+        render();
+        return startHosting();
+      }
       state.message = 'Open a room or join one.';
       return render();
     }
@@ -2724,7 +2744,14 @@ function handleAction(action) {
     return finishPostDraftFlow();
   }
   if (action === 'finish-item-assign') return finishPostDraftFlow();
-  if (action === 'host-link') return startHosting();
+  if (action === 'host-link') {
+    state.playMode = 'link';
+    state.pendingMode = 'link';
+    state.link.setupIntent = 'host';
+    state.phase = 'mode-setup';
+    state.message = 'Set the draft rules for the hosted room.';
+    return render();
+  }
   if (action === 'join-link') return joinHost();
   if (action === 'ready-link-battle') return readyLinkBattle();
   if (action === 'link-rematch') return beginLinkRematch(true);
@@ -2750,54 +2777,30 @@ function sendLinkMessage(message) {
 
 function setupLinkDraft() {
   resetDraftProgress();
+  state.playMode = 'link';
   state.phase = 'link-draft';
+  state.link.status = 'Connection ready. Draft locally and keep your picks hidden until battle.';
   state.link.draftRound = 1;
-  state.link.localPickLocked = false;
-  state.link.remotePickLocked = false;
-  state.link.remoteDraftCount = 0;
+  state.link.localPack = drawConfiguredPack(state.draftedIds, 3);
   state.link.localReady = false;
   state.link.remoteReady = false;
   state.link.remoteRoster = null;
-  if (state.link.role === 'host') prepareLinkRound();
-  render();
-}
-
-function prepareLinkRound() {
-  const excluded = new Set(state.draftedIds);
-  const localPack = drawConfiguredPack(excluded, 3);
-  const remotePack = drawConfiguredPack(new Set([...excluded, ...localPack.map((member) => member.id)]), 3);
-  state.link.localPack = localPack;
-  state.link.remotePack = remotePack;
-  state.link.localPickLocked = false;
-  state.link.remotePickLocked = false;
-  sendLinkMessage({type: 'link-pack', round: state.link.draftRound, pack: remotePack, remoteDraftCount: state.opponentDraft.length});
+  state.message = 'Pick your first Pokemon for the Link Battle.';
   render();
 }
 
 function pickLinkDraft(id) {
-  if (state.link.localPickLocked) return;
   const picked = state.link.localPack.find((member) => member.id === id);
   if (!picked) return;
   state.playerDraft.push(picked);
   state.draftedIds.add(picked.id);
-  state.link.localPickLocked = true;
-  sendLinkMessage({type: 'link-pick', id, round: state.link.draftRound});
-  if (state.link.role === 'host') maybeFinishLinkRound();
+  if (state.playerDraft.length >= currentTeamSize()) {
+    state.playerLoadout = buildLoadoutFromDraft(state.playerDraft);
+    return startPostDraftFlow();
+  }
+  state.link.draftRound = state.playerDraft.length + 1;
+  state.link.localPack = drawConfiguredPack(state.draftedIds, 3);
   render();
-}
-
-function maybeFinishLinkRound() {
-  if (!state.link.localPickLocked || !state.link.remotePickLocked) return;
-  if (state.playerDraft.length >= currentTeamSize() && state.opponentDraft.length >= currentTeamSize()) return finishLinkDraft();
-  state.link.draftRound += 1;
-  prepareLinkRound();
-}
-
-function finishLinkDraft() {
-  state.playerLoadout = buildLoadoutFromDraft(state.playerDraft);
-  state.opponentLoadout = buildLoadoutFromDraft(state.opponentDraft);
-  sendLinkMessage({type: 'link-draft-done', remoteDraftCount: state.playerDraft.length});
-  startPostDraftFlow();
 }
 
 function beginLinkRematch(broadcast) {
@@ -2809,24 +2812,53 @@ function startHosting() {
   teardownLink();
   state.link = freshLinkState();
   state.link.role = 'host';
-  const peer = new Peer();
-  state.link.peer = peer;
-  peer.on('open', (id) => {
-    state.link.peerId = id;
-    state.link.status = 'Room open. Share the code.';
-    render();
-  });
-  peer.on('connection', (conn) => attachConnection(conn, 'host'));
+  state.playMode = 'link';
+  state.phase = 'link-setup';
+  state.link.status = 'Opening room...';
+  const openRoom = (attempt = 0) => {
+    const code = generateLobbyCode();
+    const peer = new Peer(code);
+    state.link.peer = peer;
+    peer.on('open', () => {
+      state.link.peerId = code;
+      state.link.status = 'Room open. Share the host code.';
+      render();
+    });
+    peer.on('error', (error) => {
+      if (error?.type === 'unavailable-id' && attempt < 8) {
+        peer.destroy?.();
+        return openRoom(attempt + 1);
+      }
+      state.link.status = 'Room could not be opened. Try again.';
+      render();
+    });
+    peer.on('connection', (conn) => attachConnection(conn, 'host'));
+  };
+  openRoom();
+  render();
 }
 
 function joinHost() {
-  if (!state.hostJoinCode) return;
+  const code = String(state.hostJoinCode || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5);
+  state.hostJoinCode = code;
+  if (code.length !== 5) {
+    state.link.status = 'Enter the full 5-letter host code.';
+    return render();
+  }
   teardownLink();
   state.link = freshLinkState();
   state.link.role = 'guest';
+  state.playMode = 'link';
+  state.phase = 'link-setup';
+  state.link.status = 'Connecting to the host room...';
   const peer = new Peer();
   state.link.peer = peer;
-  peer.on('open', () => attachConnection(peer.connect(state.hostJoinCode, {reliable: true}), 'guest'));
+  peer.on('open', () => attachConnection(peer.connect(code, {reliable: true}), 'guest'));
+  peer.on('error', () => {
+    state.link.status = 'Connection failed. Check the host code and try again.';
+    render();
+  });
+  render();
 }
 
 function attachConnection(conn, role) {
@@ -2834,7 +2866,7 @@ function attachConnection(conn, role) {
   state.link.role = role;
   conn.on('open', () => {
     state.link.connected = true;
-    state.link.status = role === 'host' ? 'Connection ready. Sharing host rules now.' : 'Connected. Waiting for the host rules.';
+    state.link.status = role === 'host' ? 'Player connected. Starting the shared draft flow.' : 'Connected. Syncing the host rules.';
     sendLinkMessage({type: 'hello', name: 'Opponent'});
     if (role === 'host') {
       sendLinkMessage({type: 'link-settings', settings: normalizedModeSettings()});
@@ -2857,36 +2889,13 @@ function handleLinkMessage(message) {
   }
   if (message.type === 'link-settings') {
     state.modeSettings = normalizedModeSettings(message.settings || DEFAULT_MODE_SETTINGS);
-    state.link.status = 'Connection ready. Host rules synced.';
+    state.link.status = 'Connection ready. Host rules synced. Draft starting now.';
     if (state.link.role === 'guest') setupLinkDraft();
-  }
-  if (message.type === 'link-pack') {
-    state.phase = 'link-draft';
-    state.link.draftRound = message.round;
-    state.link.localPack = message.pack;
-    state.link.remoteDraftCount = message.remoteDraftCount || state.link.remoteDraftCount;
-    state.link.localPickLocked = false;
-  }
-  if (message.type === 'link-pick') {
-    const picked = state.link.remotePack.find((member) => member.id === message.id);
-    if (picked) {
-      state.opponentDraft.push(picked);
-      state.draftedIds.add(picked.id);
-      state.link.remotePickLocked = true;
-      state.link.remoteDraftCount = state.opponentDraft.length;
-    }
-    if (state.link.role === 'host') maybeFinishLinkRound();
-  }
-  if (message.type === 'link-draft-done') {
-    state.link.remoteDraftCount = message.remoteDraftCount;
-    if (state.playerDraft.length === currentTeamSize()) {
-      state.playerLoadout = buildLoadoutFromDraft(state.playerDraft);
-      startPostDraftFlow();
-    }
   }
   if (message.type === 'battle-ready') {
     state.link.remoteReady = true;
     state.link.remoteRoster = message.roster;
+    if (state.phase === 'link-preview' && !state.link.localReady) state.message = 'The other player is ready. Start battle when your order is set.';
     maybeStartHostedBattle();
   }
   if (message.type === 'battle-start') {
@@ -2905,7 +2914,9 @@ function handleLinkMessage(message) {
 }
 
 function readyLinkBattle() {
+  if (!state.link.connected || state.link.localReady) return;
   state.link.localReady = true;
+  state.message = 'Waiting for player...';
   sendLinkMessage({type: 'battle-ready', roster: state.playerPreview});
   maybeStartHostedBattle();
   render();
@@ -3391,6 +3402,17 @@ function injectStyles() {
       background:linear-gradient(180deg,#f2d97b,#c6a548);
       color:var(--ink);
       font-weight:700;
+    }
+    .primary-btn.link-ready-armed{
+      background:linear-gradient(180deg,#7fe0b5,#3c9f73);
+      color:#10241a;
+      box-shadow:0 0 0 2px rgba(127,224,181,.22), 0 14px 28px rgba(0,0,0,.16);
+      opacity:1;
+    }
+    .primary-btn.link-ready-armed:disabled{
+      opacity:1;
+      cursor:default;
+      filter:none;
     }
     .choice-btn.alt{background:linear-gradient(180deg,#cfdfab,#8ca85b)}
     .three-col,.two-col,.battle-shell,.choice-grid,.bench-grid{display:grid;gap:14px}
