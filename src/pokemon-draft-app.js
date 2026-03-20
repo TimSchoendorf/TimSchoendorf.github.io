@@ -7646,7 +7646,7 @@ function injectStyles() {
       }
       .battle-hp{height:12px}
       .battle-sprite-foe{
-        top:calc(var(--battle-foe-line) - 1.5%);
+        top:calc(var(--battle-foe-line) - 5.5%);
         right:6%;
         width:29%;
         height:35%;
@@ -7660,7 +7660,7 @@ function injectStyles() {
       .battle-shadow{width:72%;height:14%;bottom:6%}
       .sprite.battle{width:100%;height:100%}
       .battle-sprite-foe .sprite.battle.front{
-        transform:translateX(4%) translateY(0);
+        transform:translateX(4%) translateY(-2%);
       }
       .battle-sprite-player .sprite.battle.back{
         transform:translateX(-4%) translateY(6%);
