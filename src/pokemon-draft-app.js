@@ -7105,6 +7105,7 @@ function injectStyles() {
       }
       .item-draft-shell .draft-board{
         grid-template-rows:auto 1fr;
+        align-content:start;
       }
       .item-draft-summary{
         padding:8px 10px;
@@ -7128,15 +7129,21 @@ function injectStyles() {
         min-height:132px;
         padding:9px;
         gap:6px;
+        grid-template-rows:auto auto auto;
+        align-content:start;
       }
       .item-draft-shell .item-draft-card > .tiny{
         -webkit-line-clamp:2;
         font-size:.68rem;
         line-height:1.22;
+        min-height:2.7em;
       }
       .item-draft-shell .item-draft-card .card-actions .primary-btn{
         min-height:34px;
         padding:6px 10px;
+      }
+      .item-draft-shell .item-draft-card .card-actions{
+        margin-top:0;
       }
       .item-assign-shell .draft-team-panel,
       .item-assign-shell .draft-board{
@@ -7913,6 +7920,7 @@ function injectStyles() {
         overflow-y:hidden;
         padding-bottom:2px;
         scroll-snap-type:x proximity;
+        align-items:start;
       }
       .team-size-6 .item-draft-grid::-webkit-scrollbar{display:none}
       .team-size-6 .item-draft-grid .item-draft-card{
@@ -7921,6 +7929,7 @@ function injectStyles() {
         min-height:118px;
         padding:8px;
         gap:5px;
+        grid-template-rows:auto auto auto;
       }
       .team-size-6 .reroll-toolbar{
         padding:8px;
@@ -8233,6 +8242,7 @@ function injectStyles() {
       .team-size-6 .item-draft-card > .tiny{
         font-size:.64rem;
         line-height:1.16;
+        min-height:2.45em;
       }
       .team-size-6 .draft-team-panel .item-pool-strip .item-pill{
         padding:5px 8px;
