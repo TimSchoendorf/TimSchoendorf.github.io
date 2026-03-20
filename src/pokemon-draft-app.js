@@ -2169,6 +2169,7 @@ function renderCombatant(mon, facing, sideKey, side, team = []) {
 function renderBench(team, own) {
   const bench = team.filter((member) => !member.active);
   if (!bench.length) return '<div class="empty">No reserve available.</div>';
+  const interactionLocked = state.actionLocked || state.battleAnimating || Boolean(state.pendingPlayerRequest);
   const allowSwitch = own && state.playerRequest && (state.playerRequest.forceSwitch || !state.playerRequest.active?.[0]?.trapped);
   const switchChoices = new Map(
     allowSwitch
@@ -2186,7 +2187,7 @@ function renderBench(team, own) {
       : own && switchChoice
         ? (state.playerRequest?.forceSwitch ? 'Forced switch' : 'Tap card to switch in')
         : '';
-    const clickable = Boolean(switchChoice) && !state.actionLocked;
+    const clickable = Boolean(switchChoice) && !interactionLocked;
     return `<div class="bench-card bench-card-switch ${clickable ? 'bench-card-actionable' : ''} ${fainted ? 'bench-card-fainted' : ''}" ${clickable ? `data-choice="${switchChoice}" data-choice-kind="switch"` : ''} style="background:${typeGradient(member.types || ['Normal'])}">
       <div class="bench-card-sprite">${spriteTag(member, 'front', 'sm')}</div>
       <div class="bench-card-copy"><strong>${member.name}</strong><div class="tiny">${member.condition}</div>${switchState ? `<div class="bench-card-switch-note">${switchState}</div>` : ''}</div>
@@ -2197,15 +2198,18 @@ function renderBench(team, own) {
 
 function renderChoiceButtons() {
   if (!state.playerRequest) return '<div class="empty">Waiting for the next request.</div>';
+  const interactionLocked = state.actionLocked || state.battleAnimating || Boolean(state.pendingPlayerRequest);
   if (state.playerRequest.forceSwitch) {
-    return '<div class="empty battle-choice-note"><strong>Choose your next Pokemon.</strong><div>Tap one of the reserve cards below to send it in.</div></div>';
+    return interactionLocked
+      ? '<div class="empty battle-choice-note"><strong>Resolving turn.</strong><div>Your next switch will be available in a moment.</div></div>'
+      : '<div class="empty battle-choice-note"><strong>Choose your next Pokemon.</strong><div>Tap one of the reserve cards below to send it in.</div></div>';
   }
   const moves = state.playerRequest.active?.[0]?.moves.map((move, index) => {
     const selected = state.selectedChoice === `move ${index + 1}` ? 'selected' : '';
     const moveData = dex.moves.get(move.id || move.move || '');
     const tone = typeColors(moveData?.type);
     const hasTrackedPp = Number.isFinite(move.pp);
-    const disabled = move.disabled || (hasTrackedPp && move.pp <= 0);
+    const disabled = interactionLocked || move.disabled || (hasTrackedPp && move.pp <= 0);
     const ppText = Number.isFinite(move.pp) && Number.isFinite(move.maxpp) ? `<span class="choice-btn-pp">${move.pp}/${move.maxpp} PP</span>` : '';
     return `<button class="choice-btn choice-btn-move ${selected}" style="--choice-type-bg:${tone.bg};--choice-type-fg:${tone.fg}" data-choice="move ${index + 1}" data-choice-kind="move" data-move-name="${move.move}" ${disabled ? 'disabled' : ''}><strong class="choice-btn-name">${move.move}</strong>${ppText}</button>`;
   }).join('') || '';
@@ -3213,7 +3217,7 @@ async function finishBattle(winner) {
 }
 
 function submitChoice(choice) {
-  if (!state.playerRequest || state.actionLocked) return;
+  if (!state.playerRequest || state.actionLocked || state.battleAnimating || state.pendingPlayerRequest) return;
   state.actionLocked = true;
   render();
   if (state.playMode === 'link' && state.link.role === 'guest') return sendLinkMessage({type: 'battle-choice', choice});
