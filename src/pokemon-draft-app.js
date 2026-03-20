@@ -240,6 +240,7 @@ const state = {
   itemAssignments: {},
   selectedDraftItem: '',
   itemAssignFocusMember: 0,
+  uiScrollLefts: {},
   itemDraftSequence: 0,
   runWins: 0,
   bestRun: loadBestRun(),
@@ -1829,7 +1830,7 @@ function renderRerollStage() {
       <section class="reroll-grid reroll-workshop-grid">${state.playerLoadout.map((member, index) => renderRerollMoveCard(member, index)).join('')}</section>
     </section>
     <section class="reroll-mobile-only reroll-mobile-workshop">
-      <div class="reroll-team-tabs">${selector}</div>
+      <div class="reroll-team-tabs" data-preserve-scroll="reroll-team-tabs">${selector}</div>
       ${focusedMember ? renderRerollMoveCard(focusedMember, focusIndex) : ''}
     </section>
     <div class="actions reroll-footer">
@@ -1892,6 +1893,22 @@ function renderItemAssignMemberCard(member, {compact = false} = {}) {
   </article>`;
 }
 
+function renderItemAssignSelectorCard(member, index) {
+  const assignedItem = playerAssignedItemFor(member.name);
+  return `<button class="item-assign-team-tab ${index === state.itemAssignFocusMember ? 'active' : ''}" data-item-assign-focus="${index}">
+    <span class="item-assign-team-tab-sprite">${spriteTag(member, 'front', 'sm')}</span>
+    <span class="item-assign-team-tab-copy"><strong title="${member.name}">${member.name}</strong><span>${assignedItem ? itemName(assignedItem) : 'No item'}</span></span>
+  </button>`;
+}
+
+function renderItemAssignPickerCard(entry, assignedItems, compact = false) {
+  const selected = state.selectedDraftItem === entry.key;
+  const assigned = assignedItems.has(entry.key);
+  return `<button class="item-picker-card ${selected ? 'selected' : ''} ${assigned ? 'assigned' : ''} ${compact ? 'compact' : ''}" data-select-item="${entry.key}">
+    <div class="item-picker-card-head">${itemIconTag(entry.id)}<div><strong>${itemName(entry.id)}</strong><span>${assigned ? 'Assigned' : 'Available'}</span></div></div>
+  </button>`;
+}
+
 function renderItemAssignStage() {
   const compactCopy = currentTeamSize() === 6;
   const assignedItems = new Set(Object.values(state.itemAssignments));
@@ -1914,17 +1931,15 @@ function renderItemAssignStage() {
     </section>
     <section class="draft-team-panel">
       <div class="draft-section-head"><div><div class="label">Drafted item pool</div><h3>Choose one to assign</h3></div><p>Click an item to arm it, then click a team card to place it.</p></div>
-      <div class="item-pool-strip">${state.draftedItems.map((entry) => `<button class="item-pill ${state.selectedDraftItem === entry.key ? 'selected' : ''} ${assignedItems.has(entry.key) ? 'assigned' : ''}" data-select-item="${entry.key}">${itemIconTag(entry.id, 'small')}${itemName(entry.id)}</button>`).join('')}</div>
+      <div class="item-pool-strip item-assign-item-strip" data-preserve-scroll="item-assign-items" data-carousel-select="item" aria-label="Swipe held items">${state.draftedItems.map((entry) => renderItemAssignPickerCard(entry, assignedItems, currentTeamSize() === 6)).join('')}</div>
       ${highlightedItem ? renderItemInfoCard(highlightedItem.id, {selected: state.selectedDraftItem === highlightedItem.key, assigned: assignedItems.has(highlightedItem.key), compact: currentTeamSize() === 6}) : ''}
     </section>
     <section class="draft-board item-assign-board">
       <div class="draft-section-head"><div><div class="label">Your team</div><h3>Place your held items</h3></div><p class="preview-order-note">Click a card while an item is selected to assign it. Use Clear to remove an item from a Pokemon.</p></div>
       <section class="item-assign-desktop-only"><div class="item-assign-list">${state.playerLoadout.map((member) => renderItemAssignMemberCard(member)).join('')}</div></section>
       <section class="item-assign-mobile-only">
-        <div class="item-assign-team-tabs">${state.playerLoadout.map((member, index) => `<button class="item-assign-team-tab ${index === focusIndex ? 'active' : ''}" data-item-assign-focus="${index}">
-          <span class="item-assign-team-tab-sprite">${spriteTag(member, 'front', 'sm')}</span>
-          <span class="item-assign-team-tab-copy"><strong title="${member.name}">${member.name}</strong></span>
-        </button>`).join('')}</div>
+        <div class="item-assign-mobile-hint"><strong>Swipe</strong><span>Slide item cards and team cards to choose what is active.</span></div>
+        <div class="item-assign-team-tabs" data-preserve-scroll="item-assign-team" data-carousel-select="member" aria-label="Swipe team members">${state.playerLoadout.map((member, index) => renderItemAssignSelectorCard(member, index)).join('')}</div>
         ${focusedMember ? renderItemAssignMemberCard(focusedMember, {compact: true}) : ''}
       </section>
     </section>
@@ -2107,7 +2122,7 @@ function renderBench(team, own) {
         .map(({mon, index}) => [mon.details.split(',')[0], `switch ${index + 1}`])
       : [],
   );
-  return `<div class="bench-grid">${bench.map((member) => {
+  return `<div class="bench-grid" data-preserve-scroll="${own ? 'battle-bench' : 'battle-bench-foe'}">${bench.map((member) => {
     const fainted = member.condition?.endsWith(' fnt') || member.status === 'fainted';
     const switchChoice = own ? switchChoices.get(member.name) || '' : '';
     const switchState = fainted
@@ -2211,7 +2226,59 @@ function render() {
     </div>`;
   }
   bindEvents();
+  restorePreservedScrollers();
   if (battleView) window.scrollTo({top: 0, left: 0, behavior: 'auto'});
+}
+
+function nearestScrollableChild(container) {
+  const children = Array.from(container.querySelectorAll('button'));
+  if (!children.length) return null;
+  const containerRect = container.getBoundingClientRect();
+  const center = containerRect.left + (containerRect.width / 2);
+  let best = children[0];
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const child of children) {
+    const rect = child.getBoundingClientRect();
+    const childCenter = rect.left + (rect.width / 2);
+    const distance = Math.abs(childCenter - center);
+    if (distance < bestDistance) {
+      best = child;
+      bestDistance = distance;
+    }
+  }
+  return best;
+}
+
+function syncCarouselSelection(container) {
+  const mode = container.dataset.carouselSelect;
+  if (!mode) return;
+  const focused = nearestScrollableChild(container);
+  if (!focused) return;
+  if (mode === 'member' && focused.dataset.itemAssignFocus) {
+    const nextIndex = Number(focused.dataset.itemAssignFocus);
+    if (nextIndex !== state.itemAssignFocusMember) {
+      state.itemAssignFocusMember = nextIndex;
+      render();
+    }
+    return;
+  }
+  if (mode === 'item' && focused.dataset.selectItem) {
+    const nextKey = focused.dataset.selectItem;
+    if (nextKey !== state.selectedDraftItem) {
+      state.selectedDraftItem = nextKey;
+      render();
+    }
+  }
+}
+
+function restorePreservedScrollers() {
+  requestAnimationFrame(() => {
+    document.querySelectorAll('[data-preserve-scroll]').forEach((container) => {
+      const key = container.dataset.preserveScroll;
+      const left = state.uiScrollLefts[key];
+      if (typeof left === 'number') container.scrollLeft = left;
+    });
+  });
 }
 
 function bindEvents() {
@@ -2234,6 +2301,17 @@ function bindEvents() {
   }));
   document.querySelectorAll('[data-close-inspect]').forEach((button) => button.addEventListener('click', closeInspect));
   document.getElementById('joinCodeInput')?.addEventListener('input', (event) => { state.hostJoinCode = event.target.value.trim(); });
+  document.querySelectorAll('[data-preserve-scroll]').forEach((container) => {
+    const key = container.dataset.preserveScroll;
+    let scrollTimer = 0;
+    container.addEventListener('scroll', () => {
+      state.uiScrollLefts[key] = container.scrollLeft;
+      if (container.dataset.carouselSelect) {
+        window.clearTimeout(scrollTimer);
+        scrollTimer = window.setTimeout(() => syncCarouselSelection(container), 90);
+      }
+    }, {passive: true});
+  });
 }
 
 function resetBattleState() {
@@ -5315,6 +5393,59 @@ function injectStyles() {
     .item-pool-strip{
       grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
     }
+    .item-assign-item-strip{
+      display:flex;
+      gap:10px;
+      overflow-x:auto;
+      overflow-y:hidden;
+      padding:2px 0 4px;
+      scroll-snap-type:x mandatory;
+      scrollbar-width:none;
+    }
+    .item-assign-item-strip::-webkit-scrollbar{
+      display:none;
+    }
+    .item-picker-card{
+      flex:0 0 220px;
+      display:grid;
+      align-content:start;
+      gap:8px;
+      padding:12px 14px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.05);
+      color:var(--text);
+      text-align:left;
+      scroll-snap-align:center;
+      cursor:pointer;
+    }
+    .item-picker-card.selected{
+      background:linear-gradient(180deg,#f2d97b,#c6a548);
+      color:var(--ink);
+      border-color:rgba(242,217,123,.72);
+    }
+    .item-picker-card.assigned:not(.selected){
+      background:linear-gradient(180deg,rgba(111,197,145,.22),rgba(54,112,86,.24));
+      border-color:rgba(111,197,145,.28);
+    }
+    .item-picker-card-head{
+      display:grid;
+      grid-template-columns:auto minmax(0,1fr);
+      align-items:center;
+      gap:10px;
+      min-width:0;
+    }
+    .item-picker-card-head strong{
+      display:block;
+      font-size:1rem;
+      line-height:1.05;
+    }
+    .item-picker-card-head span{
+      display:block;
+      opacity:.72;
+      font-size:.7rem;
+      margin-top:3px;
+    }
     .item-pill{
       display:inline-flex;
       align-items:center;
@@ -5382,6 +5513,7 @@ function injectStyles() {
       gap:8px;
       overflow-x:auto;
       padding:2px 0 2px;
+      scroll-snap-type:x mandatory;
       scrollbar-width:none;
     }
     .item-assign-team-tabs::-webkit-scrollbar{
@@ -5400,6 +5532,7 @@ function injectStyles() {
       color:var(--text);
       text-align:left;
       cursor:pointer;
+      scroll-snap-align:center;
     }
     .item-assign-team-tab.active{
       background:linear-gradient(180deg,rgba(242,217,123,.96),rgba(198,165,72,.92));
@@ -5418,6 +5551,7 @@ function injectStyles() {
     }
     .item-assign-team-tab-copy{
       display:grid;
+      gap:2px;
       min-width:0;
     }
     .item-assign-team-tab-copy strong,
@@ -5427,6 +5561,34 @@ function injectStyles() {
       overflow:hidden;
       text-overflow:ellipsis;
       white-space:nowrap;
+    }
+    .item-assign-team-tab-copy span{
+      display:block;
+      min-width:0;
+      overflow:hidden;
+      text-overflow:ellipsis;
+      white-space:nowrap;
+      font-size:.66rem;
+      opacity:.74;
+    }
+    .item-assign-mobile-hint{
+      display:grid;
+      gap:2px;
+      padding:8px 10px;
+      border-radius:14px;
+      border:1px dashed rgba(242,217,123,.22);
+      background:rgba(255,255,255,.03);
+      color:var(--muted);
+    }
+    .item-assign-mobile-hint strong{
+      color:var(--text);
+      font-size:.72rem;
+      letter-spacing:.12em;
+      text-transform:uppercase;
+    }
+    .item-assign-mobile-hint span{
+      font-size:.72rem;
+      line-height:1.25;
     }
     .item-assign-card{
       color:var(--ink);
@@ -6370,6 +6532,15 @@ function injectStyles() {
       .item-assign-team-tab-copy strong{
         font-size:.74rem;
       }
+      .item-assign-team-tab-copy span{
+        font-size:.6rem;
+      }
+      .item-assign-mobile-hint{
+        padding:7px 9px;
+      }
+      .item-assign-mobile-hint span{
+        font-size:.68rem;
+      }
       .item-assign-card.compact{
         padding:10px;
         gap:8px;
@@ -6503,6 +6674,25 @@ function injectStyles() {
       .item-pool-strip .item-pill{
         flex:0 0 auto;
         white-space:nowrap;
+      }
+      .item-assign-item-strip{
+        gap:8px;
+      }
+      .item-picker-card{
+        flex-basis:78%;
+        padding:10px 12px;
+      }
+      .item-picker-card.compact{
+        flex-basis:74%;
+      }
+      .item-picker-card-head{
+        gap:8px;
+      }
+      .item-picker-card-head strong{
+        font-size:.94rem;
+      }
+      .item-picker-card-head span{
+        font-size:.64rem;
       }
       .item-icon.small{
         width:18px;
@@ -7386,6 +7576,13 @@ function injectStyles() {
       }
       .team-size-6 .item-assign-team-tabs{
         grid-auto-columns:54%;
+      }
+      .team-size-6 .item-picker-card{
+        flex-basis:76%;
+        padding:8px 10px;
+      }
+      .team-size-6 .item-picker-card-head strong{
+        font-size:.88rem;
       }
       .team-size-6 .item-assign-team-tab-copy strong{
         font-size:.7rem;
