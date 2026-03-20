@@ -1872,15 +1872,18 @@ function renderItemDraftStage() {
         <div class="draft-team-slot-head">${spriteTag(member, 'front', 'sm')}<div class="draft-team-slot-copy"><strong title="${member.name}">${member.name}</strong><div class="tiny">${moveSummaryText(member, 2)}</div></div></div>
         <button class="info-chip" data-inspect="${member.name}">Info</button>
       </div>`).join('')}</div>
-      </section>
-      <section class="draft-team-panel">
-        <div class="draft-section-head"><div><div class="label">Drafted items</div><h3>${state.draftedItems.length ? `${state.draftedItems.length} items in your pool` : 'No items drafted yet'}</h3></div><p>Every pick stays available for the assignment step.</p></div>
+      <div class="item-draft-summary">
+        <div class="item-draft-summary-head">
+          <strong>${state.draftedItems.length ? `${state.draftedItems.length} items in your pool` : 'No items drafted yet'}</strong>
+          <span>Every pick stays available for the assignment step.</span>
+        </div>
         <div class="item-pool-strip">${state.draftedItems.length ? state.draftedItems.map((entry) => `<span class="item-pill">${itemIconTag(entry.id, 'small')}${itemName(entry.id)}</span>`).join('') : '<div class="empty">Your drafted items appear here.</div>'}</div>
-      </section>
-      <section class="draft-board">
+      </div>
+    </section>
+    <section class="draft-board">
         <div class="draft-section-head"><div><div class="label">Selection</div><h3>Pick 1 of 3 held items</h3></div><p>Choose the item that gives your team the best edge.</p></div>
         <section class="draft-choice-grid item-draft-grid">${state.itemPack.map((item) => renderItemDraftCard(item)).join('')}</section>
-      </section>
+    </section>
   </section>`;
 }
 
@@ -1904,9 +1907,23 @@ function renderItemAssignSelectorCard(member, index) {
 function renderItemAssignPickerCard(entry, assignedItems, compact = false) {
   const selected = state.selectedDraftItem === entry.key;
   const assigned = assignedItems.has(entry.key);
-  return `<button class="item-picker-card ${selected ? 'selected' : ''} ${assigned ? 'assigned' : ''} ${compact ? 'compact' : ''}" data-select-item="${entry.key}">
+  return `<button class="item-picker-card ${selected ? 'selected' : ''} ${assigned ? 'assigned' : ''} ${compact ? 'compact' : ''}" data-select-item="${entry.key}" data-carousel-option="1">
     <div class="item-picker-card-head">${itemIconTag(entry.id)}<div><strong>${itemName(entry.id)}</strong><span>${assigned ? 'Assigned' : 'Available'}</span></div></div>
   </button>`;
+}
+
+function renderItemAssignItemSlide(entry, assignedItems, compact = false) {
+  const selected = state.selectedDraftItem === entry.key;
+  const assigned = assignedItems.has(entry.key);
+  return `<button class="item-assign-item-slide ${selected ? 'selected' : ''}" data-select-item="${entry.key}" data-carousel-option="1">
+    ${renderItemInfoCard(entry.id, {selected, assigned, compact})}
+  </button>`;
+}
+
+function renderItemAssignCarouselSlide(member, index) {
+  return `<div class="item-assign-member-slide ${index === state.itemAssignFocusMember ? 'active' : ''}" data-item-assign-focus="${index}" data-carousel-option="1">
+    ${renderItemAssignMemberCard(member, {compact: true})}
+  </div>`;
 }
 
 function renderItemAssignStage() {
@@ -1929,18 +1946,21 @@ function renderItemAssignStage() {
         <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${currentTeamSize()} Pokemon</span><span>${highlightedItem ? `Selected: ${itemName(highlightedItem.id)}` : 'Select an item to inspect or assign'}</span></div>
       </div>
     </section>
-    <section class="draft-team-panel">
+    <section class="draft-team-panel item-assign-pool-panel">
       <div class="draft-section-head"><div><div class="label">Drafted item pool</div><h3>Choose one to assign</h3></div><p>Click an item to arm it, then click a team card to place it.</p></div>
-      <div class="item-pool-strip item-assign-item-strip" data-preserve-scroll="item-assign-items" data-carousel-select="item" aria-label="Swipe held items">${state.draftedItems.map((entry) => renderItemAssignPickerCard(entry, assignedItems, currentTeamSize() === 6)).join('')}</div>
-      ${highlightedItem ? renderItemInfoCard(highlightedItem.id, {selected: state.selectedDraftItem === highlightedItem.key, assigned: assignedItems.has(highlightedItem.key), compact: currentTeamSize() === 6}) : ''}
+      <section class="item-assign-desktop-only">
+        <div class="item-pool-strip item-assign-item-strip item-assign-item-carousel" data-preserve-scroll="item-assign-items" data-carousel-select="item" aria-label="Swipe held items">${state.draftedItems.map((entry) => renderItemAssignPickerCard(entry, assignedItems, currentTeamSize() === 6)).join('')}</div>
+        ${highlightedItem ? renderItemInfoCard(highlightedItem.id, {selected: true, assigned: assignedItems.has(highlightedItemKey), compact: compactCopy}) : ''}
+      </section>
+      <section class="item-assign-mobile-only">
+        <div class="item-assign-item-detail-carousel" data-preserve-scroll="item-assign-items" data-carousel-select="item" aria-label="Swipe held items">${state.draftedItems.map((entry) => renderItemAssignItemSlide(entry, assignedItems, currentTeamSize() === 6)).join('')}</div>
+      </section>
     </section>
     <section class="draft-board item-assign-board">
       <div class="draft-section-head"><div><div class="label">Your team</div><h3>Place your held items</h3></div><p class="preview-order-note">Click a card while an item is selected to assign it. Use Clear to remove an item from a Pokemon.</p></div>
       <section class="item-assign-desktop-only"><div class="item-assign-list">${state.playerLoadout.map((member) => renderItemAssignMemberCard(member)).join('')}</div></section>
       <section class="item-assign-mobile-only">
-        <div class="item-assign-mobile-hint"><strong>Swipe</strong><span>Slide item cards and team cards to choose what is active.</span></div>
-        <div class="item-assign-team-tabs" data-preserve-scroll="item-assign-team" data-carousel-select="member" aria-label="Swipe team members">${state.playerLoadout.map((member, index) => renderItemAssignSelectorCard(member, index)).join('')}</div>
-        ${focusedMember ? renderItemAssignMemberCard(focusedMember, {compact: true}) : ''}
+        <div class="item-assign-member-carousel" data-preserve-scroll="item-assign-team" data-carousel-select="member" aria-label="Swipe team members">${state.playerLoadout.map((member, index) => renderItemAssignCarouselSlide(member, index)).join('')}</div>
       </section>
     </section>
     <div class="actions mode-settings-actions"><button class="primary-btn" data-action="finish-item-assign">Continue</button></div>
@@ -2231,7 +2251,7 @@ function render() {
 }
 
 function nearestScrollableChild(container) {
-  const children = Array.from(container.querySelectorAll('button'));
+  const children = Array.from(container.querySelectorAll('[data-carousel-option], button'));
   if (!children.length) return null;
   const containerRect = container.getBoundingClientRect();
   const center = containerRect.left + (containerRect.width / 2);
@@ -5571,6 +5591,50 @@ function injectStyles() {
       font-size:.66rem;
       opacity:.74;
     }
+    .item-assign-member-carousel{
+      display:flex;
+      gap:10px;
+      overflow-x:auto;
+      overflow-y:hidden;
+      padding:2px 0 4px;
+      scroll-snap-type:x mandatory;
+      scrollbar-width:none;
+    }
+    .item-assign-member-carousel::-webkit-scrollbar{
+      display:none;
+    }
+    .item-assign-member-slide{
+      flex:0 0 100%;
+      scroll-snap-align:center;
+    }
+    .item-assign-member-slide .item-assign-card.compact{
+      min-height:0;
+    }
+    .item-assign-item-detail-carousel{
+      display:flex;
+      gap:10px;
+      overflow-x:auto;
+      overflow-y:hidden;
+      padding:2px 0 4px;
+      scroll-snap-type:x mandatory;
+      scrollbar-width:none;
+    }
+    .item-assign-item-detail-carousel::-webkit-scrollbar{
+      display:none;
+    }
+    .item-assign-item-slide{
+      flex:0 0 100%;
+      padding:0;
+      border:none;
+      background:none;
+      color:inherit;
+      text-align:left;
+      scroll-snap-align:center;
+      cursor:pointer;
+    }
+    .item-assign-item-slide .item-info-card{
+      min-height:0;
+    }
     .item-assign-mobile-hint{
       display:grid;
       gap:2px;
@@ -5614,6 +5678,28 @@ function injectStyles() {
     }
     .item-draft-team-strip{
       grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    }
+    .item-draft-summary{
+      display:grid;
+      gap:8px;
+      margin-top:2px;
+      padding:10px 12px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.04);
+    }
+    .item-draft-summary-head{
+      display:grid;
+      gap:2px;
+    }
+    .item-draft-summary-head strong{
+      font-size:.92rem;
+      line-height:1.1;
+    }
+    .item-draft-summary-head span{
+      color:var(--muted);
+      font-size:.72rem;
+      line-height:1.25;
     }
     .draft-team-slot.compact{
       grid-template-columns:minmax(0,1fr) auto;
@@ -6514,32 +6600,38 @@ function injectStyles() {
         display:grid;
         gap:8px;
       }
-      .item-assign-team-tabs{
-        display:grid;
-        grid-auto-flow:column;
-        grid-auto-columns:52%;
-        gap:6px;
+      .item-assign-item-carousel{
+        gap:8px;
       }
-      .item-assign-team-tab{
-        min-width:0;
-        padding:7px 8px;
-        border-radius:16px;
+      .item-assign-item-detail-carousel{
+        gap:8px;
+        padding-right:12%;
       }
-      .item-assign-team-tab-sprite{
-        width:24px;
-        height:24px;
+      .item-assign-item-slide{
+        flex-basis:88%;
       }
-      .item-assign-team-tab-copy strong{
-        font-size:.74rem;
+      .item-picker-card{
+        flex-basis:78%;
+        padding:10px 12px;
       }
-      .item-assign-team-tab-copy span{
-        font-size:.6rem;
+      .item-picker-card.compact{
+        flex-basis:74%;
       }
-      .item-assign-mobile-hint{
-        padding:7px 9px;
+      .item-picker-card-head{
+        gap:8px;
       }
-      .item-assign-mobile-hint span{
-        font-size:.68rem;
+      .item-picker-card-head strong{
+        font-size:.94rem;
+      }
+      .item-picker-card-head span{
+        font-size:.64rem;
+      }
+      .item-assign-member-carousel{
+        gap:8px;
+        padding-right:12%;
+      }
+      .item-assign-member-slide{
+        flex-basis:88%;
       }
       .item-assign-card.compact{
         padding:10px;
@@ -6559,6 +6651,15 @@ function injectStyles() {
       }
       .item-assign-card.compact .card-actions{
         grid-template-columns:1fr 1fr;
+      }
+      .item-draft-summary{
+        padding:8px 10px;
+      }
+      .item-draft-summary-head strong{
+        font-size:.82rem;
+      }
+      .item-draft-summary-head span{
+        font-size:.66rem;
       }
       .preview-card-list,.preview-status-stack{
         gap:8px;
@@ -6675,6 +6776,15 @@ function injectStyles() {
         flex:0 0 auto;
         white-space:nowrap;
       }
+      .draft-team-panel .item-pool-strip{
+        min-height:44px;
+        align-items:center;
+        padding-bottom:4px;
+      }
+      .draft-team-panel .item-pool-strip .item-pill{
+        padding:6px 9px;
+        font-size:.7rem;
+      }
       .item-assign-item-strip{
         gap:8px;
       }
@@ -6684,6 +6794,27 @@ function injectStyles() {
       }
       .item-picker-card.compact{
         flex-basis:74%;
+      }
+      .item-assign-shell .preview-hero-panel{
+        display:none;
+      }
+      .item-assign-shell .draft-team-panel,
+      .item-assign-shell .draft-board{
+        padding:10px;
+      }
+      .item-assign-pool-panel .draft-section-head p,
+      .item-assign-board .draft-section-head p{
+        display:none;
+      }
+      .item-assign-item-detail-carousel .item-info-card{
+        padding:12px;
+      }
+      .item-assign-item-detail-carousel .item-info-head strong{
+        font-size:.94rem;
+      }
+      .item-assign-item-detail-carousel .item-info-desc{
+        font-size:.74rem;
+        line-height:1.28;
       }
       .item-picker-card-head{
         gap:8px;
@@ -7574,18 +7705,31 @@ function injectStyles() {
         padding:5px 6px;
         font-size:.7rem;
       }
-      .team-size-6 .item-assign-team-tabs{
-        grid-auto-columns:54%;
+      .team-size-6 .item-assign-item-carousel{
+        gap:6px;
+      }
+      .team-size-6 .item-assign-item-detail-carousel{
+        gap:6px;
       }
       .team-size-6 .item-picker-card{
         flex-basis:76%;
         padding:8px 10px;
       }
+      .team-size-6 .item-draft-summary{
+        padding:7px 9px;
+        gap:6px;
+      }
+      .team-size-6 .item-draft-summary-head strong{
+        font-size:.76rem;
+      }
+      .team-size-6 .item-draft-summary-head span{
+        font-size:.62rem;
+      }
       .team-size-6 .item-picker-card-head strong{
         font-size:.88rem;
       }
-      .team-size-6 .item-assign-team-tab-copy strong{
-        font-size:.7rem;
+      .team-size-6 .item-assign-member-carousel{
+        gap:6px;
       }
       .team-size-6 .item-assign-card.compact{
         padding:8px;
@@ -7603,6 +7747,17 @@ function injectStyles() {
       .team-size-6 .item-assign-card.compact .card-actions .ghost-btn{
         padding:6px 8px;
         font-size:.72rem;
+      }
+      .team-size-6 .item-assign-item-detail-carousel .item-info-card{
+        padding:9px 10px;
+        gap:7px;
+      }
+      .team-size-6 .item-assign-item-detail-carousel .item-info-head strong{
+        font-size:.82rem;
+      }
+      .team-size-6 .item-assign-item-detail-carousel .item-info-desc{
+        font-size:.68rem;
+        line-height:1.22;
       }
       .battle-stage{
         --battle-foe-line:11%;
@@ -7772,6 +7927,10 @@ function injectStyles() {
         padding:3px 7px;
         font-size:.58rem;
       }
+      .team-size-6 .draft-team-panel .item-pool-strip .item-pill{
+        padding:4px 7px;
+        font-size:.62rem;
+      }
       .team-size-6 .item-draft-grid{
         grid-auto-columns:76%;
         gap:6px;
@@ -7783,13 +7942,20 @@ function injectStyles() {
         font-size:.68rem;
         line-height:1.2;
       }
+      .team-size-6 .draft-team-panel .item-pool-strip .item-pill{
+        padding:5px 8px;
+        font-size:.66rem;
+      }
       .team-size-6.item-assign-shell .preview-hero-panel,
       .team-size-6.preview-shell .preview-hero-panel,
       .team-size-6.link-preview-shell .draft-hero-panel{
         display:none;
       }
-      .team-size-6 .item-assign-team-tabs{
-        grid-auto-columns:62%;
+      .team-size-6 .item-assign-item-carousel{
+        gap:5px;
+      }
+      .team-size-6 .item-picker-card{
+        flex-basis:74%;
       }
       .team-size-6 .item-assign-card.compact{
         padding:6px;
@@ -7819,6 +7985,16 @@ function injectStyles() {
         min-height:30px;
         padding:5px 6px;
         font-size:.66rem;
+      }
+      .team-size-6 .item-assign-item-detail-carousel .item-info-card{
+        padding:8px;
+        gap:6px;
+      }
+      .team-size-6 .item-assign-item-detail-carousel .item-info-head strong{
+        font-size:.76rem;
+      }
+      .team-size-6 .item-assign-item-detail-carousel .item-info-desc{
+        font-size:.64rem;
       }
       .team-size-6 .preview-card-list{
         grid-template-columns:repeat(2,minmax(0,1fr));
