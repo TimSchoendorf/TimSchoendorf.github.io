@@ -391,6 +391,7 @@ function freshLinkState() {
     conn: null,
     role: 'host',
     setupIntent: '',
+    battleChunkChain: Promise.resolve(),
     connected: false,
     peerId: '',
     remoteName: 'Opponent',
@@ -1063,7 +1064,7 @@ async function playBattleMoveAnimation(moveName, sideKey) {
       window.__pokemonBattlerDebug.lastAnimationInfo = {moveName, sideKey, stage: 'missing-viewport'};
       return;
     }
-    const side = sideKey === 'p1' ? 'player' : 'foe';
+    const side = sideKey === ownSide() ? 'player' : 'foe';
     const timeline = buildAttackTimeline(move, side, assets.data.source);
     const sceneBase = {side, source: assets.data.source};
     window.__pokemonBattlerDebug.lastAnimationInfo = {moveName, sideKey, stage: 'running', total: timeline.total};
@@ -2775,6 +2776,13 @@ function sendLinkMessage(message) {
   if (state.link.conn?.open) state.link.conn.send(message);
 }
 
+function queueLinkBattleChunk(chunk) {
+  state.link.battleChunkChain = (state.link.battleChunkChain || Promise.resolve())
+    .catch(() => {})
+    .then(() => animateBattleChunk(chunk));
+  return state.link.battleChunkChain;
+}
+
 function setupLinkDraft() {
   resetDraftProgress();
   state.playMode = 'link';
@@ -2908,7 +2916,7 @@ function handleLinkMessage(message) {
     queuePlayerRequest(message.request);
   }
   if (message.type === 'battle-choice' && state.link.role === 'host' && state.battle) state.battle.streams.p2.write(message.choice);
-  if (message.type === 'battle-chunk') void animateBattleChunk(message.chunk);
+  if (message.type === 'battle-chunk') void queueLinkBattleChunk(message.chunk);
   if (message.type === 'link-rematch') beginLinkRematch(false);
   render();
 }
@@ -3147,7 +3155,7 @@ async function handleBattleLine(line, shouldAnimate = false) {
     render();
     await nextPaint();
     if (shouldAnimate) await playBattleMoveAnimation(parts[3], sideKey);
-    return 220;
+    return shouldAnimate ? 260 : 520;
   }
   if (type === 'switch') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
@@ -3168,12 +3176,12 @@ async function handleBattleLine(line, shouldAnimate = false) {
       target.status = statusFromCondition(parts[3]) || target.status || '';
     });
     flashSide(sideKey, type === '-damage' ? 'flash-hit' : 'flash-heal');
-    return fromItem ? 360 : 560;
+    return fromItem ? 760 : 980;
   }
   if (type === '-status' || type === '-curestatus' || type === '-clearstatus') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
     updateRosterState(sideKey, parts[2].split(': ').pop(), (target) => { target.status = type === '-status' ? parts[3] : ''; });
-    return 480;
+    return 860;
   }
   if (type === 'faint') {
     const sideKey = parts[2].startsWith('p1') ? 'p1' : 'p2';
@@ -3183,21 +3191,21 @@ async function handleBattleLine(line, shouldAnimate = false) {
       target.active = false;
     });
     flashSide(sideKey, 'flash-faint');
-    return 900;
+    return 1150;
   }
   if (type === 'turn') {
     state.message = `Turn ${parts[2]}.`;
-    return 420;
+    return 700;
   }
   if (type === 'win') {
     void finishBattle(parts[2]);
-    return 900;
+    return 1200;
   }
   if (text) {
-    if (type === '-boost' || type === '-unboost' || type === '-setboost') return 420;
-    if (type === '-item' || type === '-enditem') return 380;
-    if (type === '-immune' || type === '-fail' || type === '-mustrecharge') return 440;
-    return 520;
+    if (type === '-boost' || type === '-unboost' || type === '-setboost') return 760;
+    if (type === '-item' || type === '-enditem') return 780;
+    if (type === '-immune' || type === '-fail' || type === '-mustrecharge') return 820;
+    return 900;
   }
   return 0;
 }
@@ -3211,7 +3219,7 @@ async function animateBattleChunk(chunk) {
     render();
     const endsAtNextTurnWithQueuedRequest = index === lines.length - 1 && lines[index].startsWith('|turn|') && state.pendingPlayerRequest;
     if (delay && !endsAtNextTurnWithQueuedRequest) {
-      const acceleratedDelay = state.pendingPlayerRequest ? Math.max(220, Math.round(delay * 0.6)) : delay;
+      const acceleratedDelay = state.pendingPlayerRequest ? Math.max(420, Math.round(delay * 0.82)) : delay;
       await sleep(acceleratedDelay);
     }
   }
