@@ -1937,12 +1937,23 @@ function renderItemAssignCarouselSlide(member, index) {
   </div>`;
 }
 
-function renderItemAssignProgressChip(member, index) {
+function renderItemAssignProgressSlot(member, index) {
   const assignedItem = playerAssignedItemFor(member.name);
-  return `<button class="item-assign-progress-chip ${index === state.itemAssignFocusMember ? 'active' : ''} ${assignedItem ? 'assigned' : ''}" data-item-assign-focus="${index}">
-    ${spriteTag(member, 'front', 'sm')}
-    <span>${member.name}</span>
+  return `<button class="item-assign-progress-slot ${index === state.itemAssignFocusMember ? 'active' : ''} ${assignedItem ? 'assigned' : ''}" data-item-assign-focus="${index}">
+    <span class="item-assign-progress-index">${index + 1}</span>
+    <span class="item-assign-progress-state">${assignedItem ? itemIconTag(assignedItem, 'small') : '<span class="item-assign-progress-empty-dot"></span>'}</span>
   </button>`;
+}
+
+function renderItemAssignProgressCard() {
+  const assignedCount = Object.values(state.itemAssignments).filter(Boolean).length;
+  return `<div class="item-assign-progress-card">
+    <div class="item-assign-progress-head">
+      <div class="label">Assignment progress</div>
+      <strong>${assignedCount}/${currentTeamSize()} set</strong>
+    </div>
+    <div class="item-assign-progress-strip">${state.playerLoadout.map((member, index) => renderItemAssignProgressSlot(member, index)).join('')}</div>
+  </div>`;
 }
 
 function renderItemAssignStage() {
@@ -1985,7 +1996,7 @@ function renderItemAssignStage() {
       <section class="item-assign-desktop-only"><div class="item-assign-list">${state.playerLoadout.map((member) => renderItemAssignMemberCard(member)).join('')}</div></section>
       <section class="item-assign-mobile-only">
         <div class="item-assign-member-carousel" data-preserve-scroll="item-assign-team" data-carousel-select="member" aria-label="Swipe team members">${state.playerLoadout.map((member, index) => renderItemAssignCarouselSlide(member, index)).join('')}</div>
-        <div class="item-assign-progress-strip">${state.playerLoadout.map((member, index) => renderItemAssignProgressChip(member, index)).join('')}</div>
+        ${renderItemAssignProgressCard()}
       </section>
     </section>
     <div class="actions mode-settings-actions"><button class="primary-btn" data-action="finish-item-assign">Continue</button></div>
@@ -5697,52 +5708,75 @@ function injectStyles() {
     .item-assign-member-slide .item-assign-card.compact{
       min-height:0;
     }
-    .item-assign-progress-strip{
-      display:flex;
-      gap:8px;
-      overflow-x:auto;
-      overflow-y:hidden;
-      padding:2px 0 2px;
-      scrollbar-width:none;
-    }
-    .item-assign-progress-strip::-webkit-scrollbar{
-      display:none;
-    }
-    .item-assign-progress-chip{
-      flex:0 0 auto;
+    .item-assign-progress-card{
       display:grid;
-      grid-template-columns:auto minmax(0,1fr);
-      align-items:center;
+      gap:8px;
+      padding:8px 10px;
+      border-radius:18px;
+      border:1px solid rgba(255,255,255,.08);
+      background:rgba(255,255,255,.035);
+    }
+    .item-assign-progress-head{
+      display:flex;
+      align-items:flex-end;
+      justify-content:space-between;
+      gap:10px;
+    }
+    .item-assign-progress-head strong{
+      font-size:.84rem;
+      line-height:1;
+    }
+    .item-assign-progress-strip{
+      display:grid;
+      grid-template-columns:repeat(auto-fit,minmax(42px,1fr));
       gap:6px;
-      min-width:94px;
-      padding:6px 8px;
+    }
+    .item-assign-progress-slot{
+      display:grid;
+      justify-items:center;
+      gap:5px;
+      padding:6px 4px;
       border-radius:14px;
       border:1px solid rgba(255,255,255,.08);
       background:rgba(255,255,255,.04);
-      color:var(--text);
-      text-align:left;
+      color:var(--muted);
       cursor:pointer;
     }
-    .item-assign-progress-chip.assigned{
-      border-color:rgba(111,197,145,.28);
-      background:linear-gradient(180deg,rgba(111,197,145,.18),rgba(54,112,86,.2));
+    .item-assign-progress-slot.assigned{
+      border-color:rgba(111,197,145,.32);
+      background:linear-gradient(180deg,rgba(111,197,145,.18),rgba(54,112,86,.18));
+      color:#f3fff8;
     }
-    .item-assign-progress-chip.active{
+    .item-assign-progress-slot.active{
       border-color:rgba(242,217,123,.42);
       background:linear-gradient(180deg,rgba(242,217,123,.18),rgba(198,165,72,.14));
+      color:var(--text);
     }
-    .item-assign-progress-chip .sprite.sm{
-      width:24px;
-      height:24px;
+    .item-assign-progress-index{
+      width:20px;
+      height:20px;
+      display:grid;
+      place-items:center;
+      border-radius:50%;
+      background:rgba(255,255,255,.08);
+      font-size:.62rem;
+      font-weight:800;
     }
-    .item-assign-progress-chip span{
+    .item-assign-progress-state{
+      min-height:18px;
+      display:grid;
+      place-items:center;
+    }
+    .item-assign-progress-state .item-icon.small{
+      width:18px;
+      height:18px;
+    }
+    .item-assign-progress-empty-dot{
+      width:8px;
+      height:8px;
+      border-radius:50%;
+      background:rgba(255,255,255,.26);
       display:block;
-      min-width:0;
-      overflow:hidden;
-      text-overflow:ellipsis;
-      white-space:nowrap;
-      font-size:.66rem;
-      font-weight:700;
     }
     .item-assign-item-detail-carousel{
       display:flex;
@@ -6785,6 +6819,16 @@ function injectStyles() {
         grid-template-columns:1fr 1fr;
         gap:6px;
       }
+      .team-size-6.item-draft-shell .draft-hero-copy p,
+      .team-size-6.item-draft-shell .draft-section-head p{
+        display:none;
+      }
+      .team-size-6.item-draft-shell{
+        height:auto;
+        min-height:calc(100svh - 20px);
+        grid-template-rows:auto auto auto;
+        overflow:visible;
+      }
       .team-size-6.item-draft-shell .item-draft-team-strip{
         display:flex;
         grid-template-columns:none;
@@ -6841,8 +6885,13 @@ function injectStyles() {
       .item-draft-card > .tiny{
         -webkit-line-clamp:3;
       }
+      .item-draft-shell .draft-board{
+        grid-template-rows:auto auto;
+        align-content:start;
+      }
       .team-size-6.item-draft-shell .draft-board{
         align-content:start;
+        align-self:start;
       }
       .team-size-6.item-draft-shell .item-draft-grid{
         align-items:start;
