@@ -1,5 +1,6 @@
 import Peer from 'peerjs';
 import {BattleStreams, Dex, Teams} from '@pkmn/sim';
+import pokemonI18nData from './pokemon-i18n-data.js';
 import {
   POKEMON_POOL,
   chooseBattleAction,
@@ -127,6 +128,7 @@ const BEST_RUN_KEY = 'pokemon-battler-rby-best-run-v4';
 const ENEMY_NAMES = ['Brock', 'Misty', 'Surge', 'Erika', 'Koga', 'Sabrina', 'Blaine', 'Giovanni', 'Lorelei', 'Lance'];
 const BATTLE_LOGO_PATH = '../assets/pokemon-logo-cutout.png';
 const POKEBALL_STATUS_PATH = '../assets/pokeball-status.png';
+const LANGUAGE_STORAGE_KEY = 'pokemon-battler-language-v1';
 const GENERATION_CONFIG = {
   gen1: {
     id: 'gen1',
@@ -291,6 +293,536 @@ let attackAnimationAssetsPromise = null;
 let attackAnimationAssets = null;
 let battleFeedClearHandle = null;
 
+function loadLanguagePreference() {
+  try {
+    return window.localStorage.getItem(LANGUAGE_STORAGE_KEY) === 'de' ? 'de' : 'en';
+  } catch {
+    return 'en';
+  }
+}
+
+let currentLanguageCode = loadLanguagePreference();
+
+const GERMAN_UI_TEXT = {
+  'Retro Arena': 'Retro-Arena',
+  'Pokemon Battle Arena': 'Pokémon-Kampfarena',
+  'Choose a generation first. Then pick Bot Run or Link Battle and jump straight into the draft.': 'Wähle zuerst eine Generation. Entscheide dich dann für Bot-Run oder Link-Kampf und spring dann direkt in den Draft.',
+  'Playable now': 'Jetzt spielbar',
+  'Kanto roster live': 'Kanto-Kader live',
+  '151 Kanto Pokemon': '151 Kanto-Pokémon',
+  'Ready to play': 'Spielbereit',
+  'Retro arena style inspired by Gen 1': 'Retro-Arenastil im Geiste von Gen 1',
+  'Pick a generation': 'Generation wählen',
+  'Choose a mode': 'Modus wählen',
+  'Draft, order, battle': 'Draften, ordnen, kämpfen',
+  'Solo': 'Solo',
+  'Bot Run': 'Bot-Run',
+  'Always 3 Pokemon to choose from': 'Immer 3 Pokémon zur Auswahl',
+  'Set your own order': 'Eigene Reihenfolge festlegen',
+  'Rule screen before the draft': 'Regeln vor dem Draft festlegen',
+  'Start': 'Starten',
+  'Online': 'Online',
+  'Link Battle': 'Link-Kampf',
+  'Share a room code or join one': 'Code teilen oder Raum beitreten',
+  'Both players draft in secret': 'Beide draften geheim',
+  'Connect': 'Verbinden',
+  'Battle rules depend on the selected generation.': 'Die Kampfregeln richten sich nach der gewählten Generation.',
+  'Next Era Preview': 'Vorschau der nächsten Ära',
+  'Choose a generation first. Then pick Bot Run or Link Battle and jump straight into the draft. Gen 5 modes are still in development.': 'Wähle zuerst eine Generation. Entscheide dich dann für Bot-Run oder Link-Kampf und spring dann direkt in den Draft. Die Gen-5-Modi sind noch in Entwicklung.',
+  'In development': 'In Entwicklung',
+  'Unova preview': 'Einall-Vorschau',
+  'Gen 5 style preview': 'Gen-5-Stilvorschau',
+  'Modes still in development': 'Modi noch in Entwicklung',
+  'Modern arena style inspired by Gen 5': 'Moderner Arenastil im Geiste von Gen 5',
+  'Gen 5 mode still in development': 'Gen-5-Modus noch in Entwicklung',
+  'Coming soon': 'Bald',
+  'Battle preview coming soon': 'Kampf-Vorschau folgt',
+  'Choose a generation, pick a mode, then draft and battle.': 'Generation wählen, Modus wählen, dann draften und kämpfen.',
+  'Choose a generation, pick a mode, then draft and battle. Gen 5 modes are still in development.': 'Generation wählen, Modus wählen, dann draften und kämpfen. Die Gen-5-Modi sind noch in Entwicklung.',
+  'Choose generation': 'Generation wählen',
+  'Private non-commercial fan project. Pokemon rights remain with their respective owners.': 'Privates, nicht kommerzielles Fanprojekt. Alle Rechte an Pokémon verbleiben bei den jeweiligen Rechteinhabern.',
+  'Mode Select': 'Moduswahl',
+  'Choose your arena': 'Wähle deine Arena',
+  'Flow': 'Ablauf',
+  'Active Generation': 'Aktive Generation',
+  'Best Run': 'Beste Serie',
+  'Status': 'Status',
+  'Private fan project': 'Privates Fanprojekt',
+  'This is a private, non-commercial Pokemon fan project. No ownership is claimed. Pokemon and all related names, characters, images, and trademarks belong to Nintendo, Game Freak, Creatures, The Pokemon Company, and their respective rights holders.': 'Dies ist ein privates, nicht kommerzielles Pokémon-Fanprojekt. Es werden keine Eigentumsrechte beansprucht. Pokémon sowie alle dazugehörigen Namen, Figuren, Bilder und Marken gehören Nintendo, Game Freak, Creatures, The Pokémon Company und den jeweiligen Rechteinhabern.',
+  'Back to start page': 'Zur Startseite',
+  'Attacks': 'Attacken',
+  'Move generation': 'Attackenerstellung',
+  'Fixed attacks': 'Feste Attacken',
+  'Randomized attacks': 'Zufällige Attacken',
+  'Rerolls': 'Neuwürfe',
+  'Attack reroll budget': 'Attacken-Neuwürfe',
+  'Off': 'Aus',
+  'On': 'An',
+  'Roster': 'Team',
+  'Team size': 'Teamgröße',
+  '3 Pokemon': '3 Pokémon',
+  '6 Pokemon': '6 Pokémon',
+  'Items': 'Items',
+  'Held item draft': 'Item-Draft',
+  'Fixed': 'Fest',
+  'Randomized': 'Zufällig',
+  'Choose curated sets or fully random legal moves.': 'Wähle kuratierte Sets oder komplett zufällige legale Attacken.',
+  'Attack rerolls': 'Attacken-Neuwürfe',
+  'Spend rerolls after the Pokemon draft ends.': 'Nutze die Neuwürfe nach dem Pokémon-Draft.',
+  'Pick a short run or a full 6-Pokemon run.': 'Wähle einen kurzen Run oder einen vollen 6-Pokémon-Run.',
+  'Uses a curated pool of later-generation held items with live battle effects.': 'Nutzt einen kuratierten Pool späterer getragener Items mit echten Kampfeffekten.',
+  'Mode setup': 'Modus-Setup',
+  'Set the draft rules before the run starts.': 'Lege die Draft-Regeln fest, bevor der Run startet.',
+  'Pick how moves are generated, how many Pokemon the run uses, whether rerolls are available, and whether held items are drafted after the team is locked.': 'Lege fest, wie Attacken erzeugt werden, wie viele Pokémon der Run nutzt, ob Neuwürfe verfügbar sind und ob nach dem Team-Draft Items gedraftet werden.',
+  'Current rules': 'Aktuelle Regeln',
+  'Attack rules': 'Attackenregeln',
+  'Held items': 'Items',
+  'Gen 5 draft enabled': 'Gen-5-Item-Draft aktiv',
+  'Gen 1 uses a curated later-generation held item pool only when item draft is enabled.': 'Gen 1 nutzt nur dann einen kuratierten Pool späterer getragener Items, wenn der Item-Draft aktiviert ist.',
+  'Each Pokemon gets four random moves from its own legal learnset. If it runs out of legal moves, the remaining slots pull from the full Gen 1 move pool.': 'Jedes Pokémon erhält vier zufällige Attacken aus seinem legalen Learnset. Reichen diese nicht aus, werden die restlichen Plätze aus dem gesamten Gen-1-Attackenpool ergänzt.',
+  'After the Pokemon draft, you can reroll one move at a time across your team. The default budget is 3 whenever rerolls are enabled.': 'Nach dem Pokémon-Draft kannst du einzelne Attacken im Team neu würfeln. Standardmäßig stehen dabei 3 Neuwürfe zur Verfügung.',
+  'Gen 1 had no held items, so this mode uses a compact curated pool of later-generation held items with real battle effects. After the Pokemon draft, you draft from three choices at a time and assign the items you want before battle.': 'Gen 1 hatte keine getragenen Items. Deshalb nutzt dieser Modus einen kompakten, kuratierten Pool späterer Items mit echten Kampfeffekten. Nach dem Pokémon-Draft draftest du jeweils aus drei Optionen und verteilst die gewünschten Items vor dem Kampf.',
+  'Continue': 'Weiter',
+  'Pick your next Pokemon': 'Wähle dein nächstes Pokémon',
+  'These three cards are your full selection for this round.': 'Diese drei Karten sind deine komplette Auswahl für diese Runde.',
+  'Move workshop': 'Attacken-Werkstatt',
+  'Refine the moves you want to bring into battle.': 'Verfeinere die Attacken, die du in den Kampf mitnehmen willst.',
+  'Use each reroll on a single move slot. The updated set is saved immediately for the next step.': 'Nutze jeden Neuwurf auf genau einen Attackenplatz. Das aktualisierte Set wird sofort für den nächsten Schritt gespeichert.',
+  'Next step': 'Nächster Schritt',
+  'Fallback rule': 'Fallback-Regel',
+  'Randomized learnset mode': 'Zufälliger Learnset-Modus',
+  'Fixed curated sets': 'Feste kuratierte Sets',
+  'Lead order': 'Lead-Reihenfolge',
+  'Uses the full Gen 1 move pool if a Pokemon runs out of legal unused moves.': 'Nutzt den vollständigen Gen-1-Attackenpool, wenn einem Pokémon die legalen ungenutzten Attacken ausgehen.',
+  'Continue to items': 'Weiter zu den Items',
+  'Reroll': 'Neu würfeln',
+  'Held item': 'Getragenes Item',
+  'Held item effect': 'Effekt des getragenen Items',
+  'Pick item': 'Item nehmen',
+  'Pick one held item from this item pack.': 'Wähle ein Item aus diesem Item-Pack.',
+  'Each round adds one item to your drafted item pool. After the item draft, you can assign any of your drafted items to your team.': 'Jede Runde fügt deinem gedrafteten Item-Pool ein Item hinzu. Nach dem Item-Draft kannst du jedes deiner gedrafteten Items deinem Team zuweisen.',
+  'Curated held item pool': 'Kuratierter Item-Pool',
+  'Your lineup': 'Dein Team',
+  'Pokemon waiting for items': 'Pokémon warten auf Items',
+  'Use Info to check moves and stats while you draft held items.': 'Nutze Info, um Attacken und Werte zu prüfen, während du Items draftest.',
+  'Drafted item pool': 'Gedrafteter Item-Pool',
+  'Each pick stays available for the assignment step.': 'Jeder Pick bleibt für den Zuweisungsschritt verfügbar.',
+  'Selection': 'Auswahl',
+  'Pick 1 of 3 held items': 'Wähle 1 von 3 Items',
+  'Choose the item that gives your team the best edge.': 'Wähle das Item, das deinem Team den besten Vorteil verschafft.',
+  'Assigned to a team member': 'Einem Teammitglied zugewiesen',
+  'Available to assign': 'Zum Zuweisen verfügbar',
+  'No held item': 'Kein Item',
+  'Assign selected': 'Auswahl zuweisen',
+  'Clear': 'Entfernen',
+  'Assigned': 'Zugewiesen',
+  'Available': 'Verfügbar',
+  'Assignment progress': 'Zuweisungsfortschritt',
+  'Item assign': 'Item-Zuweisung',
+  'Assign your held items to the team.': 'Verteile deine Items auf das Team.',
+  'Select an item from the pool, then click the Pokemon that should carry it. Each Pokemon can hold one item, and unassigned items can stay unused.': 'Wähle ein Item aus dem Pool und klicke dann auf das Pokémon, das es tragen soll. Jedes Pokémon kann ein Item halten, nicht zugewiesene Items dürfen ungenutzt bleiben.',
+  'Select an item to inspect or assign': 'Wähle ein Item zum Prüfen oder Zuweisen',
+  'Selected item': 'Gewähltes Item',
+  'Choose an item': 'Wähle ein Item',
+  'Choose one to assign': 'Wähle ein Item zur Zuweisung',
+  'Click an item to arm it, then click a team card to place it.': 'Wähle zuerst ein Item und tippe dann auf eine Teamkarte, um es zuzuweisen.',
+  'Your team': 'Dein Team',
+  'Place your held items': 'Verteile deine Items',
+  'Click a card while an item is selected to assign it. Use Clear to remove an item from a Pokemon.': 'Tippe auf eine Karte, während ein Item ausgewählt ist, um es zuzuweisen. Mit Entfernen nimmst du ein Item von einem Pokémon.',
+  'Order': 'Reihenfolge',
+  'Set your lead order': 'Lege deine Lead-Reihenfolge fest',
+  'No held items': 'Keine Items',
+  'Held items active': 'Items aktiv',
+  'Your order decides your lead and your switch options.': 'Deine Reihenfolge bestimmt deinen Lead und deine Wechseloptionen.',
+  'Your order': 'Deine Reihenfolge',
+  'Arena ready': 'Arena bereit',
+  'Only set your lead and your remaining switch options now.': 'Lege jetzt nur deinen Lead und deine übrigen Wechseloptionen fest.',
+  'Set your order': 'Lege deine Reihenfolge fest',
+  'Slot 1 starts the battle. Every later slot becomes a switch option.': 'Platz 1 startet den Kampf. Jeder spätere Platz wird zu einer Wechseloption.',
+  'Start battle': 'Kampf starten',
+  'Battle plan': 'Kampfplan',
+  'Hidden plan': 'Verdeckter Plan',
+  'Open': 'Frei',
+  'Filled after the draft.': 'Wird nach dem Draft gefüllt.',
+  'Leads the battle': 'Beginnt den Kampf',
+  'Ready to switch in': 'Kann eingewechselt werden',
+  'Only check your lead and your switch options. The opposing team stays hidden until battle.': 'Prüfe nur deinen Lead und deine Wechseloptionen. Das gegnerische Team bleibt bis zum Kampf verborgen.',
+  'Your order stays hidden until both sides are ready and the battle begins.': 'Deine Reihenfolge bleibt verborgen, bis beide Seiten bereit sind und der Kampf beginnt.',
+  'Hidden Order': 'Verdeckte Reihenfolge',
+  'Arrange team': 'Team anordnen',
+  'Move your team into lead order': 'Bringe dein Team in Lead-Reihenfolge',
+  'Lead': 'Lead',
+  'Pokemon Info': 'Pokémon-Info',
+  'Moves': 'Attacken',
+  'Effect': 'Effekt',
+  'Leave room': 'Raum verlassen',
+  'Leave the Link Battle room?': 'Link-Battle-Raum verlassen?',
+  'You are about to leave the room, are you sure?': 'Du bist dabei, den Raum zu verlassen. Bist du sicher?',
+  'Close': 'Schließen',
+  'Yes': 'Ja',
+  'No': 'Nein',
+  'Waiting for the next request.': 'Warten auf die nächste Aktion.',
+  'Resolving turn.': 'Zug wird aufgelöst.',
+  'Your next switch will be available in a moment.': 'Dein nächster Wechsel ist gleich verfügbar.',
+  'Choose your next Pokemon.': 'Wähle dein nächstes Pokémon.',
+  'Tap one of the reserve cards below to send it in.': 'Tippe unten auf eine Reservekarte, um sie einzuwechseln.',
+  'Battle Phase': 'Kampfphase',
+  'Arena Battle': 'Arenakampf',
+  'Your Bench': 'Deine Reserve',
+  'Actions': 'Aktionen',
+  'Rematch': 'Rückkampf',
+  'Retry': 'Nochmal',
+  'Fainted': 'Besiegt',
+  'Forced switch': 'Zwangswechsel',
+  'Tap card to switch in': 'Karte antippen zum Wechsel',
+  'No reserve available.': 'Keine Reserve verfügbar.',
+  'Host room': 'Raum hosten',
+  'Share the host code': 'Host-Code teilen',
+  'Set the rules and open a room': 'Regeln festlegen und Raum öffnen',
+  'The room is ready for one opponent. Share the 5-letter code. If nobody joins, it expires after 10 minutes.': 'Der Raum ist für einen Gegner bereit. Teile den 5-Buchstaben-Code. Wenn niemand beitritt, läuft er nach 10 Minuten ab.',
+  'Choose the draft rules first. After Continue, this card returns with the live 5-letter host code.': 'Lege zuerst die Draft-Regeln fest. Nach Weiter erscheint diese Karte mit dem aktiven 5-Buchstaben-Host-Code.',
+  'Host with new rules': 'Mit neuen Regeln hosten',
+  'Set rules & host': 'Regeln festlegen & hosten',
+  'Join room': 'Raum beitreten',
+  'Enter a 5-letter code': '5-Buchstaben-Code eingeben',
+  'Join the hosted room. The host rules sync automatically, then both players move straight into the draft.': 'Tritt dem gehosteten Raum bei. Die Host-Regeln werden automatisch synchronisiert, danach gehen beide Spieler direkt in den Draft.',
+  'Enter room code': 'Code eingeben',
+  'Link Terminal': 'Link-Terminal',
+  'Setup': 'Setup',
+  'Room open. Share the code, then jump into the draft.': 'Raum offen. Teile den Code und starte dann in den Draft.',
+  'Choose whether to host or join a Link Battle room.': 'Wähle, ob du einen Link-Battle-Raum hosten oder ihm beitreten willst.',
+  'How it works': 'So funktioniert es',
+  'Host or join': 'Hosten oder beitreten',
+  'The host sets the rules, opens the room, and shares the 5-letter code.': 'Der Host legt die Regeln fest, öffnet den Raum und teilt den 5-Buchstaben-Code.',
+  'Draft like Bot Run': 'Draft wie im Bot-Run',
+  'Both players draft through the full flow without waiting between steps.': 'Beide Spieler durchlaufen den kompletten Draft-Flow ohne Warten zwischen den Schritten.',
+  'Start together': 'Gemeinsam starten',
+  'Only the final Start battle step waits for the other player.': 'Nur der finale Kampf-starten-Schritt wartet auf den anderen Spieler.',
+  'Draft your link battle team with the same flow as Bot Run. The other player handles their own draft on their side.': 'Drafte dein Link-Battle-Team im gleichen Ablauf wie im Bot-Run. Der andere Spieler erledigt seinen Draft auf seiner Seite.',
+  'Pick 1 of 3. After the draft, the reroll, item, and order steps continue without waiting.': 'Wähle 1 von 3. Nach dem Draft laufen Neuwurf-, Item- und Reihenfolge-Schritte ohne Wartezeit weiter.',
+  'Arrange your team for Link Battle': 'Ordne dein Team für den Link-Kampf',
+  'Set your lead order now. The other player only sees the final battle once both of you hit Start battle.': 'Lege jetzt deine Lead-Reihenfolge fest. Der andere Spieler sieht den eigentlichen Kampf erst, wenn ihr beide auf Kampf starten gedrückt habt.',
+  'Battle start': 'Kampfstart',
+  'Player versus player': 'Spieler gegen Spieler',
+  'Player ready': 'Spieler bereit',
+  'The other player is ready. You can start the battle now.': 'Der andere Spieler ist bereit. Du kannst den Kampf jetzt starten.',
+  'Pick your lead and click Start battle when the order looks right.': 'Wähle deinen Lead und drücke auf Kampf starten, sobald die Reihenfolge passt.',
+  'Reconnect before trying to start the battle.': 'Stelle die Verbindung wieder her, bevor du den Kampf startest.',
+  'Draft again': 'Erneut draften',
+  'Run': 'Serie',
+  'You': 'Du',
+  'Opponent': 'Gegner',
+  'Wins': 'Siege',
+  'losses': 'Niederlagen',
+  'OK': 'OK',
+  'Empty slot': 'Leerer Platz',
+  'Your pick appears here.': 'Dein Pick erscheint hier.',
+  'Draft progress': 'Draft-Fortschritt',
+  'Connection ready': 'Verbindung bereit',
+  'Waiting for connection': 'Warten auf Verbindung',
+  'No opponent connected': 'Kein Gegner verbunden',
+  'Pick locked': 'Pick gesperrt',
+  'Pick 1 of 3 now': 'Jetzt 1 von 3 wählen',
+  'Your Team': 'Dein Team',
+  'draft slots': 'Draft-Plätze',
+  'Your picks appear here right away. Use Info to check stats and moves before you lock one in.': 'Deine Picks erscheinen hier sofort. Nutze Info, um Werte und Attacken zu prüfen, bevor du einen fest machst.',
+  'Pick 1 of 3 Pokemon': 'Wähle 1 von 3 Pokémon',
+  'Swipe for the next card': 'Zur nächsten Karte wischen',
+  'Connection needed': 'Verbindung nötig',
+  'Link Battle ready': 'Link-Kampf bereit',
+  'Room connected': 'Raum verbunden',
+  'Link Battle draft': 'Link-Battle-Draft',
+  'Choose whether to host or join one.': 'Wähle, ob du hosten oder beitreten willst.',
+  'Open a room or join one.': 'Öffne einen Raum oder tritt einem bei.',
+  'Choose language': 'Sprache wählen',
+  'English': 'Englisch',
+  'German': 'Deutsch',
+  'Project disclaimer': 'Projekt-Hinweis',
+  'Info': 'Info',
+  'Pick': 'Wählen',
+  '3-card packs': '3er-Packs',
+  'picked': 'gewählt',
+  'Data hidden': 'Daten verborgen',
+  'No picks yet.': 'Noch keine Picks.',
+  'Types': 'Typen',
+  'Profiles': 'Profile',
+  'Control': 'Kontrolle',
+  'No opponent': 'Kein Gegner',
+  'picks locked': 'Picks fixiert',
+  'Ready to battle': 'Kampfbereit',
+  'Not ready yet': 'Noch nicht bereit',
+  'Arena Draft': 'Arenadraft',
+  'Hidden Draft': 'Verdeckter Draft',
+  'waiting for items': 'warten auf Items',
+  'Swipe held items': 'Items wischen',
+  'Swipe team members': 'Teammitglieder wischen',
+  'Selected': 'Ausgewählt',
+  'No item': 'Kein Item',
+  '5-letter host code ready': '5-Buchstaben-Code bereit',
+  'Held item draft on': 'Item-Draft an',
+  'Held item draft off': 'Item-Draft aus',
+  'Choose host or join': 'Hosten oder beitreten',
+  'Rules chosen by the host': 'Regeln werden vom Host bestimmt',
+  'Connected': 'Verbunden',
+  'No connection yet.': 'Noch keine Verbindung.',
+  'Connection ready. Draft locally and keep your picks hidden until battle.': 'Verbindung bereit. Drafte lokal und halte deine Picks bis zum Kampf geheim.',
+  'Opening room...': 'Raum wird geöffnet...',
+  'Room open for 10 minutes. Share the host code.': 'Raum ist 10 Minuten offen. Teile den Host-Code.',
+  'Room could not be opened. Try again.': 'Der Raum konnte nicht geöffnet werden. Versuche es erneut.',
+  'Enter the full 5-letter host code.': 'Gib den vollständigen 5-Buchstaben-Code ein.',
+  'Connecting to the host room...': 'Verbinde mit dem Host-Raum...',
+  'Connection failed. Check the host code and try again.': 'Verbindung fehlgeschlagen. Prüfe den Host-Code und versuche es erneut.',
+  'Player connected. Starting the shared draft flow.': 'Spieler verbunden. Der gemeinsame Draft beginnt.',
+  'Connected. Syncing the host rules.': 'Verbunden. Die Host-Regeln werden synchronisiert.',
+  'Connection ready.': 'Verbindung bereit.',
+  'Connection ready. Host rules synced. Draft starting now.': 'Verbindung bereit. Host-Regeln synchronisiert. Der Draft startet jetzt.',
+  'The other player is ready. Start battle when your order is set.': 'Der andere Spieler ist bereit. Starte den Kampf, sobald deine Reihenfolge feststeht.',
+  'Waiting for player...': 'Warten auf Spieler...',
+  'Room expired.': 'Raum abgelaufen.',
+  'Connection closed.': 'Verbindung geschlossen.',
+  'Pick your first Pokemon for the Bot Run.': 'Wähle dein erstes Pokémon für den Bot-Run.',
+  'Pick your first Pokemon for the Link Battle.': 'Wähle dein erstes Pokémon für den Link-Kampf.',
+  'Draft one held item from this round.': 'Drafte ein getragenes Item aus dieser Runde.',
+  'Spend your attack rerolls across the drafted team.': 'Verteile deine Attacken-Neuwürfe über dein gedraftetes Team.',
+  'Rerolls spent. Continue to the next step.': 'Alle Neuwürfe verbraucht. Weiter zum nächsten Schritt.',
+  'Your team is ready. Arrange your lead now.': 'Dein Team ist bereit. Lege jetzt deinen Lead fest.',
+  'Your team is ready. Set the order you want to reveal when the Link Battle starts.': 'Dein Team ist bereit. Lege die Reihenfolge fest, die beim Start des Link-Kampfs aufgedeckt wird.',
+  'Opening the private room.': 'Der private Raum wird geöffnet.',
+  'Set the draft rules for the hosted room.': 'Lege die Draft-Regeln für den gehosteten Raum fest.',
+  'The Gen 5 expansion is prepared as a style preview.': 'Die Gen-5-Erweiterung ist bisher als Stilvorschau vorbereitet.',
+  'The playable Gen 5 mode arrives in the next expansion.': 'Der spielbare Gen-5-Modus folgt mit der nächsten Erweiterung.',
+  'Pokemon Battler': 'Pokémon-Battler',
+  'Kanto Link Arena': 'Kanto-Link-Arena',
+  'Gen 1 sprites, level 100 stats, RBY rules, and Link Battles with a hidden draft.': 'Gen-1-Sprites, Level-100-Werte, RBY-Regeln und Link-Kämpfe mit verdecktem Draft.',
+  'Mode': 'Modus',
+  'Notes': 'Hinweise',
+  'Rules follow the active generation.': 'Die Regeln folgen der aktiven Generation.',
+  'Log': 'Log',
+  'Slot': 'Slot',
+  'Level 100 Stats': 'Level-100-Werte',
+  'No additional effect.': 'Kein zusätzlicher Effekt.',
+  'Back to home': 'Zur Übersicht',
+  'Choose Bot Run or Link Battle.': 'Wähle Bot-Run oder Link-Kampf.',
+  'Choose whether to host a room or join one.': 'Wähle, ob du einen Raum hosten oder einem Raum beitreten willst.',
+  'Enemy left.': 'Gegner hat den Raum verlassen.',
+  'Opponent status': 'Gegnerstatus',
+  'The next opponent is waiting.': 'Der nächste Gegner wartet bereits.',
+  'Your order is locked in. The battle begins as soon as the other player starts too.': 'Deine Reihenfolge steht fest. Der Kampf beginnt, sobald der andere Spieler ebenfalls startet.',
+};
+
+const TRAINER_NAME_DE = {
+  Brock: 'Rocko',
+  Misty: 'Misty',
+  Surge: 'Major Bob',
+  Erika: 'Erika',
+  Koga: 'Koga',
+  Sabrina: 'Sabrina',
+  Blaine: 'Pyro',
+  Giovanni: 'Giovanni',
+  Lorelei: 'Lorelei',
+  Lance: 'Siegfried',
+};
+
+function uiText(text) {
+  if (currentLanguageCode !== 'de') return text;
+  return GERMAN_UI_TEXT[text] || text;
+}
+
+function saveLanguagePreference(language) {
+  currentLanguageCode = language === 'de' ? 'de' : 'en';
+  try {
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguageCode);
+  } catch {}
+}
+
+function isGerman() {
+  return currentLanguageCode === 'de';
+}
+
+function localizeTrainerName(name = '') {
+  if (!isGerman()) return name;
+  if (name === 'Opponent') return uiText('Opponent');
+  return TRAINER_NAME_DE[name] || name;
+}
+
+function modeNameLabel(mode = state.playMode) {
+  return uiText(mode === 'link' ? 'Link Battle' : 'Bot Run');
+}
+
+function localizedGenerationConfig() {
+  const generation = currentGenerationConfig();
+  return {
+    ...generation,
+    kicker: uiText(generation.kicker),
+    title: uiText(generation.title),
+    subtitle: uiText(generation.subtitle),
+    availability: uiText(generation.availability),
+    status: uiText(generation.status),
+    features: generation.features.map((feature) => uiText(feature)),
+    steps: generation.steps.map((step) => uiText(step)),
+    note: uiText(generation.note),
+    modeCards: Object.fromEntries(Object.entries(generation.modeCards).map(([key, card]) => [key, {
+      ...card,
+      eyebrow: uiText(card.eyebrow),
+      title: uiText(card.title),
+      points: card.points.map((point) => uiText(point)),
+      cta: uiText(card.cta),
+    }])),
+  };
+}
+
+function localizedPokemonName(value) {
+  const fallback = typeof value === 'string' ? value : value?.name || '';
+  if (!isGerman()) return fallback;
+  const speciesId = typeof value === 'object'
+    ? value?.id || dex.species.get(value?.name || '')?.id
+    : dex.species.get(value || '')?.id;
+  return pokemonI18nData.pokemon[speciesId] || fallback;
+}
+
+function localizedMoveName(value) {
+  const move = dex.moves.get(value || '');
+  const fallback = move?.name || value || '';
+  if (!isGerman()) return fallback;
+  return pokemonI18nData.moves[move?.id || '']?.name || fallback;
+}
+
+function localizedMoveDesc(move) {
+  const fallback = move.desc && move.desc !== 'No additional effect.'
+    ? move.desc
+    : move.shortDesc && move.shortDesc !== 'No additional effect.'
+      ? move.shortDesc
+      : 'No additional effect.';
+  if (!isGerman()) return fallback;
+  return pokemonI18nData.moves[move.id]?.desc || uiText(fallback);
+}
+
+function localizedItemName(value) {
+  const item = dex.items.get(value || '');
+  const fallback = item?.name || value || '';
+  if (!isGerman()) return fallback;
+  return pokemonI18nData.items[item?.id || '']?.name || fallback;
+}
+
+function localizedItemDesc(value) {
+  const item = dex.items.get(value || '');
+  const fallback = item?.shortDesc || item?.desc || 'Held item effect.';
+  if (!isGerman()) return fallback;
+  return pokemonI18nData.items[item?.id || '']?.desc || uiText(fallback);
+}
+
+function localizedTypeName(type) {
+  if (!isGerman()) return type;
+  return pokemonI18nData.types[type] || type;
+}
+
+function localizedTypeList(types = []) {
+  return types.map((type) => localizedTypeName(type)).join(' / ');
+}
+
+function localizedCategoryName(category) {
+  if (!isGerman()) return category;
+  if (category === 'Physical') return 'Physisch';
+  if (category === 'Special') return 'Spezial';
+  if (category === 'Status') return 'Status';
+  return category;
+}
+
+function localizedStatusName(status) {
+  if (!isGerman()) {
+    const labels = {
+      brn: 'burn',
+      frz: 'freeze',
+      par: 'paralysis',
+      psn: 'poison',
+      tox: 'bad poison',
+      slp: 'sleep',
+      confusion: 'confusion',
+      fainted: 'fainted',
+    };
+    return labels[status] || status;
+  }
+  const labels = {
+    brn: 'Verbrennung',
+    frz: 'Einfrieren',
+    par: 'Paralyse',
+    psn: 'Vergiftung',
+    tox: 'starke Vergiftung',
+    slp: 'Schlaf',
+    confusion: 'Verwirrung',
+    fainted: 'besiegt',
+  };
+  return labels[status] || status;
+}
+
+function roundLabel(round, total) {
+  return isGerman() ? `Runde ${round} von ${total}` : `Round ${round} of ${total}`;
+}
+
+function pokemonCountLabel(count) {
+  return isGerman() ? `${count} Pokémon` : `${count} Pokemon`;
+}
+
+function pickedCountLabel(count, total) {
+  return isGerman() ? `${count}/${total} gewählt` : `${count}/${total} picked`;
+}
+
+function draftedItemsCountLabel(count, total) {
+  return isGerman() ? `${count} von ${total} Items gedraftet` : `${count} of ${total} items drafted`;
+}
+
+function savedItemsLabel(count) {
+  if (!isGerman()) return `${count} item${count === 1 ? '' : 's'} saved for later`;
+  return count === 1 ? '1 Item für später gesichert' : `${count} Items für später gesichert`;
+}
+
+function itemSlotsFilledLabel(count, total) {
+  return isGerman() ? `${count} von ${total} Item-Plätzen gefüllt.` : `${count} of ${total} item slots filled.`;
+}
+
+function rerollsLeftLabel(count) {
+  return isGerman() ? `${count} Neuwürfe übrig` : `${count} rerolls left`;
+}
+
+function moveSummaryMoreLabel(count) {
+  return isGerman() ? `+${count} weitere` : `+${count} more`;
+}
+
+function pickFirstPokemonMessage(mode = state.playMode) {
+  return uiText(mode === 'link' ? 'Pick your first Pokemon for the Link Battle.' : 'Pick your first Pokemon for the Bot Run.');
+}
+
+function chooseModeMessage() {
+  return uiText('Choose Bot Run or Link Battle.');
+}
+
+function linkChooseRoomMessage() {
+  return uiText('Choose whether to host a room or join one.');
+}
+
+function turnMessage(turn) {
+  return isGerman() ? `Zug ${turn}.` : `Turn ${turn}.`;
+}
+
+function winStreakMessage(wins) {
+  return isGerman() ? `Siegeserie: ${wins}.` : `Win. Streak: ${wins}.`;
+}
+
+function streakEndsMessage(wins) {
+  return isGerman() ? `Die Serie endet bei ${wins}.` : `The streak ends at ${wins}.`;
+}
+
+function linkBattleResultMessage(localWon) {
+  return isGerman()
+    ? (localWon ? 'Du gewinnst den Link-Kampf.' : 'Der Gegner gewinnt den Link-Kampf.')
+    : (localWon ? 'You win the Link Battle.' : 'The opponent wins the Link Battle.');
+}
+
+function acceptedChallengeMessage(name) {
+  const trainer = localizeTrainerName(name);
+  return isGerman() ? `${trainer} nimmt die Herausforderung an.` : `${name} accepts the challenge.`;
+}
+
 const state = {
   phase: 'menu',
   generation: 'gen1',
@@ -325,7 +857,7 @@ const state = {
   pendingPlayerRequest: null,
   logs: [],
   battleFeed: [],
-  message: 'Choose Bot Run or Link Battle.',
+  message: uiText('Choose Bot Run or Link Battle.'),
   leaveConfirmAction: '',
   actionLocked: false,
   selectedChoice: '',
@@ -364,7 +896,7 @@ function currentRerollBudget() {
 }
 
 function attackModeLabel() {
-  return normalizedModeSettings().attackMode === 'randomized' ? 'Randomized attacks' : 'Fixed attacks';
+  return normalizedModeSettings().attackMode === 'randomized' ? uiText('Randomized attacks') : uiText('Fixed attacks');
 }
 
 function itemDraftEnabled() {
@@ -376,12 +908,11 @@ function rerollEnabled() {
 }
 
 function itemName(itemId) {
-  return dex.items.get(itemId)?.name || itemId;
+  return localizedItemName(itemId);
 }
 
 function itemDesc(itemId) {
-  const item = dex.items.get(itemId);
-  return item?.shortDesc || item?.desc || 'Held item effect.';
+  return localizedItemDesc(itemId);
 }
 
 function itemIconPath(itemId) {
@@ -472,7 +1003,7 @@ function freshLinkState() {
     connected: false,
     peerId: '',
     remoteName: 'Opponent',
-    status: 'No connection yet.',
+    status: uiText('No connection yet.'),
     alert: '',
     lobbyExpiryTimer: 0,
     localSide: 'p1',
@@ -1240,7 +1771,7 @@ function typeColors(type) {
 function moveTypeBadge(type, extraClass = '') {
   const tone = typeColors(type);
   const cls = ['type-badge', extraClass].filter(Boolean).join(' ');
-  return `<span class="${cls}" style="--type-bg:${tone.bg};--type-fg:${tone.fg}">${type}</span>`;
+  return `<span class="${cls}" style="--type-bg:${tone.bg};--type-fg:${tone.fg}">${localizedTypeName(type)}</span>`;
 }
 
 function draftMovePreview(species) {
@@ -1251,9 +1782,12 @@ function draftMovePreview(species) {
 }
 
 function moveSummaryText(member, limit = 4) {
-  const moves = member?.moveNames || [];
+  const moveIds = member?.set?.moves || member?.previewSet?.moves || [];
+  const moves = moveIds.length
+    ? moveIds.map((moveId) => localizedMoveName(moveId))
+    : (member?.moveNames || []).map((moveName) => localizedMoveName(moveName));
   if (moves.length <= limit) return moves.join(', ');
-  return `${moves.slice(0, limit).join(', ')} +${moves.length - limit} more`;
+  return `${moves.slice(0, limit).join(', ')} ${moveSummaryMoreLabel(moves.length - limit)}`;
 }
 
 function renderItemInfoCard(itemId, {selected = false, assigned = false, compact = false} = {}) {
@@ -1262,7 +1796,7 @@ function renderItemInfoCard(itemId, {selected = false, assigned = false, compact
       ${itemIconTag(itemId)}
       <div>
         <strong>${itemName(itemId)}</strong>
-        <div class="tiny">${assigned ? 'Assigned to a team member' : 'Available to assign'}</div>
+        <div class="tiny">${assigned ? uiText('Assigned to a team member') : uiText('Available to assign')}</div>
       </div>
     </div>
     <div class="tiny item-info-desc">${itemDesc(itemId)}</div>
@@ -1281,7 +1815,7 @@ function statusFromCondition(condition = '') {
 
 function spriteTag(member, facing = 'front', size = 'md') {
   if (!member?.sprites?.[facing]) return '';
-  return `<img class="sprite ${size} ${facing}" src="${member.sprites[facing]}" alt="${member.name}">`;
+  return `<img class="sprite ${size} ${facing}" src="${member.sprites[facing]}" alt="${localizedPokemonName(member)}">`;
 }
 
 function seededUnit(seed) {
@@ -1304,7 +1838,7 @@ function renderBattleDecor() {
 
 function menuSpriteTag(member, facing = 'front', slot = 'foe') {
   if (!member?.sprites?.[facing]) return `<div class="menu-mon-placeholder menu-mon-placeholder-${slot}">${slot === 'foe' ? 'F' : 'P'}</div>`;
-  return `<img class="menu-sprite menu-sprite-${slot} ${facing}" src="${member.sprites[facing]}" alt="${member.name}">`;
+  return `<img class="menu-sprite menu-sprite-${slot} ${facing}" src="${member.sprites[facing]}" alt="${localizedPokemonName(member)}">`;
 }
 
 function createDraftOption(species) {
@@ -1334,7 +1868,9 @@ function createLoadout(species, extra = {}) {
 }
 
 function currentEnemyLabel() {
-  return state.playMode === 'bot' ? `${state.enemyName || 'Opponent'} #${state.enemyNumber}` : state.link.remoteName;
+  return state.playMode === 'bot'
+    ? `${localizeTrainerName(state.enemyName || 'Opponent')} #${state.enemyNumber}`
+    : localizeTrainerName(state.link.remoteName);
 }
 
 function nextEnemyName() {
@@ -1444,11 +1980,11 @@ function formatMovePower(move) {
 }
 
 function renderInspectMoveCard(move) {
-  const effectText = move.desc && move.desc !== 'No additional effect.' ? move.desc : move.shortDesc && move.shortDesc !== 'No additional effect.' ? move.shortDesc : 'No additional effect.';
+  const effectText = localizedMoveDesc(move);
   return `<article class="inspect-move-card">
     <div class="inspect-move-head">
-      <strong>${move.name}</strong>
-      <div class="inspect-move-tags">${moveTypeBadge(move.type)}<span>${move.category}</span></div>
+      <strong>${localizedMoveName(move.id)}</strong>
+      <div class="inspect-move-tags">${moveTypeBadge(move.type)}<span>${localizedCategoryName(move.category)}</span></div>
     </div>
     <div class="inspect-move-stats">
       <div><span>PWR</span><strong>${formatMovePower(move)}</strong></div>
@@ -1456,7 +1992,7 @@ function renderInspectMoveCard(move) {
       <div><span>PP</span><strong>${move.pp || '--'}</strong></div>
       <div><span>PRI</span><strong>${move.priority || 0}</strong></div>
     </div>
-    <p><span>Effect</span>${effectText}</p>
+    <p><span>${uiText('Effect')}</span>${effectText}</p>
   </article>`;
 }
 
@@ -1499,22 +2035,22 @@ function scheduleBattleFeedClear(delay = 1600) {
 
 function renderRosterCard(member, reveal) {
   return `<div class="roster-card" style="background:${typeGradient(member.types)}">
-    <div class="roster-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="tiny">#${member.num} | ${member.types.join(' / ')}</div></div><button class="info-chip" data-inspect="${member.name}">Info</button></div>
-    <div class="tiny">${reveal ? `Lv100 ${member.battleStats.hp}/${member.battleStats.atk}/${member.battleStats.def}/${member.battleStats.spc}/${member.battleStats.spe}` : 'Data hidden'}</div>
+    <div class="roster-head">${spriteTag(member, 'front', 'sm')}<div><strong>${localizedPokemonName(member)}</strong><div class="tiny">#${member.num} | ${localizedTypeList(member.types)}</div></div><button class="info-chip" data-inspect="${member.name}">${uiText('Info')}</button></div>
+    <div class="tiny">${reveal ? `Lv100 ${member.battleStats.hp}/${member.battleStats.atk}/${member.battleStats.def}/${member.battleStats.spc}/${member.battleStats.spe}` : uiText('Data hidden')}</div>
   </div>`;
 }
 
 function renderSidePanel(title, team, reveal) {
   const synergy = team.length ? draftSynergy(team) : null;
-  return `<div class="panel"><div class="label">${title}</div>
-    ${team.length ? team.map((member) => renderRosterCard(member, reveal)).join('') : '<div class="empty">No picks yet.</div>'}
-    ${synergy ? `<div class="synergy"><span>Types ${synergy.typeCoverage}</span><span>Profiles ${synergy.roleCoverage}</span><span>Control ${synergy.control}</span></div>` : ''}
+  return `<div class="panel"><div class="label">${uiText(title)}</div>
+    ${team.length ? team.map((member) => renderRosterCard(member, reveal)).join('') : `<div class="empty">${uiText('No picks yet.')}</div>`}
+    ${synergy ? `<div class="synergy"><span>${uiText('Types')} ${synergy.typeCoverage}</span><span>${uiText('Profiles')} ${synergy.roleCoverage}</span><span>${uiText('Control')} ${synergy.control}</span></div>` : ''}
   </div>`;
 }
 
 function renderOpponentPanel() {
   if (state.playMode === 'link' && state.phase !== 'battle') {
-    return `<div class="panel"><div class="label">Opponent</div><div class="empty"><strong>${state.link.connected ? state.link.remoteName : 'No opponent'}</strong><div>${state.link.remoteDraftCount}/${currentTeamSize()} picks locked</div><div>${state.link.remoteReady ? 'Ready to battle' : 'Not ready yet'}</div></div></div>`;
+    return `<div class="panel"><div class="label">${uiText('Opponent')}</div><div class="empty"><strong>${state.link.connected ? localizeTrainerName(state.link.remoteName) : uiText('No opponent')}</strong><div>${state.link.remoteDraftCount}/${currentTeamSize()} ${uiText('picks locked')}</div><div>${state.link.remoteReady ? uiText('Ready to battle') : uiText('Not ready yet')}</div></div></div>`;
   }
   const team = state.playMode === 'bot' ? (state.phase === 'draft' ? state.opponentDraft : state.opponentLoadout) : state.opponentLoadout;
   return renderSidePanel(state.playMode === 'bot' ? currentEnemyLabel() : 'Opponent', team, state.playMode === 'bot');
@@ -1535,18 +2071,18 @@ function renderDraftCard(species, pickAttr) {
   const moves = draftMovePreview(species);
   return `<article class="draft-card draft-choice-card" style="background:${typeGradient(species.types)}">
     <div class="draft-choice-head">
-      <div><div class="label">#${species.num}</div><h3>${species.name}</h3></div>
-      <button class="info-chip" data-inspect="${species.name}">Info</button>
+      <div><div class="label">#${species.num}</div><h3>${localizedPokemonName(species)}</h3></div>
+      <button class="info-chip" data-inspect="${species.name}">${uiText('Info')}</button>
     </div>
     <div class="draft-choice-body">
       <div class="draft-choice-sprite">${spriteTag(species, 'front', 'lg')}</div>
       <div class="draft-choice-copy">
         <div class="types">${species.types.map((type) => moveTypeBadge(type)).join('')}</div>
-        <div class="move-row">${moves.map((move) => `<span class="move-chip" style="--type-bg:${typeColors(move.type).bg};--type-fg:${typeColors(move.type).fg}">${move.name}</span>`).join('')}</div>
+        <div class="move-row">${moves.map((move) => `<span class="move-chip" style="--type-bg:${typeColors(move.type).bg};--type-fg:${typeColors(move.type).fg}">${localizedMoveName(move.id)}</span>`).join('')}</div>
       </div>
     </div>
     <div class="draft-stat-grid">${renderDraftStatCells(species)}</div>
-    <div class="card-actions"><button class="primary-btn" ${pickAttr}>Pick</button></div>
+    <div class="card-actions"><button class="primary-btn" ${pickAttr}>${uiText('Pick')}</button></div>
   </article>`;
 }
 
@@ -1554,13 +2090,13 @@ function renderDraftTeamSlots(team) {
   return `<div class="draft-team-strip">${Array.from({length: currentTeamSize()}, (_, index) => {
     const member = team[index];
     if (!member) {
-      return `<div class="draft-team-slot empty"><span class="draft-team-index">${index + 1}</span><div><strong>Empty slot</strong><div class="tiny">Your pick appears here.</div></div></div>`;
+      return `<div class="draft-team-slot empty"><span class="draft-team-index">${index + 1}</span><div><strong>${uiText('Empty slot')}</strong><div class="tiny">${uiText('Your pick appears here.')}</div></div></div>`;
     }
     return `<div class="draft-team-slot filled" style="background:${typeGradient(member.types)}">
       <span class="draft-team-index">${index + 1}</span>
       ${spriteTag(member, 'front', 'sm')}
-      <div class="draft-team-copy"><strong>${member.name}</strong><div class="tiny">${member.types.join(' / ')}${playerAssignedItemFor(member.name) ? ` | ${itemName(playerAssignedItemFor(member.name))}` : ''}</div></div>
-      <button class="info-chip" data-inspect="${member.name}">Info</button>
+      <div class="draft-team-copy"><strong>${localizedPokemonName(member)}</strong><div class="tiny">${localizedTypeList(member.types)}${playerAssignedItemFor(member.name) ? ` | ${itemName(playerAssignedItemFor(member.name))}` : ''}</div></div>
+      <button class="info-chip" data-inspect="${member.name}">${uiText('Info')}</button>
     </div>`;
   }).join('')}</div>`;
 }
@@ -1569,13 +2105,13 @@ function renderDraftStatusCard(mode, roundLabel) {
   const filled = state.playerDraft.length;
   const progress = `<div class="draft-status-progress">${Array.from({length: currentTeamSize()}, (_, index) => `<span class="${index < filled ? 'filled' : ''}">${index + 1}</span>`).join('')}</div>`;
   return `<div class="draft-status-card">
-    <div class="label">${mode === 'link' ? 'Opponent status' : 'Draft progress'}</div>
-    <strong>${filled}/${currentTeamSize()} picked</strong>
+    <div class="label">${mode === 'link' ? uiText('Opponent status') : uiText('Draft progress')}</div>
+    <strong>${pickedCountLabel(filled, currentTeamSize())}</strong>
     ${progress}
     <div class="draft-status-list">
-      <span>${state.link.connected ? 'Connection ready' : 'Waiting for connection'}</span>
-      <span>${state.link.connected ? state.link.remoteName : 'No opponent connected'}</span>
-      <span>${state.link.localPickLocked ? 'Pick locked' : 'Pick 1 of 3 now'}</span>
+      <span>${state.link.connected ? uiText('Connection ready') : uiText('Waiting for connection')}</span>
+      <span>${state.link.connected ? localizeTrainerName(state.link.remoteName) : uiText('No opponent connected')}</span>
+      <span>${state.link.localPickLocked ? uiText('Pick locked') : uiText('Pick 1 of 3 now')}</span>
     </div>
   </div>`;
 }
@@ -1583,12 +2119,12 @@ function renderDraftStatusCard(mode, roundLabel) {
 function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, cards, showStatusCard = mode === 'link'}) {
   return `<section class="draft-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
-      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
-      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
+      <button class="ghost-btn back" data-action="go-menu">${uiText('Back to start page')}</button>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${modeNameLabel(mode)}</span></div>
     </div>
     <section class="draft-hero-panel">
       <div class="draft-hero-copy">
-        <div class="draft-kicker-row"><span class="label">${mode === 'bot' ? 'Arena Draft' : 'Hidden Draft'}</span><span class="draft-status-pill">${roundLabel}</span></div>
+        <div class="draft-kicker-row"><span class="label">${mode === 'bot' ? uiText('Arena Draft') : uiText('Hidden Draft')}</span><span class="draft-status-pill">${roundLabel}</span></div>
         <h2>${title}</h2>
         <p>${statusCopy}</p>
         <div class="draft-chip-row">${chips.map((chip) => `<span>${chip}</span>`).join('')}</div>
@@ -1596,12 +2132,12 @@ function renderDraftShell({mode, roundLabel, title, statusCopy, chips, action, c
     </section>
     ${showStatusCard ? `<section class="draft-link-status">${renderDraftStatusCard(mode, roundLabel)}</section>` : ''}
     <section class="draft-team-panel">
-      <div class="draft-section-head"><div><div class="label">Your Team</div><h3>${currentTeamSize()} draft slots</h3></div><p>Your picks appear here right away. Use Info to check stats and moves before you lock one in.</p></div>
+      <div class="draft-section-head"><div><div class="label">${uiText('Your Team')}</div><h3>${currentTeamSize()} ${uiText('draft slots')}</h3></div><p>${uiText('Your picks appear here right away. Use Info to check stats and moves before you lock one in.')}</p></div>
       ${renderDraftTeamSlots(state.playerDraft)}
     </section>
     <section class="draft-board">
-      <div class="draft-section-head"><div><div class="label">Selection</div><h3>Pick 1 of 3 Pokemon</h3></div><p>${action}</p></div>
-      <div class="draft-mobile-swipe-hint"><span>&larr;</span><strong>Swipe for the next card</strong><em>&bull; &bull; &bull;</em></div>
+      <div class="draft-section-head"><div><div class="label">${uiText('Selection')}</div><h3>${uiText('Pick 1 of 3 Pokemon')}</h3></div><p>${action}</p></div>
+      <div class="draft-mobile-swipe-hint"><span>&larr;</span><strong>${uiText('Swipe for the next card')}</strong><em>&bull; &bull; &bull;</em></div>
       <section class="draft-choice-grid">${cards}</section>
     </section>
   </section>`;
@@ -1611,19 +2147,19 @@ function renderPreviewHeroGuide(mode) {
   const slots = Array.from({length: currentTeamSize()}, (_, index) => {
     const member = state.playerPreview[index];
     if (!member) {
-      return `<div class="preview-hero-slot empty"><span>${index + 1}</span><strong>Open</strong><div>Filled after the draft.</div></div>`;
+      return `<div class="preview-hero-slot empty"><span>${index + 1}</span><strong>${uiText('Open')}</strong><div>${uiText('Filled after the draft.')}</div></div>`;
     }
     return `<div class="preview-hero-slot" style="background:${typeGradient(member.types)}">
       <span>${index + 1}</span>
-      <strong>${member.name}</strong>
-      <div>${index === 0 ? 'Leads the battle' : 'Ready to switch in'}</div>
+      <strong>${localizedPokemonName(member)}</strong>
+      <div>${index === 0 ? uiText('Leads the battle') : uiText('Ready to switch in')}</div>
     </div>`;
   }).join('');
   const note = mode === 'bot'
-    ? 'Only check your lead and your switch options. The opposing team stays hidden until battle.'
-    : 'Your order stays hidden until both sides are ready and the battle begins.';
+    ? uiText('Only check your lead and your switch options. The opposing team stays hidden until battle.')
+    : uiText('Your order stays hidden until both sides are ready and the battle begins.');
   return `<aside class="preview-hero-guide">
-    <div class="label">${mode === 'bot' ? 'Battle plan' : 'Hidden plan'}</div>
+    <div class="label">${mode === 'bot' ? uiText('Battle plan') : uiText('Hidden plan')}</div>
     <div class="preview-hero-slot-grid">${slots}</div>
     <div class="preview-hero-note">${note}</div>
   </aside>`;
@@ -1632,12 +2168,12 @@ function renderPreviewHeroGuide(mode) {
 function renderPreviewShell({mode, title, statusCopy, chips, actionLabel, playerPanelTitle, playerCards, asidePanel}) {
   return `<section class="preview-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
-      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
-      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${mode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
+      <button class="ghost-btn back" data-action="go-menu">${uiText('Back to start page')}</button>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${modeNameLabel(mode)}</span></div>
     </div>
     <section class="draft-hero-panel preview-hero-panel">
       <div class="draft-hero-copy">
-        <div class="draft-kicker-row"><span class="label">${mode === 'bot' ? 'Order' : 'Hidden Order'}</span><span class="draft-status-pill">${mode === 'bot' ? currentEnemyLabel() : 'Arrange team'}</span></div>
+        <div class="draft-kicker-row"><span class="label">${mode === 'bot' ? uiText('Order') : uiText('Hidden Order')}</span><span class="draft-status-pill">${mode === 'bot' ? currentEnemyLabel() : uiText('Arrange team')}</span></div>
         <h2>${title}</h2>
         <p>${statusCopy}</p>
         <div class="draft-chip-row">${chips.map((chip) => `<span>${chip}</span>`).join('')}</div>
@@ -1657,8 +2193,8 @@ function renderPreviewShell({mode, title, statusCopy, chips, actionLabel, player
 function renderPreviewCard(member, index, controls) {
   return `<div class="preview-card" style="background:${typeGradient(member.types)}">
     <div class="preview-card-media"><span class="preview-rank">${index + 1}</span>${spriteTag(member, 'front', 'sm')}</div>
-    <div class="preview-copy"><strong>${member.name}</strong><div class="tiny">${moveSummaryText(member, currentTeamSize() === 6 ? 2 : 4)}${member.set?.item ? ` | ${itemName(member.set.item)}` : ''}</div></div>
-    <div class="preview-actions"><button class="info-chip" data-inspect="${member.name}">Info</button>${controls ? `<button class="lead-chip" data-lead-index="${index}" ${index === 0 ? 'disabled' : ''}>Lead</button>` : ''}</div>
+    <div class="preview-copy"><strong>${localizedPokemonName(member)}</strong><div class="tiny">${moveSummaryText(member, currentTeamSize() === 6 ? 2 : 4)}${member.set?.item ? ` | ${itemName(member.set.item)}` : ''}</div></div>
+    <div class="preview-actions"><button class="info-chip" data-inspect="${member.name}">${uiText('Info')}</button>${controls ? `<button class="lead-chip" data-lead-index="${index}" ${index === 0 ? 'disabled' : ''}>${uiText('Lead')}</button>` : ''}</div>
   </div>`;
 }
 
@@ -1668,18 +2204,18 @@ function renderInspectModal() {
   const moves = inspectMoveDetails(member);
   return `<div class="modal-backdrop" data-close-inspect="1">
     <div class="modal" onclick="event.stopPropagation()">
-      <div class="modal-head"><div><div class="label">Pokemon Info</div><h3>${member.name}</h3></div><button class="ghost-btn" data-close-inspect="1">Close</button></div>
+      <div class="modal-head"><div><div class="label">${uiText('Pokemon Info')}</div><h3>${localizedPokemonName(member)}</h3></div><button class="ghost-btn" data-close-inspect="1">${uiText('Close')}</button></div>
       <div class="modal-body">
         <div class="inspect-sidebar">
           <div class="modal-card inspect-summary" style="background:${typeGradient(member.types)}">
             ${spriteTag(member, 'front', 'lg')}
             <div class="inspect-summary-meta">
-              <div class="inspect-summary-head"><span>#${member.num}</span><strong>${member.name}</strong></div>
+              <div class="inspect-summary-head"><span>#${member.num}</span><strong>${localizedPokemonName(member)}</strong></div>
               <div class="types">${member.types.map((type) => moveTypeBadge(type)).join('')}</div>
             </div>
           </div>
           <div class="modal-stats inspect-stat-panel">
-            <strong>Level 100 Stats</strong>
+            <strong>${uiText('Level 100 Stats')}</strong>
             <div class="inspect-stat-grid">
               <div><span>HP</span><strong>${member.battleStats.hp}</strong></div>
               <div><span>ATK</span><strong>${member.battleStats.atk}</strong></div>
@@ -1687,12 +2223,12 @@ function renderInspectModal() {
               <div><span>SPC</span><strong>${member.battleStats.spc}</strong></div>
               <div><span>SPE</span><strong>${member.battleStats.spe}</strong></div>
             </div>
-            ${member.set?.item ? `<div class="inspect-held-item"><span class="label">Held item</span><div class="inspect-held-item-head">${itemIconTag(member.set.item)}<strong>${itemName(member.set.item)}</strong></div><div class="tiny">${itemDesc(member.set.item)}</div></div>` : ''}
+            ${member.set?.item ? `<div class="inspect-held-item"><span class="label">${uiText('Held item')}</span><div class="inspect-held-item-head">${itemIconTag(member.set.item)}<strong>${itemName(member.set.item)}</strong></div><div class="tiny">${itemDesc(member.set.item)}</div></div>` : ''}
           </div>
         </div>
         <div class="inspect-details">
           <div class="modal-moves inspect-move-panel">
-            <strong>Moves</strong>
+            <strong>${uiText('Moves')}</strong>
             <div class="inspect-move-list">${renderInspectMoveColumns(moves)}</div>
           </div>
         </div>
@@ -1705,12 +2241,12 @@ function renderLeaveConfirmModal() {
   if (!state.leaveConfirmAction) return '';
   return `<div class="modal-backdrop" data-close-leave="1">
     <div class="modal leave-confirm-modal" onclick="event.stopPropagation()">
-      <div class="modal-head"><div><div class="label">Leave room</div><h3>Leave the Link Battle room?</h3></div><button class="ghost-btn" data-close-leave="1">Close</button></div>
+      <div class="modal-head"><div><div class="label">${uiText('Leave room')}</div><h3>${uiText('Leave the Link Battle room?')}</h3></div><button class="ghost-btn" data-close-leave="1">${uiText('Close')}</button></div>
       <div class="modal-body leave-confirm-body">
-        <p>You are about to leave the room, are you sure?</p>
+        <p>${uiText('You are about to leave the room, are you sure?')}</p>
         <div class="actions leave-confirm-actions">
-          <button class="primary-btn" data-action="confirm-leave-room">Yes</button>
-          <button class="ghost-btn" data-action="cancel-leave-room">No</button>
+          <button class="primary-btn" data-action="confirm-leave-room">${uiText('Yes')}</button>
+          <button class="ghost-btn" data-action="cancel-leave-room">${uiText('No')}</button>
         </div>
       </div>
     </div>
@@ -1718,14 +2254,14 @@ function renderLeaveConfirmModal() {
 }
 
 function renderMenuStage() {
-  const generation = currentGenerationConfig();
+  const generation = localizedGenerationConfig();
   const botCard = generation.modeCards.bot;
   const linkCard = generation.modeCards.link;
   const renderMenuModeCard = (card) => `
     <button class="menu-mode-card ${card.enabled ? '' : 'locked'}" data-action="${card.action}" ${card.enabled ? '' : 'disabled'}>
       <div class="menu-mode-head">
         <span class="label">${card.eyebrow}</span>
-        <span class="menu-mode-state">${card.enabled ? generation.availability : 'In development'}</span>
+        <span class="menu-mode-state">${card.enabled ? generation.availability : uiText('In development')}</span>
       </div>
       <h3>${card.title}</h3>
       <div class="menu-mode-points">${card.points.map((point) => `<span>${point}</span>`).join('')}</div>
@@ -1740,22 +2276,26 @@ function renderMenuStage() {
         <div class="menu-stage-mon menu-stage-mon-player">${menuSpriteTag(MENU_SHOWCASE.player, 'back', 'player')}</div>
         <div class="menu-stage-line menu-stage-line-top"></div>
         <div class="menu-stage-line menu-stage-line-bottom"></div>
-        <div class="menu-stage-text">Choose a generation, pick a mode, then draft and battle.</div>
+        <div class="menu-stage-text">${uiText('Choose a generation, pick a mode, then draft and battle.')}</div>
       </div>`
     : `<div class="menu-showcase menu-showcase-gen5">
         <div class="menu-stage-card menu-stage-card-foe menu-stage-card-gen5">
           <strong>${generation.label} Arena</strong>
-          <span>Battle preview coming soon</span>
+          <span>${uiText('Battle preview coming soon')}</span>
         </div>
         <div class="menu-stage-mon menu-stage-mon-foe menu-stage-mon-empty">${menuSpriteTag(null, 'front', 'foe')}</div>
         <div class="menu-stage-mon menu-stage-mon-player menu-stage-mon-empty">${menuSpriteTag(null, 'back', 'player')}</div>
         <div class="menu-stage-line menu-stage-line-top"></div>
         <div class="menu-stage-line menu-stage-line-bottom"></div>
-        <div class="menu-stage-text">Choose a generation, pick a mode, then draft and battle. Gen 5 modes are still in development.</div>
+        <div class="menu-stage-text">${uiText('Choose a generation, pick a mode, then draft and battle. Gen 5 modes are still in development.')}</div>
       </div>`;
   return `<section class="menu-shell">
     <div class="menu-topbar">
-      <div class="menu-generation-switch" role="tablist" aria-label="Choose generation">
+      <div class="menu-language-switch" role="group" aria-label="${uiText('Choose language')}">
+        <button class="menu-language-btn ${!isGerman() ? 'active' : ''}" data-action="set-language-en" title="${uiText('English')}">EN</button>
+        <button class="menu-language-btn ${isGerman() ? 'active' : ''}" data-action="set-language-de" title="${uiText('German')}">DE</button>
+      </div>
+      <div class="menu-generation-switch" role="tablist" aria-label="${uiText('Choose generation')}">
         <button class="menu-generation-btn ${state.generation === 'gen1' ? 'active' : ''}" data-action="set-generation-gen1">Gen 1</button>
         <button class="menu-generation-btn ${state.generation === 'gen5' ? 'active' : ''}" data-action="set-generation-gen5">Gen 5</button>
       </div>
@@ -1766,36 +2306,36 @@ function renderMenuStage() {
         <h2>${generation.title}</h2>
         <p>${generation.subtitle}</p>
         <div class="menu-feature-row">${generation.features.map((feature) => `<span>${feature}</span>`).join('')}</div>
-        <div class="menu-project-note">Private non-commercial fan project. Pokemon rights remain with their respective owners.</div>
+        <div class="menu-project-note">${uiText('Private non-commercial fan project. Pokemon rights remain with their respective owners.')}</div>
       </div>
       ${showcase}
     </section>
     <section class="menu-lower">
       <div class="menu-modes">
-        <div class="menu-section-head"><div><div class="label">Mode Select</div><h3>Choose your arena</h3></div><p>${generation.note}</p></div>
+        <div class="menu-section-head"><div><div class="label">${uiText('Mode Select')}</div><h3>${uiText('Choose your arena')}</h3></div><p>${generation.note}</p></div>
         <div class="menu-mode-grid">${renderMenuModeCard(botCard)}${renderMenuModeCard(linkCard)}</div>
       </div>
       <div class="menu-info-panel">
-        <div class="label">Flow</div>
+        <div class="label">${uiText('Flow')}</div>
         <div class="menu-step-list">${generation.steps.map((step, index) => `<div class="menu-step"><span>${index + 1}</span><strong>${step}</strong></div>`).join('')}</div>
         <div class="menu-meta-grid">
-          <div class="menu-meta-card"><span class="label">Active Generation</span><strong>${generation.label}</strong></div>
-          <div class="menu-meta-card"><span class="label">Best Run</span><strong>${state.bestRun}</strong></div>
-          <div class="menu-meta-card"><span class="label">Status</span><strong>${generation.availability}</strong></div>
+          <div class="menu-meta-card"><span class="label">${uiText('Active Generation')}</span><strong>${generation.label}</strong></div>
+          <div class="menu-meta-card"><span class="label">${uiText('Best Run')}</span><strong>${state.bestRun}</strong></div>
+          <div class="menu-meta-card"><span class="label">${uiText('Status')}</span><strong>${generation.availability}</strong></div>
         </div>
       </div>
     </section>
-    <section class="menu-legal-note" aria-label="Project disclaimer">
-      <div class="label">Private fan project</div>
-      <p>This is a private, non-commercial Pokemon fan project. No ownership is claimed. Pokemon and all related names, characters, images, and trademarks belong to Nintendo, Game Freak, Creatures, The Pokemon Company, and their respective rights holders.</p>
+    <section class="menu-legal-note" aria-label="${uiText('Project disclaimer')}">
+      <div class="label">${uiText('Private fan project')}</div>
+      <p>${uiText('This is a private, non-commercial Pokemon fan project. No ownership is claimed. Pokemon and all related names, characters, images, and trademarks belong to Nintendo, Game Freak, Creatures, The Pokemon Company, and their respective rights holders.')}</p>
     </section>
   </section>`;
 }
 
 function renderSettingCard(label, title, options, rowClass = '') {
   return `<article class="mode-settings-card">
-    <div class="label">${label}</div>
-    <h3>${title}</h3>
+    <div class="label">${uiText(label)}</div>
+    <h3>${uiText(title)}</h3>
     <div class="mode-settings-toggle-row ${rowClass}">${options.join('')}</div>
   </article>`;
 }
@@ -1803,9 +2343,9 @@ function renderSettingCard(label, title, options, rowClass = '') {
 function renderSettingRow(label, title, options, note = '', rowClass = '') {
   return `<article class="mode-settings-row">
     <div class="mode-settings-row-copy">
-      <div class="label">${label}</div>
-      <h3>${title}</h3>
-      ${note ? `<p>${note}</p>` : ''}
+      <div class="label">${uiText(label)}</div>
+      <h3>${uiText(title)}</h3>
+      ${note ? `<p>${uiText(note)}</p>` : ''}
     </div>
     <div class="mode-settings-toggle-row ${rowClass}">${options.join('')}</div>
   </article>`;
@@ -1813,8 +2353,8 @@ function renderSettingRow(label, title, options, note = '', rowClass = '') {
 
 function renderModeSettingsStage() {
   const settings = normalizedModeSettings();
-  const modeLabel = state.pendingMode === 'bot' ? 'Bot Run' : 'Link Battle';
-  const button = (action, text, active, extra = '') => `<button class="mode-settings-toggle ${active ? 'active' : ''} ${extra}" data-action="${action}">${text}</button>`;
+  const modeLabel = modeNameLabel(state.pendingMode);
+  const button = (action, text, active, extra = '') => `<button class="mode-settings-toggle ${active ? 'active' : ''} ${extra}" data-action="${action}">${uiText(text)}</button>`;
   const rerollControls = `<div class="mode-settings-counter ${settings.attackReroll ? '' : 'disabled'}">
         <button class="mini-btn" data-action="mode-reroll-minus" ${!settings.attackReroll || settings.rerollCount <= 1 ? 'disabled' : ''}>-</button>
         <span>${settings.rerollCount}X</span>
@@ -1822,10 +2362,10 @@ function renderModeSettingsStage() {
       </div>`
   ;
   const summaryRows = [
-    ['Attack rules', attackModeLabel()],
-    ['Team size', `${settings.teamSize} Pokemon`],
-    ['Rerolls', settings.attackReroll ? `${settings.rerollCount} total rerolls` : 'Off'],
-    ['Held items', settings.itemDraft ? 'Gen 5 draft enabled' : 'Off'],
+    [uiText('Attack rules'), attackModeLabel()],
+    [uiText('Team size'), pokemonCountLabel(settings.teamSize)],
+    [uiText('Rerolls'), settings.attackReroll ? (isGerman() ? `${settings.rerollCount} gesamt` : `${settings.rerollCount} total rerolls`) : uiText('Off')],
+    [uiText('Held items'), settings.itemDraft ? uiText('Gen 5 draft enabled') : uiText('Off')],
   ];
   const desktopControls = `
     <section class="mode-settings-grid">
@@ -1869,30 +2409,30 @@ function renderModeSettingsStage() {
     </section>`;
   return `<section class="mode-settings-shell team-size-${settings.teamSize}">
     <div class="draft-topbar">
-      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
+      <button class="ghost-btn back" data-action="go-menu">${uiText('Back to start page')}</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${modeLabel}</span></div>
     </div>
     <section class="draft-hero-panel mode-settings-hero">
       <div class="draft-hero-copy mode-settings-copy">
-        <div class="draft-kicker-row"><span class="label">Mode setup</span><span class="draft-status-pill">${modeLabel}</span></div>
-        <h2>Set the draft rules before the run starts.</h2>
-        <p>Pick how moves are generated, how many Pokemon the run uses, whether rerolls are available, and whether held items are drafted after the team is locked.</p>
+        <div class="draft-kicker-row"><span class="label">${uiText('Mode setup')}</span><span class="draft-status-pill">${modeLabel}</span></div>
+        <h2>${uiText('Set the draft rules before the run starts.')}</h2>
+        <p>${uiText('Pick how moves are generated, how many Pokemon the run uses, whether rerolls are available, and whether held items are drafted after the team is locked.')}</p>
       </div>
       <aside class="mode-settings-summary">
-        <div class="label">Current rules</div>
+        <div class="label">${uiText('Current rules')}</div>
         <div class="mode-settings-summary-list">${summaryRows.map(([label, value]) => `<div><span>${label}</span><strong>${value}</strong></div>`).join('')}</div>
-        <div class="mode-settings-summary-note">Gen 1 uses a curated later-generation held item pool only when item draft is enabled.</div>
+        <div class="mode-settings-summary-note">${uiText('Gen 1 uses a curated later-generation held item pool only when item draft is enabled.')}</div>
       </aside>
     </section>
     <div class="mode-settings-desktop">${desktopControls}</div>
     <div class="mode-settings-mobile">${mobileControls}</div>
     <section class="mode-settings-notes">
-      <div class="mode-settings-note"><strong>Randomized attacks</strong><span>Each Pokemon gets four random moves from its own legal learnset. If it runs out of legal moves, the remaining slots pull from the full Gen 1 move pool.</span></div>
-      <div class="mode-settings-note"><strong>Attack rerolls</strong><span>After the Pokemon draft, you can reroll one move at a time across your team. The default budget is 3 whenever rerolls are enabled.</span></div>
-      <div class="mode-settings-note"><strong>Held item draft</strong><span>Gen 1 had no held items, so this mode uses a compact curated pool of later-generation held items with real battle effects. After the Pokemon draft, you draft from three choices at a time and assign the items you want before battle.</span></div>
+      <div class="mode-settings-note"><strong>${uiText('Randomized attacks')}</strong><span>${uiText('Each Pokemon gets four random moves from its own legal learnset. If it runs out of legal moves, the remaining slots pull from the full Gen 1 move pool.')}</span></div>
+      <div class="mode-settings-note"><strong>${uiText('Attack rerolls')}</strong><span>${uiText('After the Pokemon draft, you can reroll one move at a time across your team. The default budget is 3 whenever rerolls are enabled.')}</span></div>
+      <div class="mode-settings-note"><strong>${uiText('Held item draft')}</strong><span>${uiText('Gen 1 had no held items, so this mode uses a compact curated pool of later-generation held items with real battle effects. After the Pokemon draft, you draft from three choices at a time and assign the items you want before battle.')}</span></div>
     </section>
     <div class="actions mode-settings-actions">
-      <button class="primary-btn" data-action="confirm-mode-settings">Continue</button>
+      <button class="primary-btn" data-action="confirm-mode-settings">${uiText('Continue')}</button>
     </div>
   </section>`;
 }
@@ -1901,11 +2441,11 @@ function renderDraftStage() {
   const round = Math.min(state.playerDraft.length + 1, currentTeamSize());
   return renderDraftShell({
     mode: 'bot',
-    roundLabel: `Round ${round} of ${currentTeamSize()}`,
-    title: 'Pick your next Pokemon',
+    roundLabel: roundLabel(round, currentTeamSize()),
+    title: uiText('Pick your next Pokemon'),
     statusCopy: state.message,
-    chips: [currentGenerationConfig().label, '3-card packs', `${state.playerDraft.length}/${currentTeamSize()} picked`, attackModeLabel()],
-    action: 'These three cards are your full selection for this round.',
+    chips: [currentGenerationConfig().label, uiText('3-card packs'), pickedCountLabel(state.playerDraft.length, currentTeamSize()), attackModeLabel()],
+    action: uiText('These three cards are your full selection for this round.'),
     cards: state.pack.map((species) => renderDraftCard(species, `data-draft-id="${species.id}"`)).join(''),
   });
 }
@@ -1917,10 +2457,10 @@ function renderRerollMoveCard(member, memberIndex) {
     const tone = typeColors(move.type);
     return `<div class="reroll-move-tile">
       <div class="reroll-move-top">
-        <span class="label">Slot ${moveIndex + 1}</span>
-        <span class="move-chip" style="--type-bg:${tone.bg};--type-fg:${tone.fg}">${move.name}</span>
+        <span class="label">${uiText('Slot')} ${moveIndex + 1}</span>
+        <span class="move-chip" style="--type-bg:${tone.bg};--type-fg:${tone.fg}">${localizedMoveName(move.id)}</span>
       </div>
-      <button class="ghost-btn compact-btn reroll-move-btn" data-reroll-member="${memberIndex}" data-reroll-move="${moveIndex}" ${state.rerollsLeft <= 0 ? 'disabled' : ''}>Reroll</button>
+      <button class="ghost-btn compact-btn reroll-move-btn" data-reroll-member="${memberIndex}" data-reroll-move="${moveIndex}" ${state.rerollsLeft <= 0 ? 'disabled' : ''}>${uiText('Reroll')}</button>
     </div>`;
   }).join('');
   const accent = typeColors(member.types[0] || 'Normal');
@@ -1928,9 +2468,9 @@ function renderRerollMoveCard(member, memberIndex) {
     <div class="reroll-card-head">
       <div class="reroll-card-title">
         <div class="label">#${member.num}</div>
-        <h3>${member.name}</h3>
+        <h3>${localizedPokemonName(member)}</h3>
       </div>
-      <button class="info-chip" data-inspect="${member.name}">Info</button>
+      <button class="info-chip" data-inspect="${member.name}">${uiText('Info')}</button>
     </div>
     <div class="reroll-card-strip">
       <div class="reroll-card-sprite">${spriteTag(member, 'front', 'sm')}</div>
@@ -1943,33 +2483,33 @@ function renderRerollMoveCard(member, memberIndex) {
 }
 
 function renderRerollStage() {
-  const modeLabel = state.playMode === 'bot' ? 'Bot Run' : 'Link Battle';
-  const nextLabel = itemDraftEnabled() ? 'Continue to items' : 'Continue';
-  const attackRuleText = state.modeSettings.attackMode === 'randomized' ? 'Randomized learnset mode' : 'Fixed curated sets';
-  const nextStep = itemDraftEnabled() ? 'Held item draft' : 'Lead order';
+  const modeLabel = modeNameLabel();
+  const nextLabel = itemDraftEnabled() ? uiText('Continue to items') : uiText('Continue');
+  const attackRuleText = state.modeSettings.attackMode === 'randomized' ? uiText('Randomized learnset mode') : uiText('Fixed curated sets');
+  const nextStep = itemDraftEnabled() ? uiText('Held item draft') : uiText('Lead order');
   const focusIndex = Math.min(Math.max(0, state.rerollFocusMember || 0), Math.max(0, state.playerLoadout.length - 1));
   const focusedMember = state.playerLoadout[focusIndex] || state.playerLoadout[0];
   const selector = state.playerLoadout.map((member, index) => `
     <button class="reroll-team-tab ${index === focusIndex ? 'active' : ''}" data-reroll-focus="${index}">
       <span class="reroll-team-tab-sprite">${spriteTag(member, 'front', 'sm')}</span>
-      <span class="reroll-team-tab-name">${member.name}</span>
+      <span class="reroll-team-tab-name">${localizedPokemonName(member)}</span>
     </button>
   `).join('');
   return `<section class="draft-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
-      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
+      <button class="ghost-btn back" data-action="go-menu">${uiText('Back to start page')}</button>
       <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${modeLabel}</span></div>
     </div>
     <section class="reroll-toolbar">
       <div class="reroll-toolbar-copy">
-        <div class="draft-kicker-row"><span class="label">Move workshop</span><span class="draft-status-pill">${state.rerollsLeft} rerolls left</span></div>
-        <h2>Refine the moves you want to bring into battle.</h2>
-        <p>Use each reroll on a single move slot. The updated set is saved immediately for the next step.</p>
+        <div class="draft-kicker-row"><span class="label">${uiText('Move workshop')}</span><span class="draft-status-pill">${rerollsLeftLabel(state.rerollsLeft)}</span></div>
+        <h2>${uiText('Refine the moves you want to bring into battle.')}</h2>
+        <p>${uiText('Use each reroll on a single move slot. The updated set is saved immediately for the next step.')}</p>
       </div>
       <div class="reroll-toolbar-stats">
-        <div class="reroll-stat-card"><span>Attack rules</span><strong>${attackRuleText}</strong></div>
-        <div class="reroll-stat-card"><span>Next step</span><strong>${nextStep}</strong></div>
-        <div class="reroll-stat-card"><span>Fallback rule</span><strong>Uses the full Gen 1 move pool if a Pokemon runs out of legal unused moves.</strong></div>
+        <div class="reroll-stat-card"><span>${uiText('Attack rules')}</span><strong>${attackRuleText}</strong></div>
+        <div class="reroll-stat-card"><span>${uiText('Next step')}</span><strong>${nextStep}</strong></div>
+        <div class="reroll-stat-card"><span>${uiText('Fallback rule')}</span><strong>${uiText('Uses the full Gen 1 move pool if a Pokemon runs out of legal unused moves.')}</strong></div>
       </div>
     </section>
     <section class="reroll-desktop-only">
@@ -1980,7 +2520,7 @@ function renderRerollStage() {
       ${focusedMember ? renderRerollMoveCard(focusedMember, focusIndex) : ''}
     </section>
     <div class="actions reroll-footer">
-      <div class="reroll-footer-copy"><strong>${state.rerollsLeft}</strong><span>rerolls left</span></div>
+      <div class="reroll-footer-copy"><strong>${state.rerollsLeft}</strong><span>${isGerman() ? 'Neuwürfe übrig' : 'rerolls left'}</span></div>
       <button class="primary-btn" data-action="finish-rerolls">${nextLabel}</button>
     </div>
   </section>`;
@@ -1990,10 +2530,10 @@ function renderItemDraftCard(item) {
   return `<article class="item-draft-card">
     <div class="item-draft-head">
       ${itemIconTag(item.id)}
-      <div><div class="label">Held item</div><h3>${item.name}</h3></div>
+      <div><div class="label">${uiText('Held item')}</div><h3>${itemName(item.id)}</h3></div>
     </div>
-    <div class="tiny">${item.shortDesc || item.desc || 'Held item effect'}</div>
-    <div class="card-actions"><button class="primary-btn" data-item-pick="${item.id}">Pick item</button></div>
+    <div class="tiny">${itemDesc(item.id)}</div>
+    <div class="card-actions"><button class="primary-btn" data-item-pick="${item.id}">${uiText('Pick item')}</button></div>
   </article>`;
 }
 
@@ -2005,33 +2545,33 @@ function renderItemDraftStage() {
     : '<div class="item-draft-summary-empty">Each pick stays available for the assignment step.</div>';
   return `<section class="draft-shell item-draft-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
-      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
-      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${state.playMode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
+      <button class="ghost-btn back" data-action="go-menu">${uiText('Back to start page')}</button>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${modeNameLabel()}</span></div>
     </div>
     <section class="draft-hero-panel">
       <div class="draft-hero-copy">
-        <div class="draft-kicker-row"><span class="label">Held item draft</span><span class="draft-status-pill">Round ${round} of ${currentTeamSize()}</span></div>
-        <h2>Pick one held item from this item pack.</h2>
-        <p>Each round adds one item to your drafted item pool. After the item draft, you can assign any of your drafted items to your team.</p>
-        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${state.draftedItems.length} of ${currentTeamSize()} items drafted</span><span>Curated held item pool</span></div>
+        <div class="draft-kicker-row"><span class="label">${uiText('Held item draft')}</span><span class="draft-status-pill">${roundLabel(round, currentTeamSize())}</span></div>
+        <h2>${uiText('Pick one held item from this item pack.')}</h2>
+        <p>${uiText('Each round adds one item to your drafted item pool. After the item draft, you can assign any of your drafted items to your team.')}</p>
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${draftedItemsCountLabel(state.draftedItems.length, currentTeamSize())}</span><span>${uiText('Curated held item pool')}</span></div>
       </div>
     </section>
     <section class="draft-team-panel">
-      <div class="draft-section-head"><div><div class="label">Your lineup</div><h3>${currentTeamSize()} Pokemon waiting for items</h3></div><p>Use Info to check moves and stats while you draft held items.</p></div>
+      <div class="draft-section-head"><div><div class="label">${uiText('Your lineup')}</div><h3>${pokemonCountLabel(currentTeamSize())} ${uiText('waiting for items')}</h3></div><p>${uiText('Use Info to check moves and stats while you draft held items.')}</p></div>
       <div class="draft-team-strip item-draft-team-strip">${state.playerLoadout.map((member) => `<div class="draft-team-slot filled compact" style="background:${typeGradient(member.types)}">
-        <div class="draft-team-slot-head">${spriteTag(member, 'front', 'sm')}<div class="draft-team-slot-copy"><strong title="${member.name}">${member.name}</strong><div class="tiny">${moveSummaryText(member, 2)}</div></div></div>
-        <button class="info-chip" data-inspect="${member.name}">Info</button>
+        <div class="draft-team-slot-head">${spriteTag(member, 'front', 'sm')}<div class="draft-team-slot-copy"><strong title="${localizedPokemonName(member)}">${localizedPokemonName(member)}</strong><div class="tiny">${moveSummaryText(member, 2)}</div></div></div>
+        <button class="info-chip" data-inspect="${member.name}">${uiText('Info')}</button>
       </div>`).join('')}</div>
       <div class="item-draft-summary">
         <div class="item-draft-summary-head">
-          <strong>${draftedCount ? `${draftedCount} item${draftedCount === 1 ? '' : 's'} saved for later` : 'Drafted item pool'}</strong>
-          <span>${draftedCount} of ${currentTeamSize()} item slots filled.</span>
+          <strong>${draftedCount ? savedItemsLabel(draftedCount) : uiText('Drafted item pool')}</strong>
+          <span>${itemSlotsFilledLabel(draftedCount, currentTeamSize())}</span>
         </div>
         ${draftedPool}
       </div>
     </section>
     <section class="draft-board">
-        <div class="draft-section-head"><div><div class="label">Selection</div><h3>Pick 1 of 3 held items</h3></div><p>Choose the item that gives your team the best edge.</p></div>
+        <div class="draft-section-head"><div><div class="label">${uiText('Selection')}</div><h3>${uiText('Pick 1 of 3 held items')}</h3></div><p>${uiText('Choose the item that gives your team the best edge.')}</p></div>
         <section class="draft-choice-grid item-draft-grid">${state.itemPack.map((item) => renderItemDraftCard(item)).join('')}</section>
     </section>
   </section>`;
@@ -2040,9 +2580,9 @@ function renderItemDraftStage() {
 function renderItemAssignMemberCard(member, {compact = false} = {}) {
   const assignedItem = playerAssignedItemFor(member.name);
   return `<article class="item-assign-card ${compact ? 'compact' : ''}" style="background:${typeGradient(member.types)}">
-    <div class="item-assign-head">${spriteTag(member, 'front', 'sm')}<div><strong>${member.name}</strong><div class="item-assign-type-row">${member.types.map((type) => moveTypeBadge(type, 'compact')).join('')}</div><div class="tiny">${moveSummaryText(member, currentTeamSize() === 6 ? 2 : 4)}</div></div><button class="info-chip" data-inspect="${member.name}">Info</button></div>
-    <div class="item-assign-current">${assignedItem ? `<span class="item-pill assigned">${itemName(assignedItem)}</span>` : '<span class="item-pill empty">No held item</span>'}</div>
-    <div class="card-actions"><button class="primary-btn" data-assign-item="${member.name}" ${state.selectedDraftItem ? '' : 'disabled'}>Assign selected</button><button class="ghost-btn compact-btn" data-clear-item="${member.name}" ${assignedItem ? '' : 'disabled'}>Clear</button></div>
+    <div class="item-assign-head">${spriteTag(member, 'front', 'sm')}<div><strong>${localizedPokemonName(member)}</strong><div class="item-assign-type-row">${member.types.map((type) => moveTypeBadge(type, 'compact')).join('')}</div><div class="tiny">${moveSummaryText(member, currentTeamSize() === 6 ? 2 : 4)}</div></div><button class="info-chip" data-inspect="${member.name}">${uiText('Info')}</button></div>
+    <div class="item-assign-current">${assignedItem ? `<span class="item-pill assigned">${itemName(assignedItem)}</span>` : `<span class="item-pill empty">${uiText('No held item')}</span>`}</div>
+    <div class="card-actions"><button class="primary-btn" data-assign-item="${member.name}" ${state.selectedDraftItem ? '' : 'disabled'}>${uiText('Assign selected')}</button><button class="ghost-btn compact-btn" data-clear-item="${member.name}" ${assignedItem ? '' : 'disabled'}>${uiText('Clear')}</button></div>
   </article>`;
 }
 
@@ -2050,7 +2590,7 @@ function renderItemAssignSelectorCard(member, index) {
   const assignedItem = playerAssignedItemFor(member.name);
   return `<button class="item-assign-team-tab ${index === state.itemAssignFocusMember ? 'active' : ''}" data-item-assign-focus="${index}">
     <span class="item-assign-team-tab-sprite">${spriteTag(member, 'front', 'sm')}</span>
-    <span class="item-assign-team-tab-copy"><strong title="${member.name}">${member.name}</strong><span>${assignedItem ? itemName(assignedItem) : 'No item'}</span></span>
+    <span class="item-assign-team-tab-copy"><strong title="${localizedPokemonName(member)}">${localizedPokemonName(member)}</strong><span>${assignedItem ? itemName(assignedItem) : uiText('No item')}</span></span>
   </button>`;
 }
 
@@ -2058,7 +2598,7 @@ function renderItemAssignPickerCard(entry, assignedItems, compact = false) {
   const selected = state.selectedDraftItem === entry.key;
   const assigned = assignedItems.has(entry.key);
   return `<button class="item-picker-card ${selected ? 'selected' : ''} ${assigned ? 'assigned' : ''} ${compact ? 'compact' : ''}" data-select-item="${entry.key}" data-carousel-option="1">
-    <div class="item-picker-card-head">${itemIconTag(entry.id)}<div><strong>${itemName(entry.id)}</strong><span>${assigned ? 'Assigned' : 'Available'}</span></div></div>
+    <div class="item-picker-card-head">${itemIconTag(entry.id)}<div><strong>${itemName(entry.id)}</strong><span>${assigned ? uiText('Assigned') : uiText('Available')}</span></div></div>
   </button>`;
 }
 
@@ -2088,8 +2628,8 @@ function renderItemAssignProgressCard() {
   const assignedCount = Object.values(state.itemAssignments).filter(Boolean).length;
   return `<div class="item-assign-progress-card">
     <div class="item-assign-progress-head">
-      <div class="label">Assignment progress</div>
-      <strong>${assignedCount}/${currentTeamSize()} set</strong>
+      <div class="label">${uiText('Assignment progress')}</div>
+      <strong>${assignedCount}/${currentTeamSize()} ${isGerman() ? 'gesetzt' : 'set'}</strong>
     </div>
     <div class="item-assign-progress-strip">${state.playerLoadout.map((member, index) => renderItemAssignProgressSlot(member, index)).join('')}</div>
   </div>`;
@@ -2105,58 +2645,58 @@ function renderItemAssignStage() {
   const focusedMember = state.playerLoadout[focusIndex] || state.playerLoadout[0];
   return `<section class="preview-shell item-assign-shell team-size-${currentTeamSize()}">
     <div class="draft-topbar">
-      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
-      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${state.playMode === 'bot' ? 'Bot Run' : 'Link Battle'}</span></div>
+      <button class="ghost-btn back" data-action="go-menu">${uiText('Back to start page')}</button>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${modeNameLabel()}</span></div>
     </div>
     <section class="draft-hero-panel preview-hero-panel">
       <div class="draft-hero-copy">
-        <div class="draft-kicker-row"><span class="label">Item assign</span><span class="draft-status-pill">${state.draftedItems.length} drafted</span></div>
-        <h2>Assign your held items to the team.</h2>
-        ${compactCopy ? '' : '<p>Select an item from the pool, then click the Pokemon that should carry it. Each Pokemon can hold one item, and unassigned items can stay unused.</p>'}
-        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${currentTeamSize()} Pokemon</span><span>${highlightedItem ? `Selected: ${itemName(highlightedItem.id)}` : 'Select an item to inspect or assign'}</span></div>
+        <div class="draft-kicker-row"><span class="label">${uiText('Item assign')}</span><span class="draft-status-pill">${state.draftedItems.length} ${isGerman() ? 'gedraftet' : 'drafted'}</span></div>
+        <h2>${uiText('Assign your held items to the team.')}</h2>
+        ${compactCopy ? '' : `<p>${uiText('Select an item from the pool, then click the Pokemon that should carry it. Each Pokemon can hold one item, and unassigned items can stay unused.')}</p>`}
+        <div class="draft-chip-row"><span>${currentGenerationConfig().label}</span><span>${pokemonCountLabel(currentTeamSize())}</span><span>${highlightedItem ? `${uiText('Selected')}: ${itemName(highlightedItem.id)}` : uiText('Select an item to inspect or assign')}</span></div>
       </div>
     </section>
     <section class="item-assign-mobile-status item-assign-mobile-only">
-      <div class="item-assign-status-card"><span>Selected item</span><strong>${highlightedItem ? itemName(highlightedItem.id) : 'Choose an item'}</strong></div>
-      <div class="item-assign-status-card"><span>Assigned</span><strong>${assignedCount}/${currentTeamSize()} ready</strong></div>
+      <div class="item-assign-status-card"><span>${uiText('Selected item')}</span><strong>${highlightedItem ? itemName(highlightedItem.id) : uiText('Choose an item')}</strong></div>
+      <div class="item-assign-status-card"><span>${uiText('Assigned')}</span><strong>${assignedCount}/${currentTeamSize()} ${isGerman() ? 'bereit' : 'ready'}</strong></div>
     </section>
     <section class="draft-team-panel item-assign-pool-panel">
-      <div class="draft-section-head"><div><div class="label">Drafted item pool</div><h3>Choose one to assign</h3></div><p>Click an item to arm it, then click a team card to place it.</p></div>
+      <div class="draft-section-head"><div><div class="label">${uiText('Drafted item pool')}</div><h3>${uiText('Choose one to assign')}</h3></div><p>${uiText('Click an item to arm it, then click a team card to place it.')}</p></div>
       <section class="item-assign-desktop-only">
-        <div class="item-pool-strip item-assign-item-strip item-assign-item-carousel" data-preserve-scroll="item-assign-items" data-carousel-select="item" aria-label="Swipe held items">${state.draftedItems.map((entry) => renderItemAssignPickerCard(entry, assignedItems, currentTeamSize() === 6)).join('')}</div>
+        <div class="item-pool-strip item-assign-item-strip item-assign-item-carousel" data-preserve-scroll="item-assign-items" data-carousel-select="item" aria-label="${uiText('Swipe held items')}">${state.draftedItems.map((entry) => renderItemAssignPickerCard(entry, assignedItems, currentTeamSize() === 6)).join('')}</div>
         ${highlightedItem ? renderItemInfoCard(highlightedItem.id, {selected: true, assigned: assignedItems.has(highlightedItemKey), compact: compactCopy}) : ''}
       </section>
       <section class="item-assign-mobile-only">
-        <div class="item-assign-item-detail-carousel" data-preserve-scroll="item-assign-items" data-carousel-select="item" aria-label="Swipe held items">${state.draftedItems.map((entry) => renderItemAssignItemSlide(entry, assignedItems, currentTeamSize() === 6)).join('')}</div>
+        <div class="item-assign-item-detail-carousel" data-preserve-scroll="item-assign-items" data-carousel-select="item" aria-label="${uiText('Swipe held items')}">${state.draftedItems.map((entry) => renderItemAssignItemSlide(entry, assignedItems, currentTeamSize() === 6)).join('')}</div>
       </section>
     </section>
     <section class="draft-board item-assign-board">
-      <div class="draft-section-head"><div><div class="label">Your team</div><h3>Place your held items</h3></div><p class="preview-order-note">Click a card while an item is selected to assign it. Use Clear to remove an item from a Pokemon.</p></div>
+      <div class="draft-section-head"><div><div class="label">${uiText('Your team')}</div><h3>${uiText('Place your held items')}</h3></div><p class="preview-order-note">${uiText('Click a card while an item is selected to assign it. Use Clear to remove an item from a Pokemon.')}</p></div>
       <section class="item-assign-desktop-only"><div class="item-assign-list">${state.playerLoadout.map((member) => renderItemAssignMemberCard(member)).join('')}</div></section>
       <section class="item-assign-mobile-only">
-        <div class="item-assign-member-carousel" data-preserve-scroll="item-assign-team" data-carousel-select="member" aria-label="Swipe team members">${state.playerLoadout.map((member, index) => renderItemAssignCarouselSlide(member, index)).join('')}</div>
+        <div class="item-assign-member-carousel" data-preserve-scroll="item-assign-team" data-carousel-select="member" aria-label="${uiText('Swipe team members')}">${state.playerLoadout.map((member, index) => renderItemAssignCarouselSlide(member, index)).join('')}</div>
         ${renderItemAssignProgressCard()}
       </section>
     </section>
-    <div class="actions mode-settings-actions"><button class="primary-btn" data-action="finish-item-assign">Continue</button></div>
+    <div class="actions mode-settings-actions"><button class="primary-btn" data-action="finish-item-assign">${uiText('Continue')}</button></div>
   </section>`;
 }
 
 function renderBotPreviewStage() {
   return renderPreviewShell({
     mode: 'bot',
-    title: `Arrange your team for ${currentEnemyLabel()}`,
+    title: isGerman() ? `Ordne dein Team für ${currentEnemyLabel()}` : `Arrange your team for ${currentEnemyLabel()}`,
     statusCopy: state.message,
-    chips: [currentGenerationConfig().label, `${currentTeamSize()} Pokemon picked`, 'Set your lead order', attackModeLabel(), itemDraftEnabled() ? 'Held items active' : 'No held items'],
-    actionLabel: 'Your order decides your lead and your switch options.',
-    playerPanelTitle: 'Your order',
+    chips: [currentGenerationConfig().label, `${pokemonCountLabel(currentTeamSize())} ${uiText('picked')}`, uiText('Set your lead order'), attackModeLabel(), itemDraftEnabled() ? uiText('Held items active') : uiText('No held items')],
+    actionLabel: uiText('Your order decides your lead and your switch options.'),
+    playerPanelTitle: uiText('Your order'),
     playerCards: state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join(''),
     asidePanel: `<div class="preview-panel preview-opponent-panel">
-        <div class="draft-section-head"><div><div class="label">Arena ready</div><h3>${currentEnemyLabel()}</h3></div><p>Only set your lead and your remaining switch options now.</p></div>
+        <div class="draft-section-head"><div><div class="label">${uiText('Arena ready')}</div><h3>${currentEnemyLabel()}</h3></div><p>${uiText('Only set your lead and your remaining switch options now.')}</p></div>
         <div class="preview-status-stack">
-          <div class="empty"><strong>Set your order</strong><div>Slot 1 starts the battle. Every later slot becomes a switch option.</div></div>
+          <div class="empty"><strong>${uiText('Set your order')}</strong><div>${uiText('Slot 1 starts the battle. Every later slot becomes a switch option.')}</div></div>
         </div>
-        <div class="actions"><button class="primary-btn" data-action="start-battle">Start Battle</button><button class="ghost-btn" data-action="go-menu">Mode Select</button></div>
+        <div class="actions"><button class="primary-btn" data-action="start-battle">${uiText('Start battle')}</button><button class="ghost-btn" data-action="go-menu">${uiText('Mode Select')}</button></div>
       </div>`,
   });
 }
@@ -2165,47 +2705,47 @@ function renderLinkConnectionCard(kind) {
   if (kind === 'host') {
     const hostReady = state.link.role === 'host' && Boolean(state.link.peerId);
     return `<article class="link-setup-card">
-      <div class="label">Host room</div>
-      <h3>${hostReady ? 'Share the host code' : 'Set the rules and open a room'}</h3>
-      <p>${hostReady ? 'The room is ready for one opponent. Share the 5-letter code. If nobody joins, it expires after 10 minutes.' : 'Choose the draft rules first. After Continue, this card returns with the live 5-letter host code.'}</p>
-      <button class="primary-btn" data-action="host-link">${hostReady ? 'Host with new rules' : 'Set rules & host'}</button>
+      <div class="label">${uiText('Host room')}</div>
+      <h3>${hostReady ? uiText('Share the host code') : uiText('Set the rules and open a room')}</h3>
+      <p>${hostReady ? uiText('The room is ready for one opponent. Share the 5-letter code. If nobody joins, it expires after 10 minutes.') : uiText('Choose the draft rules first. After Continue, this card returns with the live 5-letter host code.')}</p>
+      <button class="primary-btn" data-action="host-link">${hostReady ? uiText('Host with new rules') : uiText('Set rules & host')}</button>
       <div class="code-box link-code-box">${state.link.peerId || '-----'}</div>
-      ${hostReady ? `<div class="link-card-note">${attackModeLabel()} · ${currentTeamSize()} Pokemon · ${itemDraftEnabled() ? 'Held item draft on' : 'Held item draft off'}</div>` : ''}
+      ${hostReady ? `<div class="link-card-note">${attackModeLabel()} · ${pokemonCountLabel(currentTeamSize())} · ${itemDraftEnabled() ? uiText('Held item draft on') : uiText('Held item draft off')}</div>` : ''}
     </article>`;
   }
   return `<article class="link-setup-card">
-    <div class="label">Join room</div>
-    <h3>Enter a 5-letter code</h3>
-    <p>Join the hosted room. The host rules sync automatically, then both players move straight into the draft.</p>
-    <input id="joinCodeInput" class="text-input" maxlength="5" placeholder="Enter room code" value="${state.hostJoinCode}">
-    <button class="primary-btn" data-action="join-link">Connect</button>
-    ${state.link.connected ? `<div class="link-card-note">Connected to ${state.link.remoteName}.</div>` : ''}
+    <div class="label">${uiText('Join room')}</div>
+    <h3>${uiText('Enter a 5-letter code')}</h3>
+    <p>${uiText('Join the hosted room. The host rules sync automatically, then both players move straight into the draft.')}</p>
+    <input id="joinCodeInput" class="text-input" maxlength="5" placeholder="${uiText('Enter room code')}" value="${state.hostJoinCode}">
+    <button class="primary-btn" data-action="join-link">${uiText('Connect')}</button>
+    ${state.link.connected ? `<div class="link-card-note">${isGerman() ? `Verbunden mit ${localizeTrainerName(state.link.remoteName)}.` : `Connected to ${state.link.remoteName}.`}</div>` : ''}
   </article>`;
 }
 
 function renderLinkSetupStage() {
   const roomPrepared = state.link.role === 'host' && Boolean(state.link.peerId);
   const chips = roomPrepared
-    ? [currentGenerationConfig().label, '5-letter host code ready', attackModeLabel(), `${currentTeamSize()} Pokemon`, itemDraftEnabled() ? 'Held item draft on' : 'Held item draft off']
-    : [currentGenerationConfig().label, 'Choose host or join', 'Rules chosen by the host'];
+    ? [currentGenerationConfig().label, uiText('5-letter host code ready'), attackModeLabel(), pokemonCountLabel(currentTeamSize()), itemDraftEnabled() ? uiText('Held item draft on') : uiText('Held item draft off')]
+    : [currentGenerationConfig().label, uiText('Choose host or join'), uiText('Rules chosen by the host')];
   return `<section class="link-setup-shell">
     <div class="draft-topbar">
-      <button class="ghost-btn back" data-action="go-menu">Back to start page</button>
-      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>Link Battle</span></div>
+      <button class="ghost-btn back" data-action="go-menu">${uiText('Back to start page')}</button>
+      <div class="draft-topbar-meta"><span>${currentGenerationConfig().label}</span><span>${uiText('Link Battle')}</span></div>
     </div>
     <section class="link-setup-hero">
       <div class="link-setup-copy">
-        <div class="draft-kicker-row"><span class="label">Link Terminal</span><span class="draft-status-pill">${state.link.connected ? 'Connected' : 'Setup'}</span></div>
-        <h2>${roomPrepared ? 'Room open. Share the code, then jump into the draft.' : 'Choose whether to host or join a Link Battle room.'}</h2>
+        <div class="draft-kicker-row"><span class="label">${uiText('Link Terminal')}</span><span class="draft-status-pill">${state.link.connected ? uiText('Connected') : uiText('Setup')}</span></div>
+        <h2>${roomPrepared ? uiText('Room open. Share the code, then jump into the draft.') : uiText('Choose whether to host or join a Link Battle room.')}</h2>
         <p>${state.link.status}</p>
         <div class="draft-chip-row">${chips.map((chip) => `<span>${chip}</span>`).join('')}</div>
       </div>
       <div class="link-setup-stage-card">
-        <div class="label">How it works</div>
+        <div class="label">${uiText('How it works')}</div>
         <div class="link-setup-step-grid">
-          <div class="link-setup-step"><span>1</span><strong>Host or join</strong><div>The host sets the rules, opens the room, and shares the 5-letter code.</div></div>
-          <div class="link-setup-step"><span>2</span><strong>Draft like Bot Run</strong><div>Both players draft through the full flow without waiting between steps.</div></div>
-          <div class="link-setup-step"><span>3</span><strong>Start together</strong><div>Only the final Start battle step waits for the other player.</div></div>
+          <div class="link-setup-step"><span>1</span><strong>${uiText('Host or join')}</strong><div>${uiText('The host sets the rules, opens the room, and shares the 5-letter code.')}</div></div>
+          <div class="link-setup-step"><span>2</span><strong>${uiText('Draft like Bot Run')}</strong><div>${uiText('Both players draft through the full flow without waiting between steps.')}</div></div>
+          <div class="link-setup-step"><span>3</span><strong>${uiText('Start together')}</strong><div>${uiText('Only the final Start battle step waits for the other player.')}</div></div>
         </div>
       </div>
     </section>
@@ -2214,18 +2754,18 @@ function renderLinkSetupStage() {
       ${renderLinkConnectionCard('host')}
       ${renderLinkConnectionCard('guest')}
     </section>
-    <div class="actions link-setup-actions"><button class="ghost-btn" data-action="go-menu">Mode Select</button></div>
+    <div class="actions link-setup-actions"><button class="ghost-btn" data-action="go-menu">${uiText('Mode Select')}</button></div>
   </section>`;
 }
 
 function renderLinkDraftStage() {
   return renderDraftShell({
     mode: 'link',
-    roundLabel: `Round ${state.link.draftRound || 1} of ${currentTeamSize()}`,
-    title: 'Pick your next Pokemon',
-    statusCopy: 'Draft your link battle team with the same flow as Bot Run. The other player handles their own draft on their side.',
-    chips: [currentGenerationConfig().label, 'Link Battle draft', `${state.playerDraft.length}/${currentTeamSize()} picked`, state.link.connected ? 'Room connected' : 'Waiting for connection', attackModeLabel()],
-    action: 'Pick 1 of 3. After the draft, the reroll, item, and order steps continue without waiting.',
+    roundLabel: roundLabel(state.link.draftRound || 1, currentTeamSize()),
+    title: uiText('Pick your next Pokemon'),
+    statusCopy: uiText('Draft your link battle team with the same flow as Bot Run. The other player handles their own draft on their side.'),
+    chips: [currentGenerationConfig().label, uiText('Link Battle draft'), pickedCountLabel(state.playerDraft.length, currentTeamSize()), state.link.connected ? uiText('Room connected') : uiText('Waiting for connection'), attackModeLabel()],
+    action: uiText('Pick 1 of 3. After the draft, the reroll, item, and order steps continue without waiting.'),
     cards: state.link.localPack.map((species) => renderDraftCard(species, `data-link-draft-id="${species.id}"`)).join(''),
     showStatusCard: false,
   });
@@ -2236,18 +2776,18 @@ function renderLinkPreviewStage() {
   const opponentReady = !state.link.localReady && state.link.remoteReady;
   return renderPreviewShell({
     mode: 'link',
-    title: 'Arrange your team for Link Battle',
-    statusCopy: 'Set your lead order now. The other player only sees the final battle once both of you hit Start battle.',
-    chips: [currentGenerationConfig().label, 'Link Battle ready', `${state.playerPreview.length}/${currentTeamSize()} ready`, state.link.connected ? 'Room connected' : 'Connection needed', itemDraftEnabled() ? 'Held items active' : 'No held items'],
-    actionLabel: 'Slot 1 starts the battle. Every later slot becomes a switch option.',
-    playerPanelTitle: 'Your order',
+    title: uiText('Arrange your team for Link Battle'),
+    statusCopy: uiText('Set your lead order now. The other player only sees the final battle once both of you hit Start battle.'),
+    chips: [currentGenerationConfig().label, uiText('Link Battle ready'), isGerman() ? `${state.playerPreview.length}/${currentTeamSize()} bereit` : `${state.playerPreview.length}/${currentTeamSize()} ready`, state.link.connected ? uiText('Room connected') : uiText('Connection needed'), itemDraftEnabled() ? uiText('Held items active') : uiText('No held items')],
+    actionLabel: uiText('Slot 1 starts the battle. Every later slot becomes a switch option.'),
+    playerPanelTitle: uiText('Your order'),
     playerCards: state.playerPreview.map((member, index) => renderPreviewCard(member, index, true)).join(''),
     asidePanel: `<div class="preview-panel preview-opponent-panel">
-        <div class="draft-section-head"><div><div class="label">Battle start</div><h3>Player versus player</h3></div><p>Only the final Start battle step waits for the other player.</p></div>
+        <div class="draft-section-head"><div><div class="label">${uiText('Battle start')}</div><h3>${uiText('Player versus player')}</h3></div><p>${uiText('Only the final Start battle step waits for the other player.')}</p></div>
         <div class="preview-status-stack">
-          <div class="empty"><strong>${waiting ? 'Waiting for player...' : opponentReady ? 'Player ready' : state.link.connected ? 'Set your order' : 'Connection needed'}</strong><div>${waiting ? 'Your order is locked in. The battle begins as soon as the other player starts too.' : opponentReady ? 'The other player is ready. You can start the battle now.' : state.link.connected ? 'Pick your lead and click Start battle when the order looks right.' : 'Reconnect before trying to start the battle.'}</div></div>
+          <div class="empty"><strong>${waiting ? uiText('Waiting for player...') : opponentReady ? uiText('Player ready') : state.link.connected ? uiText('Set your order') : uiText('Connection needed')}</strong><div>${waiting ? uiText('Your order is locked in. The battle begins as soon as the other player starts too.') : opponentReady ? uiText('The other player is ready. You can start the battle now.') : state.link.connected ? uiText('Pick your lead and click Start battle when the order looks right.') : uiText('Reconnect before trying to start the battle.')}</div></div>
         </div>
-        <div class="actions"><button class="primary-btn ${state.link.localReady ? 'link-ready-armed' : ''}" data-action="ready-link-battle" ${!state.link.connected || state.link.localReady ? 'disabled' : ''}>Start battle</button><button class="ghost-btn" data-action="link-rematch">Draft again</button></div>
+        <div class="actions"><button class="primary-btn ${state.link.localReady ? 'link-ready-armed' : ''}" data-action="ready-link-battle" ${!state.link.connected || state.link.localReady ? 'disabled' : ''}>${uiText('Start battle')}</button><button class="ghost-btn" data-action="link-rematch">${uiText('Draft again')}</button></div>
       </div>`,
   });
 }
@@ -2271,15 +2811,15 @@ function renderBattleBallRow(team, side) {
 function renderCombatant(mon, facing, sideKey, side, team = []) {
   if (!mon || mon.condition?.endsWith(' fnt')) return `<div class="combatant combatant-${side} empty"><div class="battle-status-shell battle-status-shell-${side}">${side === 'player' ? renderBattleBallRow(team, side) : ''}${side === 'foe' ? renderBattleBallRow(team, side) : ''}</div></div>`;
   const percent = conditionToPercent(mon.condition);
-  const infoButton = side === 'player' ? `<button class="info-chip battle-status-info" data-inspect="${mon.name}" aria-label="Inspect ${mon.name}">Info</button>` : '';
+  const infoButton = side === 'player' ? `<button class="info-chip battle-status-info" data-inspect="${mon.name}" aria-label="${isGerman() ? `${localizedPokemonName(mon)} prüfen` : `Inspect ${mon.name}`}">${uiText('Info')}</button>` : '';
   return `<div class="combatant combatant-${side} ${state.flash[sideKey]}">
     <div class="battle-status-shell battle-status-shell-${side}">
       ${side === 'player' ? renderBattleBallRow(team, side) : ''}
       <div class="battle-status battle-status-${side}">
         <div class="battle-status-top">
-          <div class="battle-status-name"><div class="battle-status-name-row"><strong>${mon.name}</strong></div></div>
+          <div class="battle-status-name"><div class="battle-status-name-row"><strong>${localizedPokemonName(mon)}</strong></div></div>
         </div>
-        <div class="battle-status-meta"><span>Lv100</span>${infoButton}<span>${mon.status || 'OK'}</span></div>
+        <div class="battle-status-meta"><span>Lv100</span>${infoButton}<span>${mon.status ? localizedStatusName(mon.status) : uiText('OK')}</span></div>
         <div class="battle-hp-row"><span class="hp-label">HP</span><div class="hp battle-hp"><div class="hp-fill ${hpTone(percent)}" style="width:${percent}%"></div></div></div>
         <div class="tiny">${mon.condition}</div>
       </div>
@@ -2294,7 +2834,7 @@ function renderCombatant(mon, facing, sideKey, side, team = []) {
 
 function renderBench(team, own) {
   const bench = team.filter((member) => !member.active);
-  if (!bench.length) return '<div class="empty">No reserve available.</div>';
+  if (!bench.length) return `<div class="empty">${uiText('No reserve available.')}</div>`;
   const interactionLocked = state.actionLocked || state.battleAnimating || Boolean(state.pendingPlayerRequest);
   const allowSwitch = own && state.playerRequest && (state.playerRequest.forceSwitch || !state.playerRequest.active?.[0]?.trapped);
   const switchChoices = new Map(
@@ -2309,26 +2849,26 @@ function renderBench(team, own) {
     const fainted = member.condition?.endsWith(' fnt') || member.status === 'fainted';
     const switchChoice = own ? switchChoices.get(member.name) || '' : '';
     const switchState = fainted
-      ? 'Fainted'
+      ? uiText('Fainted')
       : own && switchChoice
-        ? (state.playerRequest?.forceSwitch ? 'Forced switch' : 'Tap card to switch in')
+        ? (state.playerRequest?.forceSwitch ? uiText('Forced switch') : uiText('Tap card to switch in'))
         : '';
     const clickable = Boolean(switchChoice) && !interactionLocked;
     return `<div class="bench-card bench-card-switch ${clickable ? 'bench-card-actionable' : ''} ${fainted ? 'bench-card-fainted' : ''}" ${clickable ? `data-choice="${switchChoice}" data-choice-kind="switch"` : ''} style="background:${typeGradient(member.types || ['Normal'])}">
       <div class="bench-card-sprite">${spriteTag(member, 'front', 'sm')}</div>
-      <div class="bench-card-copy"><strong>${member.name}</strong><div class="tiny">${member.condition}</div>${switchState ? `<div class="bench-card-switch-note">${switchState}</div>` : ''}</div>
-      <button class="info-chip" data-inspect="${member.name}">Info</button>
+      <div class="bench-card-copy"><strong>${localizedPokemonName(member)}</strong><div class="tiny">${member.condition}</div>${switchState ? `<div class="bench-card-switch-note">${switchState}</div>` : ''}</div>
+      <button class="info-chip" data-inspect="${member.name}">${uiText('Info')}</button>
     </div>`;
   }).join('')}</div>`;
 }
 
 function renderChoiceButtons() {
-  if (!state.playerRequest) return '<div class="empty">Waiting for the next request.</div>';
+  if (!state.playerRequest) return `<div class="empty">${uiText('Waiting for the next request.')}</div>`;
   const interactionLocked = state.actionLocked || state.battleAnimating || Boolean(state.pendingPlayerRequest);
   if (state.playerRequest.forceSwitch) {
     return interactionLocked
-      ? '<div class="empty battle-choice-note"><strong>Resolving turn.</strong><div>Your next switch will be available in a moment.</div></div>'
-      : '<div class="empty battle-choice-note"><strong>Choose your next Pokemon.</strong><div>Tap one of the reserve cards below to send it in.</div></div>';
+      ? `<div class="empty battle-choice-note"><strong>${uiText('Resolving turn.')}</strong><div>${uiText('Your next switch will be available in a moment.')}</div></div>`
+      : `<div class="empty battle-choice-note"><strong>${uiText('Choose your next Pokemon.')}</strong><div>${uiText('Tap one of the reserve cards below to send it in.')}</div></div>`;
   }
   const moves = state.playerRequest.active?.[0]?.moves.map((move, index) => {
     const selected = state.selectedChoice === `move ${index + 1}` ? 'selected' : '';
@@ -2337,44 +2877,44 @@ function renderChoiceButtons() {
     const hasTrackedPp = Number.isFinite(move.pp);
     const disabled = interactionLocked || move.disabled || (hasTrackedPp && move.pp <= 0);
     const ppText = Number.isFinite(move.pp) && Number.isFinite(move.maxpp) ? `<span class="choice-btn-pp">${move.pp}/${move.maxpp} PP</span>` : '';
-    return `<button class="choice-btn choice-btn-move ${selected}" style="--choice-type-bg:${tone.bg};--choice-type-fg:${tone.fg}" data-choice="move ${index + 1}" data-choice-kind="move" data-move-name="${move.move}" ${disabled ? 'disabled' : ''}><strong class="choice-btn-name">${move.move}</strong>${ppText}</button>`;
+    return `<button class="choice-btn choice-btn-move ${selected}" style="--choice-type-bg:${tone.bg};--choice-type-fg:${tone.fg}" data-choice="move ${index + 1}" data-choice-kind="move" data-move-name="${move.move}" ${disabled ? 'disabled' : ''}><strong class="choice-btn-name">${localizedMoveName(move.id || move.move)}</strong>${ppText}</button>`;
   }).join('') || '';
   return `<div class="choice-grid">${moves}</div>`;
 }
 
 function renderBattleRecordBadge() {
   if (state.playMode !== 'link') {
-    return `<div class="battle-streak-badge"><span class="label">Run</span><strong>Win Streak ${state.runWins}</strong></div>`;
+    return `<div class="battle-streak-badge"><span class="label">${uiText('Run')}</span><strong>${isGerman() ? `Siegeserie ${state.runWins}` : `Win Streak ${state.runWins}`}</strong></div>`;
   }
-  const localLabel = 'You';
-  const remoteLabel = state.link.remoteName || 'Opponent';
+  const localLabel = uiText('You');
+  const remoteLabel = localizeTrainerName(state.link.remoteName || 'Opponent');
   return `<div class="battle-streak-badge battle-record-badge">
-    <div class="battle-record-row"><span class="label">${localLabel}</span><strong>Wins ${state.link.wins} · losses ${state.link.losses}</strong></div>
-    <div class="battle-record-row"><span class="label">${remoteLabel}</span><strong>Wins ${state.link.losses} · losses ${state.link.wins}</strong></div>
+    <div class="battle-record-row"><span class="label">${localLabel}</span><strong>${uiText('Wins')} ${state.link.wins} · ${uiText('losses')} ${state.link.losses}</strong></div>
+    <div class="battle-record-row"><span class="label">${remoteLabel}</span><strong>${uiText('Wins')} ${state.link.losses} · ${uiText('losses')} ${state.link.wins}</strong></div>
   </div>`;
 }
 
 function renderBattleStage() {
   const rematch = state.playMode === 'link' && state.battleFinished
-    ? '<button class="primary-btn" data-action="link-rematch">Rematch</button>'
+    ? `<button class="primary-btn" data-action="link-rematch">${uiText('Rematch')}</button>`
     : state.playMode === 'bot' && state.battleFinished
-      ? '<button class="primary-btn" data-action="retry-bot">Retry</button>'
+      ? `<button class="primary-btn" data-action="retry-bot">${uiText('Retry')}</button>`
       : '';
   const latestFeed = state.battleFeed[0] || '';
   return `<section class="battle-ui team-size-${currentTeamSize()}">
     ${renderBattleDecor()}
     <div class="battle-frame-top">
-      <button class="ghost-btn battle-mode-link" data-action="go-menu">Mode Select</button>
+      <button class="ghost-btn battle-mode-link" data-action="go-menu">${uiText('Mode Select')}</button>
       <div class="battle-brand-logo"><img src="${BATTLE_LOGO_PATH}" alt="Pokemon logo"></div>
       ${renderBattleRecordBadge()}
       </div>
       <div class="battle-desktop-shell">
         <div class="battle-center">
-          <div class="battle-header"><div><div class="label">Battle Phase</div><h2>Arena Battle</h2></div><p>${state.message}</p></div>
+          <div class="battle-header"><div><div class="label">${uiText('Battle Phase')}</div><h2>${uiText('Arena Battle')}</h2></div><p>${state.message}</p></div>
           <section class="battle-shell"><div class="battle-stage">${renderCombatant(foeActive(), 'front', foeSide(), 'foe', foeTeamState())}<div class="battle-field" data-battle-attack-field><canvas class="battle-layer" data-battle-attack-layer></canvas></div><div class="battle-feed"><div class="feed-line">${latestFeed}</div></div>${renderCombatant(ownActive(), 'back', ownSide(), 'player', ownTeamState())}</div></section>
           <section class="battle-footer">
-            <div class="panel battle-panel"><div class="label">Your Bench</div>${renderBench(ownTeamState(), true)}</div>
-            <div class="panel battle-panel battle-actions-panel"><div class="label">Actions</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn battle-mobile-menu" data-action="go-menu">Mode Select</button></div></div>
+            <div class="panel battle-panel"><div class="label">${uiText('Your Bench')}</div>${renderBench(ownTeamState(), true)}</div>
+            <div class="panel battle-panel battle-actions-panel"><div class="label">${uiText('Actions')}</div>${renderChoiceButtons()}<div class="actions">${rematch}<button class="ghost-btn battle-mobile-menu" data-action="go-menu">${uiText('Mode Select')}</button></div></div>
         </section>
         <div class="battle-starter-art"><img src="${STARTER_ART_PATH}" alt="First-generation starters"></div>
       </div>
@@ -2404,23 +2944,24 @@ function render() {
   const menuView = state.phase === 'menu';
   const draftView = ['mode-setup', 'draft', 'reroll', 'item-draft', 'item-assign', 'link-setup', 'link-draft', 'preview', 'link-preview'].includes(state.phase);
   const previewFlowView = state.phase === 'preview' || state.phase === 'link-preview';
+  document.documentElement.lang = isGerman() ? 'de' : 'en';
   if (menuView) {
-    app.innerHTML = `<div class="app-shell menu-view theme-${state.generation}">
+    app.innerHTML = `<div class="app-shell menu-view theme-${state.generation} lang-${currentLanguageCode}">
       <main class="main menu-main">${renderStage()}</main>
       ${renderInspectModal()}
       ${renderLeaveConfirmModal()}
     </div>`;
   } else if (draftView) {
-    app.innerHTML = `<div class="app-shell draft-view ${previewFlowView ? 'preview-flow-view' : ''} theme-${state.generation}">
+    app.innerHTML = `<div class="app-shell draft-view ${previewFlowView ? 'preview-flow-view' : ''} theme-${state.generation} lang-${currentLanguageCode}">
       <main class="main draft-main">${renderStage()}</main>
       ${renderInspectModal()}
       ${renderLeaveConfirmModal()}
     </div>`;
   } else {
-    app.innerHTML = `<div class="app-shell ${battleView ? 'battle-view' : ''} theme-${state.generation}">
-      <aside class="side"><a class="ghost-btn back" href="../index.html#games">Back to home</a><div class="brand"><div class="label">Pokemon Battler</div><h1>Kanto Link Arena</h1><p>Gen 1 sprites, level 100 stats, RBY rules, and Link Battles with a hidden draft.</p></div><div class="panel metrics"><span>Mode ${state.playMode === 'bot' ? 'Bot Run' : 'Link Battle'}</span><span>151 Pokemon</span><span>Best Run ${state.bestRun}</span></div>${renderSidePanel('Your Team', ownTeam, true)}${renderOpponentPanel()}</aside>
+    app.innerHTML = `<div class="app-shell ${battleView ? 'battle-view' : ''} theme-${state.generation} lang-${currentLanguageCode}">
+      <aside class="side"><a class="ghost-btn back" href="../index.html#games">${uiText('Back to home')}</a><div class="brand"><div class="label">${uiText('Pokemon Battler')}</div><h1>${uiText('Kanto Link Arena')}</h1><p>${uiText('Gen 1 sprites, level 100 stats, RBY rules, and Link Battles with a hidden draft.')}</p></div><div class="panel metrics"><span>${uiText('Mode')} ${modeNameLabel()}</span><span>${uiText('151 Kanto Pokemon')}</span><span>${uiText('Best Run')} ${state.bestRun}</span></div>${renderSidePanel('Your Team', ownTeam, true)}${renderOpponentPanel()}</aside>
       <main class="main">${renderStage()}</main>
-      <aside class="side"><div class="panel"><div class="label">Notes</div><div class="empty">Rules follow the active generation.</div></div><div class="panel"><div class="label">Log</div>${state.logs.map((line) => `<div class="log-line">${line}</div>`).join('')}</div></aside>
+      <aside class="side"><div class="panel"><div class="label">${uiText('Notes')}</div><div class="empty">${uiText('Rules follow the active generation.')}</div></div><div class="panel"><div class="label">${uiText('Log')}</div>${state.logs.map((line) => `<div class="log-line">${line}</div>`).join('')}</div></aside>
       ${renderInspectModal()}
       ${renderLeaveConfirmModal()}
     </div>`;
@@ -2617,7 +3158,7 @@ function resetDraft() {
   state.playMode = 'bot';
   state.phase = 'draft';
   state.logs = [];
-  state.message = 'Pick your first Pokemon for the Bot Run.';
+  state.message = pickFirstPokemonMessage('bot');
   state.runWins = 0;
   state.enemyNumber = 1;
   state.enemyName = '';
@@ -2673,7 +3214,7 @@ function prepareNextEnemy(message) {
   render();
 }
 
-function prepareLinkPreview(message = 'Your team is ready. Set the order you want to reveal when the Link Battle starts.') {
+function prepareLinkPreview(message = uiText('Your team is ready. Set the order you want to reveal when the Link Battle starts.')) {
   resetBattleState();
   state.phase = 'link-preview';
   state.playerLoadout = applyAssignedItems(state.playerLoadout, state.itemAssignments);
@@ -2686,13 +3227,13 @@ function beginItemDraftPhase() {
   state.phase = 'item-draft';
   state.itemDraftRound = Math.max(1, state.draftedItems.length + 1);
   state.itemPack = buildItemPack(new Set(state.draftedItems.map((entry) => entry.id)), 3, state.playerLoadout);
-  state.message = 'Draft one held item from this round.';
+  state.message = uiText('Draft one held item from this round.');
   render();
 }
 
 function finishPostDraftFlow() {
   state.playerLoadout = applyAssignedItems(state.playerLoadout, state.itemAssignments);
-  if (state.playMode === 'bot') return prepareNextEnemy('Your team is ready. Arrange your lead now.');
+  if (state.playMode === 'bot') return prepareNextEnemy(uiText('Your team is ready. Arrange your lead now.'));
   return prepareLinkPreview();
 }
 
@@ -2708,7 +3249,7 @@ function startPostDraftFlow() {
   state.itemDraftSequence = 0;
   if (state.rerollsLeft > 0) {
     state.phase = 'reroll';
-    state.message = 'Spend your attack rerolls across the drafted team.';
+    state.message = uiText('Spend your attack rerolls across the drafted team.');
     return render();
   }
   if (itemDraftEnabled()) return beginItemDraftPhase();
@@ -2722,7 +3263,7 @@ function rerollLoadoutMove(memberIndex, moveIndex) {
   const moves = rerollMove(member, member.set.moves, moveIndex, dex);
   state.playerLoadout[memberIndex] = createLoadout(member, {moves, item: member.set.item || ''});
   state.rerollsLeft -= 1;
-  if (state.rerollsLeft <= 0) state.message = 'Rerolls spent. Continue to the next step.';
+  if (state.rerollsLeft <= 0) state.message = uiText('Rerolls spent. Continue to the next step.');
   render();
 }
 
@@ -2801,14 +3342,14 @@ function openLeaveConfirm(action) {
   render();
 }
 
-function returnToLinkSetupAfterDisconnect(alert, status = 'Connection closed.') {
+function returnToLinkSetupAfterDisconnect(alert, status = uiText('Connection closed.')) {
   resetDraftProgress();
   resetBattleState();
   state.playMode = 'link';
   state.pendingMode = 'link';
   state.phase = 'link-setup';
   state.hostJoinCode = '';
-  state.message = 'Choose whether to host a room or join one.';
+  state.message = linkChooseRoomMessage();
   state.link = freshLinkState();
   state.link.status = status;
   state.link.alert = alert;
@@ -2819,7 +3360,7 @@ function leaveToMenu() {
   teardownLink(true);
   state.playMode = 'bot';
   state.phase = 'menu';
-  state.message = 'Choose Bot Run or Link Battle.';
+  state.message = chooseModeMessage();
   resetBattleState();
   render();
 }
@@ -2838,16 +3379,23 @@ function handleAction(action) {
   }
   if (action === 'set-generation-gen1') {
     state.generation = 'gen1';
-    state.message = 'Choose Bot Run or Link Battle.';
+    state.message = chooseModeMessage();
+    return render();
+  }
+  if (action === 'set-language-en' || action === 'set-language-de') {
+    saveLanguagePreference(action === 'set-language-de' ? 'de' : 'en');
+    state.message = state.generation === 'gen5'
+      ? uiText('The Gen 5 expansion is prepared as a style preview.')
+      : chooseModeMessage();
     return render();
   }
   if (action === 'set-generation-gen5') {
     state.generation = 'gen5';
-    state.message = 'The Gen 5 expansion is prepared as a style preview.';
+    state.message = uiText('The Gen 5 expansion is prepared as a style preview.');
     return render();
   }
   if (state.generation !== 'gen1' && (action === 'start-bot' || action === 'start-link')) {
-    state.message = 'The playable Gen 5 mode arrives in the next expansion.';
+    state.message = uiText('The playable Gen 5 mode arrives in the next expansion.');
     return render();
   }
   if (action === 'start-link') {
@@ -2857,13 +3405,13 @@ function handleAction(action) {
     state.hostJoinCode = '';
     state.link = freshLinkState();
     state.phase = 'link-setup';
-    state.message = 'Choose whether to host a room or join one.';
+    state.message = linkChooseRoomMessage();
     return render();
   }
   if (action === 'start-bot') {
     state.pendingMode = 'bot';
     state.phase = 'mode-setup';
-    state.message = 'Set the draft rules before the run starts.';
+    state.message = uiText('Set the draft rules before the run starts.');
     return render();
   }
   if (action === 'mode-attack-fixed') {
@@ -2903,12 +3451,12 @@ function handleAction(action) {
       state.playMode = 'link';
       state.pendingMode = '';
       state.phase = 'link-setup';
-      state.message = 'Opening the private room.';
+      state.message = uiText('Opening the private room.');
       if (state.link.setupIntent === 'host') {
         render();
         return startHosting();
       }
-      state.message = 'Open a room or join one.';
+      state.message = uiText('Open a room or join one.');
       return render();
     }
     return resetDraft();
@@ -2925,7 +3473,7 @@ function handleAction(action) {
     state.pendingMode = 'link';
     state.link.setupIntent = 'host';
     state.phase = 'mode-setup';
-    state.message = 'Set the draft rules for the hosted room.';
+    state.message = uiText('Set the draft rules for the hosted room.');
     return render();
   }
   if (action === 'join-link') return joinHost();
@@ -2982,10 +3530,10 @@ function scheduleHostLobbyExpiry() {
     state.playMode = 'link';
     state.pendingMode = 'link';
     state.phase = 'link-setup';
-    state.message = 'Choose whether to host a room or join one.';
+    state.message = linkChooseRoomMessage();
     state.link = freshLinkState();
-    state.link.status = 'No connection yet.';
-    state.link.alert = 'Room expired.';
+    state.link.status = uiText('No connection yet.');
+    state.link.alert = uiText('Room expired.');
     render();
   }, HOST_ROOM_EXPIRY_MS);
 }
@@ -3004,13 +3552,13 @@ function setupLinkDraft() {
   resetDraftProgress();
   state.playMode = 'link';
   state.phase = 'link-draft';
-  state.link.status = 'Connection ready. Draft locally and keep your picks hidden until battle.';
+  state.link.status = uiText('Connection ready. Draft locally and keep your picks hidden until battle.');
   state.link.draftRound = 1;
   state.link.localPack = drawConfiguredPack(state.draftedIds, 3);
   state.link.localReady = false;
   state.link.remoteReady = false;
   state.link.remoteRoster = null;
-  state.message = 'Pick your first Pokemon for the Link Battle.';
+  state.message = pickFirstPokemonMessage('link');
   render();
 }
 
@@ -3039,14 +3587,14 @@ function startHosting() {
   state.link.role = 'host';
   state.playMode = 'link';
   state.phase = 'link-setup';
-  state.link.status = 'Opening room...';
+  state.link.status = uiText('Opening room...');
   const openRoom = (attempt = 0) => {
     const code = generateLobbyCode();
     const peer = new Peer(code);
     state.link.peer = peer;
     peer.on('open', () => {
       state.link.peerId = code;
-      state.link.status = 'Room open for 10 minutes. Share the host code.';
+      state.link.status = uiText('Room open for 10 minutes. Share the host code.');
       scheduleHostLobbyExpiry();
       render();
     });
@@ -3055,7 +3603,7 @@ function startHosting() {
         peer.destroy?.();
         return openRoom(attempt + 1);
       }
-      state.link.status = 'Room could not be opened. Try again.';
+      state.link.status = uiText('Room could not be opened. Try again.');
       render();
     });
     peer.on('connection', (conn) => {
@@ -3074,7 +3622,7 @@ function joinHost() {
   const code = String(state.hostJoinCode || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5);
   state.hostJoinCode = code;
   if (code.length !== 5) {
-    state.link.status = 'Enter the full 5-letter host code.';
+    state.link.status = uiText('Enter the full 5-letter host code.');
     return render();
   }
   teardownLink();
@@ -3082,12 +3630,12 @@ function joinHost() {
   state.link.role = 'guest';
   state.playMode = 'link';
   state.phase = 'link-setup';
-  state.link.status = 'Connecting to the host room...';
+  state.link.status = uiText('Connecting to the host room...');
   const peer = new Peer();
   state.link.peer = peer;
   peer.on('open', () => attachConnection(peer.connect(code, {reliable: true}), 'guest'));
   peer.on('error', () => {
-    state.link.status = 'Connection failed. Check the host code and try again.';
+    state.link.status = uiText('Connection failed. Check the host code and try again.');
     render();
   });
   render();
@@ -3099,7 +3647,7 @@ function attachConnection(conn, role) {
   conn.on('open', () => {
     clearLinkLobbyExpiryTimer();
     state.link.connected = true;
-    state.link.status = role === 'host' ? 'Player connected. Starting the shared draft flow.' : 'Connected. Syncing the host rules.';
+    state.link.status = role === 'host' ? uiText('Player connected. Starting the shared draft flow.') : uiText('Connected. Syncing the host rules.');
     sendLinkMessage({type: 'hello', name: 'Opponent'});
     if (role === 'host') {
       sendLinkMessage({type: 'link-settings', settings: normalizedModeSettings()});
@@ -3111,24 +3659,24 @@ function attachConnection(conn, role) {
   conn.on('close', () => {
     if (conn.__suppressCloseNotice) return;
     state.link.connected = false;
-    returnToLinkSetupAfterDisconnect('Enemy left.');
+    returnToLinkSetupAfterDisconnect(uiText('Enemy left.'));
   });
 }
 
 function handleLinkMessage(message) {
   if (message.type === 'hello') {
-    state.link.status = 'Connection ready.';
+    state.link.status = uiText('Connection ready.');
     state.link.remoteName = message.name || 'Opponent';
   }
   if (message.type === 'link-settings') {
     state.modeSettings = normalizedModeSettings(message.settings || DEFAULT_MODE_SETTINGS);
-    state.link.status = 'Connection ready. Host rules synced. Draft starting now.';
+    state.link.status = uiText('Connection ready. Host rules synced. Draft starting now.');
     if (state.link.role === 'guest') setupLinkDraft();
   }
   if (message.type === 'battle-ready') {
     state.link.remoteReady = true;
     state.link.remoteRoster = message.roster;
-    if (state.phase === 'link-preview' && !state.link.localReady) state.message = 'The other player is ready. Start battle when your order is set.';
+    if (state.phase === 'link-preview' && !state.link.localReady) state.message = uiText('The other player is ready. Start battle when your order is set.');
     maybeStartHostedBattle();
   }
   if (message.type === 'battle-start') {
@@ -3149,7 +3697,7 @@ function handleLinkMessage(message) {
 function readyLinkBattle() {
   if (!state.link.connected || state.link.localReady) return;
   state.link.localReady = true;
-  state.message = 'Waiting for player...';
+  state.message = uiText('Waiting for player...');
   sendLinkMessage({type: 'battle-ready', roster: state.playerPreview});
   maybeStartHostedBattle();
   render();
@@ -3192,7 +3740,7 @@ async function startBattleSimulation({p1Team, p2Team, p1Name, p2Name, localSide,
   state.phase = 'battle';
   state.link.localSide = localSide;
   initialiseTeamStates(p1Team, p2Team);
-  state.message = `${p2Name} accepts the challenge.`;
+  state.message = acceptedChallengeMessage(p2Name);
   render();
   void ensureAttackAnimationAssets();
   const streams = BattleStreams.getPlayerStreams(new BattleStreams.BattleStream());
@@ -3256,16 +3804,7 @@ function updateRosterState(sideKey, name, updater) {
 }
 
 function formatStatus(status) {
-  const labels = {
-    brn: 'burn',
-    frz: 'freeze',
-    par: 'paralysis',
-    psn: 'poison',
-    tox: 'bad poison',
-    slp: 'sleep',
-    confusion: 'confusion',
-  };
-  return labels[status] || status;
+  return localizedStatusName(status);
 }
 
 function battleTagValue(parts, prefix) {
@@ -3273,88 +3812,111 @@ function battleTagValue(parts, prefix) {
   return tag ? tag.slice(prefix.length) : '';
 }
 
+function battleParticipantName(part) {
+  const raw = part?.includes(': ') ? part.split(': ').pop() : part || '';
+  return localizedPokemonName(raw);
+}
+
+function battleItemDisplayName(itemName) {
+  return localizedItemName(itemName || '');
+}
+
+function battleMoveDisplayName(moveName) {
+  return localizedMoveName(moveName || '');
+}
+
+function battleStatLabel(stat) {
+  const labels = isGerman()
+    ? {atk: 'Angriff', def: 'Verteidigung', spa: 'Spezial-Angriff', spd: 'Spezial-Verteidigung', spe: 'Initiative', accuracy: 'Genauigkeit', evasion: 'Fluchtwert'}
+    : {atk: 'Attack', def: 'Defense', spa: 'Sp. Atk', spd: 'Sp. Def', spe: 'Speed', accuracy: 'accuracy', evasion: 'evasion'};
+  return labels[stat] || stat;
+}
+
 function battleText(parts) {
   const type = parts[1];
-  const actor = parts[2]?.includes(': ') ? parts[2].split(': ').pop() : parts[2];
+  const actor = battleParticipantName(parts[2]);
   const fromItem = battleTagValue(parts, '[from] item: ');
-  if (type === 'move') return `${parts[2].split(': ').pop()} used ${parts[3]}.`;
-  if (type === '-miss') return `${parts[2].split(': ').pop()} missed.`;
-  if (type === '-supereffective') return "It's super effective.";
-  if (type === '-resisted') return "It's not very effective.";
-  if (type === '-crit') return 'A critical hit.';
-  if (type === 'switch') return `${parts[2].split(': ').pop()} entered the battle.`;
-  if (type === 'faint') return `${parts[2].split(': ').pop()} fainted.`;
+  if (type === 'move') return isGerman() ? `${actor} setzt ${battleMoveDisplayName(parts[3])} ein.` : `${actor} used ${battleMoveDisplayName(parts[3])}.`;
+  if (type === '-miss') return isGerman() ? `${actor} verfehlt.` : `${actor} missed.`;
+  if (type === '-supereffective') return isGerman() ? 'Volltreffer!' : "It's super effective.";
+  if (type === '-resisted') return isGerman() ? 'Nicht sehr effektiv.' : "It's not very effective.";
+  if (type === '-crit') return isGerman() ? 'Ein Volltreffer.' : 'A critical hit.';
+  if (type === 'switch') return isGerman() ? `${actor} betritt den Kampf.` : `${actor} entered the battle.`;
+  if (type === 'faint') return isGerman() ? `${actor} wurde besiegt.` : `${actor} fainted.`;
   if (type === '-heal' && fromItem) {
-    if (fromItem === 'Leftovers') return `${actor} restored a little HP using its Leftovers.`;
-    if (fromItem === 'Black Sludge') return `${actor} restored HP using its Black Sludge.`;
-    if (fromItem === 'Sitrus Berry') return `${actor} restored HP using its Sitrus Berry.`;
-    return `${actor} restored HP using ${fromItem}.`;
+    const itemLabel = battleItemDisplayName(fromItem);
+    if (fromItem === 'Leftovers') return isGerman() ? `${actor} regeneriert mit seinen ${itemLabel} ein paar KP.` : `${actor} restored a little HP using its ${itemLabel}.`;
+    if (fromItem === 'Black Sludge') return isGerman() ? `${actor} regeneriert mit seinem ${itemLabel} KP.` : `${actor} restored HP using its ${itemLabel}.`;
+    if (fromItem === 'Sitrus Berry') return isGerman() ? `${actor} regeneriert mit seiner ${itemLabel} KP.` : `${actor} restored HP using its ${itemLabel}.`;
+    return isGerman() ? `${actor} regeneriert mit ${itemLabel} KP.` : `${actor} restored HP using ${itemLabel}.`;
   }
   if (type === '-damage' && battleTagValue(parts, '[from] ') === 'confusion') {
-    return `${actor} hurt itself in its confusion.`;
+    return isGerman() ? `${actor} verletzt sich in seiner Verwirrung selbst.` : `${actor} hurt itself in its confusion.`;
   }
   if (type === '-damage' && fromItem) {
-    if (fromItem === 'Life Orb') return `${actor} is hurt by its Life Orb.`;
-    if (fromItem === 'Black Sludge') return `${actor} is hurt by the Black Sludge.`;
-    return `${actor} is hurt by ${fromItem}.`;
+    const itemLabel = battleItemDisplayName(fromItem);
+    if (fromItem === 'Life Orb') return isGerman() ? `${actor} wird durch seinen ${itemLabel} verletzt.` : `${actor} is hurt by its ${itemLabel}.`;
+    if (fromItem === 'Black Sludge') return isGerman() ? `${actor} wird durch den ${itemLabel} verletzt.` : `${actor} is hurt by the ${itemLabel}.`;
+    return isGerman() ? `${actor} wird durch ${itemLabel} verletzt.` : `${actor} is hurt by ${itemLabel}.`;
   }
-  if (type === '-status') return `${parts[2].split(': ').pop()} is afflicted with ${formatStatus(parts[3])}.`;
-  if (type === '-curestatus') return `${parts[2].split(': ').pop()} recovered.`;
-  if (type === '-clearstatus') return `${parts[2].split(': ').pop()} is cured.`;
+  if (type === '-status') return isGerman() ? `${actor} leidet nun unter ${formatStatus(parts[3])}.` : `${actor} is afflicted with ${formatStatus(parts[3])}.`;
+  if (type === '-curestatus') return isGerman() ? `${actor} ist wieder hergestellt.` : `${actor} recovered.`;
+  if (type === '-clearstatus') return isGerman() ? `${actor} wurde geheilt.` : `${actor} is cured.`;
   if (type === 'cant') {
-    const name = parts[2].split(': ').pop();
+    const name = actor;
     const reason = parts[3];
-    if (reason === 'slp') return `${name} is fast asleep.`;
-    if (reason === 'frz') return `${name} is frozen solid.`;
-    if (reason === 'par') return `${name} is paralyzed and cannot move.`;
-    if (reason === 'flinch') return `${name} flinched.`;
-    if (reason === 'recharge') return `${name} must recharge.`;
-    if (reason === 'Disable') return `${name} cannot use that move.`;
-    return `${name} cannot act.`;
+    if (reason === 'slp') return isGerman() ? `${name} schläft tief und fest.` : `${name} is fast asleep.`;
+    if (reason === 'frz') return isGerman() ? `${name} ist komplett eingefroren.` : `${name} is frozen solid.`;
+    if (reason === 'par') return isGerman() ? `${name} ist paralysiert und kann sich nicht bewegen.` : `${name} is paralyzed and cannot move.`;
+    if (reason === 'flinch') return isGerman() ? `${name} schreckt zurück.` : `${name} flinched.`;
+    if (reason === 'recharge') return isGerman() ? `${name} muss neue Energie sammeln.` : `${name} must recharge.`;
+    if (reason === 'Disable') return isGerman() ? `${name} kann diese Attacke nicht einsetzen.` : `${name} cannot use that move.`;
+    return isGerman() ? `${name} kann nicht handeln.` : `${name} cannot act.`;
   }
   if (type === '-start') {
-    const name = parts[2].split(': ').pop();
-    if (parts[3] === 'confusion') return `${name} became confused.`;
-    if (parts[3] === 'Substitute') return `${name} put up a substitute.`;
-    return `${name} is affected by ${parts[3]}.`;
+    const name = actor;
+    if (parts[3] === 'confusion') return isGerman() ? `${name} ist verwirrt.` : `${name} became confused.`;
+    if (parts[3] === 'Substitute') return isGerman() ? `${name} stellt einen Delegator auf.` : `${name} put up a substitute.`;
+    return isGerman() ? `${name} wird von ${parts[3]} beeinflusst.` : `${name} is affected by ${parts[3]}.`;
   }
   if (type === '-end') {
-    const name = parts[2].split(': ').pop();
-    if (parts[3] === 'confusion') return `${name} snapped out of confusion.`;
-    if (parts[3] === 'Substitute') return `${name}'s substitute faded.`;
-    return `${parts[3]} ended for ${name}.`;
+    const name = actor;
+    if (parts[3] === 'confusion') return isGerman() ? `${name} ist nicht mehr verwirrt.` : `${name} snapped out of confusion.`;
+    if (parts[3] === 'Substitute') return isGerman() ? `${name}s Delegator verschwindet.` : `${name}'s substitute faded.`;
+    return isGerman() ? `${parts[3]} endet für ${name}.` : `${parts[3]} ended for ${name}.`;
   }
   if (type === '-activate') {
-    const name = parts[2].split(': ').pop();
-    if (parts[3] === 'confusion') return `${name} is confused.`;
-    if (parts[3]?.startsWith('move: Bide')) return `${name} is storing energy.`;
-    return `${name} activates ${parts[3]}.`;
+    const name = actor;
+    if (parts[3] === 'confusion') return isGerman() ? `${name} ist verwirrt.` : `${name} is confused.`;
+    if (parts[3]?.startsWith('move: Bide')) return isGerman() ? `${name} sammelt Energie.` : `${name} is storing energy.`;
+    return isGerman() ? `${name} aktiviert ${parts[3]}.` : `${name} activates ${parts[3]}.`;
   }
   if (type === '-item') {
-    if (parts[3] === 'Air Balloon') return `${actor} floats with an Air Balloon.`;
-    return `${parts[2].split(': ').pop()} uses ${parts[3]}.`;
+    const itemLabel = battleItemDisplayName(parts[3]);
+    if (parts[3] === 'Air Balloon') return isGerman() ? `${actor} schwebt dank seines ${itemLabel}.` : `${actor} floats with an ${itemLabel}.`;
+    return isGerman() ? `${actor} nutzt ${itemLabel}.` : `${actor} uses ${itemLabel}.`;
   }
-  if (type === '-enditem') return `${parts[2].split(': ').pop()} consumed its ${parts[3]}.`;
-  if (type === '-sidestart') return `${parts[2].startsWith('p1') ? 'One side' : 'The other side'} gained ${parts[3]}.`;
-  if (type === '-sideend') return `${parts[3]} wore off.`;
-  if (type === '-fieldstart') return `${parts[2]} began.`;
-  if (type === '-fieldend') return `${parts[2]} ended.`;
-  if (type === '-prepare') return `${parts[2].split(': ').pop()} is getting ready for ${parts[3]}.`;
-  if (type === '-singleturn') return `${parts[2].split(': ').pop()} is affected by ${parts[3]}.`;
-  if (type === '-singlemove') return `${parts[2].split(': ').pop()} gained ${parts[3]}.`;
-  if (type === '-boost') return `${parts[2].split(': ').pop()} boosts ${parts[3]}.`;
-  if (type === '-unboost') return `${parts[2].split(': ').pop()} loses ${parts[3]}.`;
-  if (type === '-clearboost') return `${parts[2].split(': ').pop()}'s stat boosts were cleared.`;
-  if (type === '-clearallboost') return 'All stat changes were cleared.';
-  if (type === '-clearpositiveboost') return `${parts[2].split(': ').pop()}'s positive boosts were removed.`;
-  if (type === '-clearnegativeboost') return `${parts[2].split(': ').pop()}'s negative boosts were removed.`;
-  if (type === '-setboost') return `${parts[2].split(': ').pop()}'s ${parts[3]} changed.`;
-  if (type === '-immune') return `${parts[2].split(': ').pop()} is unaffected.`;
-  if (type === '-fail') return 'But it failed.';
-  if (type === '-mustrecharge') return `${parts[2].split(': ').pop()} must wait this turn.`;
-  if (type === '-hitcount') return `${parts[2]} hits.`;
-  if (type === '-ohko') return 'A one-hit knockout.';
-  if (type === 'win') return `${parts[2]} wins the battle.`;
+  if (type === '-enditem') return isGerman() ? `${actor} verbraucht ${battleItemDisplayName(parts[3])}.` : `${actor} consumed its ${battleItemDisplayName(parts[3])}.`;
+  if (type === '-sidestart') return isGerman() ? `${parts[2].startsWith('p1') ? 'Deine Seite' : 'Die Gegenseite'} erhält ${parts[3]}.` : `${parts[2].startsWith('p1') ? 'One side' : 'The other side'} gained ${parts[3]}.`;
+  if (type === '-sideend') return isGerman() ? `${parts[3]} endet.` : `${parts[3]} wore off.`;
+  if (type === '-fieldstart') return isGerman() ? `${parts[2]} beginnt.` : `${parts[2]} began.`;
+  if (type === '-fieldend') return isGerman() ? `${parts[2]} endet.` : `${parts[2]} ended.`;
+  if (type === '-prepare') return isGerman() ? `${actor} bereitet ${battleMoveDisplayName(parts[3])} vor.` : `${actor} is getting ready for ${battleMoveDisplayName(parts[3])}.`;
+  if (type === '-singleturn') return isGerman() ? `${actor} wird von ${parts[3]} beeinflusst.` : `${actor} is affected by ${parts[3]}.`;
+  if (type === '-singlemove') return isGerman() ? `${actor} erhält ${parts[3]}.` : `${actor} gained ${parts[3]}.`;
+  if (type === '-boost') return isGerman() ? `${actor} steigert ${battleStatLabel(parts[3])}.` : `${actor} boosts ${battleStatLabel(parts[3])}.`;
+  if (type === '-unboost') return isGerman() ? `${actor} verliert ${battleStatLabel(parts[3])}.` : `${actor} loses ${battleStatLabel(parts[3])}.`;
+  if (type === '-clearboost') return isGerman() ? `${actor}s Statuswerte werden zurückgesetzt.` : `${actor}'s stat boosts were cleared.`;
+  if (type === '-clearallboost') return isGerman() ? 'Alle Statuswertänderungen wurden entfernt.' : 'All stat changes were cleared.';
+  if (type === '-clearpositiveboost') return isGerman() ? `${actor}s positive Statuswertänderungen wurden entfernt.` : `${actor}'s positive boosts were removed.`;
+  if (type === '-clearnegativeboost') return isGerman() ? `${actor}s negative Statuswertänderungen wurden entfernt.` : `${actor}'s negative boosts were removed.`;
+  if (type === '-setboost') return isGerman() ? `${actor}s ${battleStatLabel(parts[3])} ändert sich.` : `${actor}'s ${battleStatLabel(parts[3])} changed.`;
+  if (type === '-immune') return isGerman() ? `${actor} bleibt unberührt.` : `${actor} is unaffected.`;
+  if (type === '-fail') return isGerman() ? 'Aber es schlägt fehl.' : 'But it failed.';
+  if (type === '-mustrecharge') return isGerman() ? `${actor} muss diese Runde aussetzen.` : `${actor} must wait this turn.`;
+  if (type === '-hitcount') return isGerman() ? `${parts[2]} Treffer.` : `${parts[2]} hits.`;
+  if (type === '-ohko') return isGerman() ? 'Ein Volltreffer-K.o.' : 'A one-hit knockout.';
+  if (type === 'win') return isGerman() ? `${localizeTrainerName(parts[2])} gewinnt den Kampf.` : `${parts[2]} wins the battle.`;
   return '';
 }
 
@@ -3422,7 +3984,7 @@ async function handleBattleLine(line, shouldAnimate = false) {
     return 1150;
   }
   if (type === 'turn') {
-    state.message = `Turn ${parts[2]}.`;
+    state.message = turnMessage(parts[2]);
     return 700;
   }
   if (type === 'win') {
@@ -3473,18 +4035,18 @@ async function finishBattle(winner) {
       state.runWins += 1;
       saveBestRun(state.runWins);
       state.enemyNumber += 1;
-      state.message = `Win. Streak: ${state.runWins}.`;
+      state.message = winStreakMessage(state.runWins);
       render();
       await sleep(1000);
-      prepareNextEnemy('The next opponent is waiting.');
+      prepareNextEnemy(uiText('The next opponent is waiting.'));
       return;
     }
-    state.message = `The streak ends at ${state.runWins}.`;
+    state.message = streakEndsMessage(state.runWins);
     return render();
   }
   if (localWon) state.link.wins += 1;
   else state.link.losses += 1;
-  state.message = localWon ? 'You win the Link Battle.' : 'The opponent wins the Link Battle.';
+  state.message = linkBattleResultMessage(localWon);
   render();
 }
 
@@ -4190,9 +4752,11 @@ function injectStyles() {
     .menu-topbar{
       display:flex;
       align-items:center;
-      justify-content:flex-end;
+      justify-content:space-between;
+      flex-wrap:wrap;
       gap:14px;
     }
+    .menu-language-switch,
     .menu-generation-switch{
       display:grid;
       grid-template-columns:repeat(2,minmax(0,1fr));
@@ -4203,6 +4767,10 @@ function injectStyles() {
       background:rgba(7,11,10,.4);
       backdrop-filter:blur(10px);
     }
+    .menu-language-switch{
+      min-width:132px;
+    }
+    .menu-language-btn,
     .menu-generation-btn{
       min-width:112px;
       padding:10px 16px;
@@ -4215,6 +4783,7 @@ function injectStyles() {
       letter-spacing:.04em;
       transition:background .16s ease,color .16s ease,transform .16s ease,box-shadow .16s ease;
     }
+    .menu-language-btn.active,
     .menu-generation-btn.active{
       background:linear-gradient(180deg,var(--menu-accent-soft),var(--menu-accent));
       color:#16211a;
@@ -6679,9 +7248,11 @@ function injectStyles() {
       .menu-topbar{
         align-items:stretch;
       }
+      .menu-language-switch,
       .menu-generation-switch{
         width:100%;
       }
+      .menu-language-btn,
       .menu-generation-btn{
         min-width:0;
       }
