@@ -398,6 +398,7 @@ function freshLinkState() {
     remoteName: 'Opponent',
     status: 'No connection yet.',
     alert: '',
+    lobbyExpiryTimer: 0,
     localSide: 'p1',
     draftRound: 0,
     localPack: [],
@@ -413,6 +414,7 @@ function freshLinkState() {
 
 const LOBBY_CONSONANTS = 'BCDFGHJKLMNPRSTVWXYZ';
 const LOBBY_VOWELS = 'AEIOU';
+const HOST_ROOM_EXPIRY_MS = 10 * 60 * 1000;
 
 function randomFrom(pool) {
   return pool[Math.floor(Math.random() * pool.length)];
@@ -2079,7 +2081,7 @@ function renderLinkConnectionCard(kind) {
     return `<article class="link-setup-card">
       <div class="label">Host room</div>
       <h3>${hostReady ? 'Share the host code' : 'Set the rules and open a room'}</h3>
-      <p>${hostReady ? 'The room is ready. Share the 5-letter code and the draft begins as soon as the other player connects.' : 'Choose the draft rules first. After Continue, this card returns with the live 5-letter host code.'}</p>
+      <p>${hostReady ? 'The room is ready for one opponent. Share the 5-letter code. If nobody joins, it expires after 10 minutes.' : 'Choose the draft rules first. After Continue, this card returns with the live 5-letter host code.'}</p>
       <button class="primary-btn" data-action="host-link">${hostReady ? 'Host with new rules' : 'Set rules & host'}</button>
       <div class="code-box link-code-box">${state.link.peerId || '-----'}</div>
       ${hostReady ? `<div class="link-card-note">${attackModeLabel()} · ${currentTeamSize()} Pokemon · ${itemDraftEnabled() ? 'Held item draft on' : 'Held item draft off'}</div>` : ''}
@@ -2839,6 +2841,7 @@ function handleAction(action) {
 }
 
 function teardownLink(suppressNotice = false) {
+  clearLinkLobbyExpiryTimer();
   if (state.link.conn) state.link.conn.__suppressCloseNotice = suppressNotice;
   state.link.conn?.close?.();
   state.link.peer?.destroy?.();
@@ -2847,6 +2850,34 @@ function teardownLink(suppressNotice = false) {
 
 function sendLinkMessage(message) {
   if (state.link.conn?.open) state.link.conn.send(message);
+}
+
+function clearLinkLobbyExpiryTimer() {
+  if (state.link.lobbyExpiryTimer) {
+    window.clearTimeout(state.link.lobbyExpiryTimer);
+    state.link.lobbyExpiryTimer = 0;
+  }
+}
+
+function scheduleHostLobbyExpiry() {
+  clearLinkLobbyExpiryTimer();
+  state.link.lobbyExpiryTimer = window.setTimeout(() => {
+    const isStillWaitingRoom = state.playMode === 'link'
+      && state.phase === 'link-setup'
+      && state.link.role === 'host'
+      && Boolean(state.link.peerId)
+      && !state.link.connected;
+    if (!isStillWaitingRoom) return;
+    teardownLink(true);
+    state.playMode = 'link';
+    state.pendingMode = 'link';
+    state.phase = 'link-setup';
+    state.message = 'Choose whether to host a room or join one.';
+    state.link = freshLinkState();
+    state.link.status = 'No connection yet.';
+    state.link.alert = 'Room expired.';
+    render();
+  }, HOST_ROOM_EXPIRY_MS);
 }
 
 function queueLinkBattleChunk(chunk) {
@@ -2902,7 +2933,8 @@ function startHosting() {
     state.link.peer = peer;
     peer.on('open', () => {
       state.link.peerId = code;
-      state.link.status = 'Room open. Share the host code.';
+      state.link.status = 'Room open for 10 minutes. Share the host code.';
+      scheduleHostLobbyExpiry();
       render();
     });
     peer.on('error', (error) => {
@@ -2913,7 +2945,13 @@ function startHosting() {
       state.link.status = 'Room could not be opened. Try again.';
       render();
     });
-    peer.on('connection', (conn) => attachConnection(conn, 'host'));
+    peer.on('connection', (conn) => {
+      if (state.link.connected || state.link.conn?.open) {
+        conn.on('open', () => conn.close());
+        return;
+      }
+      attachConnection(conn, 'host');
+    });
   };
   openRoom();
   render();
@@ -2946,6 +2984,7 @@ function attachConnection(conn, role) {
   state.link.conn = conn;
   state.link.role = role;
   conn.on('open', () => {
+    clearLinkLobbyExpiryTimer();
     state.link.connected = true;
     state.link.status = role === 'host' ? 'Player connected. Starting the shared draft flow.' : 'Connected. Syncing the host rules.';
     sendLinkMessage({type: 'hello', name: 'Opponent'});
