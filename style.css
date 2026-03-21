@@ -81,8 +81,9 @@ img {
 }
 
 .nav-logo {
-    font-size: 1.5rem;
+    font-size: clamp(1rem, 2vw, 1.5rem);
     font-weight: 700;
+    white-space: nowrap;
     background: var(--gradient);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
