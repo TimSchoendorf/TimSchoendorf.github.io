@@ -19,8 +19,22 @@ const GEN1_BATTLER_MOD = 'gen1battler';
 
 function ensureGen1BattleDex() {
   if (!Dex.dexes[GEN1_BATTLER_MOD]) {
+    const baseGen1MoveHit = Dex.mod('gen1').data.Scripts.actions.moveHit;
     Dex.mod(GEN1_BATTLER_MOD, {
-      Scripts: {inherit: 'gen1', gen: 1},
+      Scripts: {
+        inherit: 'gen1',
+        gen: 1,
+        actions: {
+          inherit: true,
+          moveHit(targetOrTargets, pokemon, move, moveData, isSecondary, isSelf) {
+            const damage = baseGen1MoveHit.call(this, targetOrTargets, pokemon, move, moveData, isSecondary, isSelf);
+            if (!(move?.forceSwitch || moveData?.forceSwitch) || isSecondary || isSelf) return damage;
+            const targets = Array.isArray(targetOrTargets) ? targetOrTargets : [targetOrTargets];
+            const forceDamage = this.forceSwitch(targets.map(() => 0), targets, pokemon, move);
+            return Array.isArray(targetOrTargets) ? forceDamage : forceDamage[0];
+          },
+        },
+      },
       Conditions: {
         slp: {
           inherit: true,
@@ -38,6 +52,23 @@ function ensureGen1BattleDex() {
               this.add('-end', target, 'Nightmare', '[silent]');
             }
           },
+        },
+      },
+      Moves: {
+        roar: {
+          inherit: true,
+          forceSwitch: true,
+          priority: -1,
+          shortDesc: 'Forces the target to switch to a random ally.',
+          desc: 'The target is forced to switch out and be replaced with a random unfainted ally. Fails if the target is the last unfainted Pokemon in its party, or if the user moves before the target.',
+        },
+        whirlwind: {
+          inherit: true,
+          accuracy: 100,
+          forceSwitch: true,
+          priority: -1,
+          shortDesc: 'Forces the target to switch to a random ally.',
+          desc: 'The target is forced to switch out and be replaced with a random unfainted ally. Fails if the target is the last unfainted Pokemon in its party, or if the user moves before the target.',
         },
       },
     });
