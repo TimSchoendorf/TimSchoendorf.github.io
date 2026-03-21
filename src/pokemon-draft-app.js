@@ -3216,6 +3216,9 @@ function battleText(parts) {
     if (fromItem === 'Sitrus Berry') return `${actor} restored HP using its Sitrus Berry.`;
     return `${actor} restored HP using ${fromItem}.`;
   }
+  if (type === '-damage' && battleTagValue(parts, '[from] ') === 'confusion') {
+    return `${actor} hurt itself in its confusion.`;
+  }
   if (type === '-damage' && fromItem) {
     if (fromItem === 'Life Orb') return `${actor} is hurt by its Life Orb.`;
     if (fromItem === 'Black Sludge') return `${actor} is hurt by the Black Sludge.`;
