@@ -1026,7 +1026,21 @@ function currentBattleViewport(assets) {
   const playerStatus = document.querySelector('.battle-status-player');
   const foeStatus = document.querySelector('.battle-status-foe');
   if (!stage || !field || !feed || !canvas || !playerSprite || !foeSprite || !playerStatus || !foeStatus) return null;
+  const stageRect = stage.getBoundingClientRect();
+  const canvasRect = canvas.getBoundingClientRect();
+  const playerRect = playerSprite.getBoundingClientRect();
+  const foeRect = foeSprite.getBoundingClientRect();
+  if (stageRect.width < 20 || stageRect.height < 20 || canvasRect.width < 20 || canvasRect.height < 20 || playerRect.width < 8 || playerRect.height < 8 || foeRect.width < 8 || foeRect.height < 8) return null;
   return new BattleAttackViewport(stage, field, feed, canvas, playerSprite, foeSprite, playerStatus, foeStatus, assets.tilesets, assets.data.source);
+}
+
+async function waitForBattleViewport(assets, attempts = 18) {
+  let viewport = null;
+  for (let attempt = 0; attempt < attempts && !viewport; attempt += 1) {
+    if (attempt) await nextPaint();
+    viewport = currentBattleViewport(assets);
+  }
+  return viewport;
 }
 
 function shouldAnimateMove(lines, moveIndex) {
@@ -1059,11 +1073,7 @@ async function playBattleMoveAnimation(moveName, sideKey) {
       window.__pokemonBattlerDebug.lastAnimationInfo = {moveName, sideKey, stage: 'missing-move'};
       return;
     }
-    let viewport = null;
-    for (let attempt = 0; attempt < 6 && !viewport; attempt += 1) {
-      if (attempt) await nextPaint();
-      viewport = currentBattleViewport(assets);
-    }
+    const viewport = await waitForBattleViewport(assets);
     if (!viewport) {
       window.__pokemonBattlerDebug.lastAnimationInfo = {moveName, sideKey, stage: 'missing-viewport'};
       return;
@@ -2852,6 +2862,19 @@ function sendLinkMessage(message) {
   if (state.link.conn?.open) state.link.conn.send(message);
 }
 
+async function waitForLinkBattleSceneReady(attempts = 18) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    const sceneReady = state.phase === 'battle'
+      && (state.teamStates.p1.length > 0 || state.teamStates.p2.length > 0)
+      && document.querySelector('.battle-stage')
+      && document.querySelector('.combatant-player .sprite.battle')
+      && document.querySelector('.combatant-foe .sprite.battle');
+    if (sceneReady) return true;
+    await nextPaint();
+  }
+  return false;
+}
+
 function clearLinkLobbyExpiryTimer() {
   if (state.link.lobbyExpiryTimer) {
     window.clearTimeout(state.link.lobbyExpiryTimer);
@@ -2883,7 +2906,10 @@ function scheduleHostLobbyExpiry() {
 function queueLinkBattleChunk(chunk) {
   state.link.battleChunkChain = (state.link.battleChunkChain || Promise.resolve())
     .catch(() => {})
-    .then(() => animateBattleChunk(chunk));
+    .then(async () => {
+      await waitForLinkBattleSceneReady();
+      return animateBattleChunk(chunk);
+    });
   return state.link.battleChunkChain;
 }
 
