@@ -393,6 +393,8 @@ function freshLinkState() {
     role: 'host',
     setupIntent: '',
     battleChunkChain: Promise.resolve(),
+    wins: 0,
+    losses: 0,
     connected: false,
     peerId: '',
     remoteName: 'Opponent',
@@ -2266,6 +2268,18 @@ function renderChoiceButtons() {
   return `<div class="choice-grid">${moves}</div>`;
 }
 
+function renderBattleRecordBadge() {
+  if (state.playMode !== 'link') {
+    return `<div class="battle-streak-badge"><span class="label">Run</span><strong>Win Streak ${state.runWins}</strong></div>`;
+  }
+  const localLabel = 'You';
+  const remoteLabel = state.link.remoteName || 'Opponent';
+  return `<div class="battle-streak-badge battle-record-badge">
+    <div class="battle-record-row"><span class="label">${localLabel}</span><strong>Wins ${state.link.wins} · losses ${state.link.losses}</strong></div>
+    <div class="battle-record-row"><span class="label">${remoteLabel}</span><strong>Wins ${state.link.losses} · losses ${state.link.wins}</strong></div>
+  </div>`;
+}
+
 function renderBattleStage() {
   const rematch = state.playMode === 'link' && state.battleFinished
     ? '<button class="primary-btn" data-action="link-rematch">Rematch</button>'
@@ -2273,13 +2287,12 @@ function renderBattleStage() {
       ? '<button class="primary-btn" data-action="retry-bot">Retry</button>'
       : '';
   const latestFeed = state.battleFeed[0] || '';
-  const streak = `Win Streak ${state.runWins}`;
   return `<section class="battle-ui team-size-${currentTeamSize()}">
     ${renderBattleDecor()}
     <div class="battle-frame-top">
       <button class="ghost-btn battle-mode-link" data-action="go-menu">Mode Select</button>
       <div class="battle-brand-logo"><img src="${BATTLE_LOGO_PATH}" alt="Pokemon logo"></div>
-      <div class="battle-streak-badge"><span class="label">Run</span><strong>${streak}</strong></div>
+      ${renderBattleRecordBadge()}
       </div>
       <div class="battle-desktop-shell">
         <div class="battle-center">
@@ -3374,7 +3387,10 @@ async function finishBattle(winner) {
   state.actionLocked = true;
   state.selectedChoice = '';
   state.battleAnimating = false;
-  const localWon = winner === 'You';
+  const localWinnerLabel = state.playMode === 'link'
+    ? (state.link.localSide === 'p1' ? 'You' : (state.link.remoteName || 'Opponent'))
+    : 'You';
+  const localWon = winner === localWinnerLabel;
   if (state.playMode === 'bot') {
     if (localWon) {
       state.runWins += 1;
@@ -3389,6 +3405,8 @@ async function finishBattle(winner) {
     state.message = `The streak ends at ${state.runWins}.`;
     return render();
   }
+  if (localWon) state.link.wins += 1;
+  else state.link.losses += 1;
   state.message = localWon ? 'You win the Link Battle.' : 'The opponent wins the Link Battle.';
   render();
 }
@@ -4529,6 +4547,21 @@ function injectStyles() {
     .battle-streak-badge strong{
       font-size:1rem;
       line-height:1.05;
+    }
+    .battle-record-badge{
+      min-width:210px;
+    }
+    .battle-record-row{
+      display:grid;
+      gap:2px;
+      justify-items:end;
+    }
+    .battle-record-row .label{
+      font-size:.63rem;
+    }
+    .battle-record-row strong{
+      font-size:.86rem;
+      line-height:1.08;
     }
     .battle-desktop-shell{
       display:grid;
