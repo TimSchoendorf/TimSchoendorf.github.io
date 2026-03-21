@@ -17,15 +17,58 @@ import {
 
 const GEN1_BATTLER_MOD = 'gen1battler';
 
+function getFocusEnergyCritChance(battle, dex, source, move) {
+  const species = dex.species.get(source.set.species);
+  let critChance = Math.floor(species.baseStats.spe / 2);
+  // Fix the Gen 1 bug: Focus Energy should sharply raise crit chance instead of lowering it.
+  critChance = battle.clampIntRange(critChance * 8, 1, 255);
+  if (move.critRatio === 1) {
+    critChance = Math.floor(critChance / 2);
+  } else if (move.critRatio === 2) {
+    critChance = battle.clampIntRange(critChance * 4, 1, 255);
+  }
+  return critChance;
+}
+
 function ensureGen1BattleDex() {
   if (!Dex.dexes[GEN1_BATTLER_MOD]) {
     const baseGen1MoveHit = Dex.mod('gen1').data.Scripts.actions.moveHit;
+    const baseGen1GetDamage = Dex.mod('gen1').data.Scripts.actions.getDamage;
     Dex.mod(GEN1_BATTLER_MOD, {
       Scripts: {
         inherit: 'gen1',
         gen: 1,
         actions: {
           inherit: true,
+          getDamage(source, target, move, suppressMessages) {
+            if (!source?.volatiles?.focusenergy) {
+              return baseGen1GetDamage.call(this, source, target, move, suppressMessages);
+            }
+            const activeMove =
+              typeof move === 'string'
+                ? this.battle.dex.getActiveMove(move)
+                : typeof move === 'number'
+                  ? null
+                  : move;
+            if (!activeMove || activeMove.willCrit) {
+              return baseGen1GetDamage.call(this, source, target, move, suppressMessages);
+            }
+            const correctedCritChance = getFocusEnergyCritChance(this.battle, this.dex, source, activeMove);
+            let intercepted = false;
+            const originalRandomChance = this.battle.randomChance;
+            this.battle.randomChance = (numerator, denominator) => {
+              if (!intercepted && denominator === 256) {
+                intercepted = true;
+                return originalRandomChance.call(this.battle, correctedCritChance, denominator);
+              }
+              return originalRandomChance.call(this.battle, numerator, denominator);
+            };
+            try {
+              return baseGen1GetDamage.call(this, source, target, move, suppressMessages);
+            } finally {
+              this.battle.randomChance = originalRandomChance;
+            }
+          },
           moveHit(targetOrTargets, pokemon, move, moveData, isSecondary, isSelf) {
             const damage = baseGen1MoveHit.call(this, targetOrTargets, pokemon, move, moveData, isSecondary, isSelf);
             if (!(move?.forceSwitch || moveData?.forceSwitch) || isSecondary || isSelf) return damage;
