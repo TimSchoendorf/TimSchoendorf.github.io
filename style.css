@@ -719,6 +719,19 @@ img {
 }
 
 /* ===== Contact Section ===== */
+.contact {
+    position: relative;
+}
+
+.contact::before {
+    content: '';
+    display: block;
+    width: min(1200px, calc(100% - 48px));
+    height: 1px;
+    margin: 0 auto 72px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+
 .contact-content {
     text-align: center;
 }
